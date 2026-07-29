@@ -20,6 +20,17 @@ type Lesson = {
   questions: Question[];
 };
 
+type SavedSession = {
+  view: "learn" | "practice";
+  lessonId: number;
+  deckIndex: number;
+  round: number;
+  cardIndex: number;
+  questionIndex: number;
+  score: number;
+  mistakes: string[];
+};
+
 const lessonOne: Lesson = {
   id: 1,
   arabicTitle: "الدَّرْسُ الأَوَّلُ",
@@ -123,8 +134,23 @@ function speak(text: string) {
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "ar-SA";
-  utterance.rate = 0.72;
+  const arabicVoice = window.speechSynthesis
+    .getVoices()
+    .find((voice) => voice.lang.toLowerCase().startsWith("ar"));
+  if (arabicVoice) utterance.voice = arabicVoice;
+  utterance.rate = 0.62;
+  utterance.pitch = 0.9;
+  utterance.volume = 0.88;
   window.speechSynthesis.speak(utterance);
+}
+
+function shuffle<T>(items: T[]) {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(Math.random() * (index + 1));
+    [result[index], result[target]] = [result[target], result[index]];
+  }
+  return result;
 }
 
 export default function Home() {
@@ -139,6 +165,7 @@ export default function Home() {
   const [score, setScore] = useState(0);
   const [mistakes, setMistakes] = useState<string[]>([]);
   const [savedScores, setSavedScores] = useState<Record<number, number>>({});
+  const [storageReady, setStorageReady] = useState(false);
 
   const lesson = lessons.find((item) => item.id === lessonId) ?? lessonOne;
   const deck = lesson.decks[deckIndex];
@@ -153,7 +180,43 @@ export default function Home() {
       if (stored !== null) scores[item.id] = Number(stored);
     });
     setSavedScores(scores);
+    const storedSession = window.localStorage.getItem("shifahiya-active-session");
+    if (storedSession) {
+      try {
+        const session = JSON.parse(storedSession) as SavedSession;
+        if (lessons.some((item) => item.id === session.lessonId)) {
+          setLessonId(session.lessonId);
+          setDeckIndex(session.deckIndex);
+          setRound(session.round);
+          setCardIndex(session.cardIndex);
+          setQuestionIndex(session.questionIndex);
+          setScore(session.score);
+          setMistakes(session.mistakes);
+          setSelected(null);
+          setRevealed(false);
+          setView(session.view);
+        }
+      } catch {
+        window.localStorage.removeItem("shifahiya-active-session");
+      }
+    }
+    setStorageReady(true);
   }, []);
+
+  useEffect(() => {
+    if (!storageReady || (view !== "learn" && view !== "practice")) return;
+    const session: SavedSession = {
+      view,
+      lessonId,
+      deckIndex,
+      round,
+      cardIndex,
+      questionIndex,
+      score,
+      mistakes,
+    };
+    window.localStorage.setItem("shifahiya-active-session", JSON.stringify(session));
+  }, [storageReady, view, lessonId, deckIndex, round, cardIndex, questionIndex, score, mistakes]);
 
   const progress =
     view === "practice"
@@ -162,13 +225,20 @@ export default function Home() {
           (lesson.decks.length * 2 * words.length)) *
         100;
 
-  const options = useMemo(() => currentQuestion?.options ?? [], [currentQuestion]);
+  const options = useMemo(
+    () => shuffle(currentQuestion?.options ?? []),
+    [lessonId, questionIndex, currentQuestion],
+  );
 
   function startLesson(id: number) {
     setLessonId(id);
     setDeckIndex(0);
     setRound(1);
     setCardIndex(0);
+    setQuestionIndex(0);
+    setScore(0);
+    setMistakes([]);
+    setSelected(null);
     setRevealed(false);
     setView("learn");
   }
@@ -207,12 +277,14 @@ export default function Home() {
       return;
     }
     window.localStorage.setItem(`shifahiya-lesson-${lesson.id}`, String(score));
+    window.localStorage.removeItem("shifahiya-active-session");
     setSavedScores((items) => ({ ...items, [lesson.id]: score }));
     setView("result");
   }
 
   function resetLesson() {
     window.localStorage.removeItem(`shifahiya-lesson-${lesson.id}`);
+    window.localStorage.removeItem("shifahiya-active-session");
     setSavedScores((items) => {
       const next = { ...items };
       delete next[lesson.id];
