@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
@@ -39,11 +39,17 @@ test("server-renders the Shifahiya course with lesson fifteen", async () => {
 
 test("keeps lesson fifteen data and local progress support in the app", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const lessonFifteen = await readFile(new URL("../content/lesson-15.ts", import.meta.url), "utf8");
+  const catalog = await readFile(new URL("../content/index.ts", import.meta.url), "utf8");
+  const contentFiles = await readdir(new URL("../content/", import.meta.url));
 
-  assert.match(page, /const lessonFifteen: Lesson/);
-  assert.match(page, /مَلِكٌ/);
-  assert.match(page, /مُتَأَهِّلَاتٌ/);
-  assert.match(page, /أَمَّا \.\.\. فَـ \.\.\./);
+  assert.equal(contentFiles.filter((file) => /^lesson-\d{2}\.ts$/.test(file)).length, 15);
+  assert.match(lessonFifteen, /export const lessonFifteen: Lesson/);
+  assert.match(lessonFifteen, /مَلِكٌ/);
+  assert.match(lessonFifteen, /مُتَأَهِّلَاتٌ/);
+  assert.match(lessonFifteen, /أَمَّا \.\.\. فَـ \.\.\./);
+  assert.match(catalog, /export const rawLessons/);
+  assert.match(page, /import \{ rawLessons, type Lesson, type Question \} from "\.\.\/content"/);
   assert.match(page, /shifahiya-active-session/);
   assert.match(page, /shifahiya-session-\$\{lessonId\}/);
   assert.match(page, /unfinished \? "Продолжить"/);
