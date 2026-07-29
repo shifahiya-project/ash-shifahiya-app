@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Word = { arabic: string; russian: string; note?: string };
 type Question = {
@@ -30,6 +30,26 @@ type SavedSession = {
   score: number;
   mistakes: string[];
 };
+
+type CardProgress = {
+  box: number;
+  nextReview: string;
+  lastReviewed: string;
+  correct: number;
+  wrong: number;
+};
+
+type ReviewCard = {
+  id: string;
+  lessonId: number;
+  prompt: string;
+  answer: string;
+  promptLang: "ar" | "ru";
+  answerLang: "ar" | "ru";
+};
+
+const CARD_PROGRESS_KEY = "shifahiya-card-progress-v1";
+const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
 
 const lessonOne: Lesson = {
   id: 1,
@@ -1022,6 +1042,51 @@ const lessons = [
   lessonFifteen,
 ].map(expandLessonQuestions);
 
+function localDate(daysFromNow = 0) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + daysFromNow);
+  return date.toISOString().slice(0, 10);
+}
+
+function wordCardId(lessonId: number, deckIndex: number, wordIndex: number, direction: "ar-ru" | "ru-ar") {
+  return `lesson-${lessonId}-deck-${deckIndex}-word-${wordIndex}-${direction}`;
+}
+
+const reviewCatalog: ReviewCard[] = lessons.flatMap((lesson) =>
+  lesson.decks.flatMap((deck, deckIndex) =>
+    deck.words.flatMap((word, wordIndex) => [
+      {
+        id: wordCardId(lesson.id, deckIndex, wordIndex, "ar-ru"),
+        lessonId: lesson.id,
+        prompt: word.arabic,
+        answer: word.russian,
+        promptLang: "ar" as const,
+        answerLang: "ru" as const,
+      },
+      {
+        id: wordCardId(lesson.id, deckIndex, wordIndex, "ru-ar"),
+        lessonId: lesson.id,
+        prompt: word.russian,
+        answer: word.arabic,
+        promptLang: "ru" as const,
+        answerLang: "ar" as const,
+      },
+    ]),
+  ),
+);
+
+function nextCardProgress(previous: CardProgress | undefined, remembered: boolean): CardProgress {
+  const box = remembered ? Math.min((previous?.box ?? 0) + 1, REVIEW_INTERVALS.length - 1) : 0;
+  return {
+    box,
+    nextReview: localDate(REVIEW_INTERVALS[box]),
+    lastReviewed: localDate(),
+    correct: (previous?.correct ?? 0) + (remembered ? 1 : 0),
+    wrong: (previous?.wrong ?? 0) + (remembered ? 0 : 1),
+  };
+}
+
 function speak(text: string) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
@@ -1047,7 +1112,7 @@ function shuffle<T>(items: T[]) {
 }
 
 export default function Home() {
-  const [view, setView] = useState<"home" | "learn" | "practice" | "result">("home");
+  const [view, setView] = useState<"home" | "learn" | "practice" | "review" | "result">("home");
   const [lessonId, setLessonId] = useState(1);
   const [deckIndex, setDeckIndex] = useState(0);
   const [round, setRound] = useState(1);
@@ -1059,13 +1124,31 @@ export default function Home() {
   const [mistakes, setMistakes] = useState<string[]>([]);
   const [savedScores, setSavedScores] = useState<Record<number, number>>({});
   const [savedSessions, setSavedSessions] = useState<Record<number, SavedSession>>({});
+  const [cardProgress, setCardProgress] = useState<Record<string, CardProgress>>({});
+  const [reviewQueue, setReviewQueue] = useState<ReviewCard[]>([]);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const [reviewRevealed, setReviewRevealed] = useState(false);
+  const [backupMessage, setBackupMessage] = useState("");
   const [storageReady, setStorageReady] = useState(false);
+  const importInput = useRef<HTMLInputElement>(null);
 
   const lesson = lessons.find((item) => item.id === lessonId) ?? lessonOne;
   const deck = lesson.decks[deckIndex];
   const words = deck.words;
   const currentWord = words[cardIndex];
   const currentQuestion = lesson.questions[questionIndex];
+  const currentReviewCard = reviewQueue[reviewIndex];
+  const dueCards = useMemo(() => {
+    const today = localDate();
+    return reviewCatalog.filter((card) => {
+      const progressItem = cardProgress[card.id];
+      return progressItem && progressItem.nextReview <= today;
+    });
+  }, [cardProgress]);
+  const learnedCards = useMemo(
+    () => Object.values(cardProgress).filter((item) => item.box > 0).length,
+    [cardProgress],
+  );
 
   function restoreSession(session: SavedSession) {
     setLessonId(session.lessonId);
@@ -1098,6 +1181,14 @@ export default function Home() {
     });
     setSavedScores(scores);
     setSavedSessions(sessions);
+    const storedCardProgress = window.localStorage.getItem(CARD_PROGRESS_KEY);
+    if (storedCardProgress) {
+      try {
+        setCardProgress(JSON.parse(storedCardProgress) as Record<string, CardProgress>);
+      } catch {
+        window.localStorage.removeItem(CARD_PROGRESS_KEY);
+      }
+    }
     const storedSession = window.localStorage.getItem("shifahiya-active-session");
     if (storedSession) {
       try {
@@ -1160,6 +1251,104 @@ export default function Home() {
     setSelected(null);
     setRevealed(false);
     setView("learn");
+  }
+
+  function storeCardProgress(updater: (items: Record<string, CardProgress>) => Record<string, CardProgress>) {
+    setCardProgress((items) => {
+      const next = updater(items);
+      window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function rateLearningCard(remembered: boolean) {
+    const forwardId = wordCardId(lesson.id, deckIndex, cardIndex, "ar-ru");
+    const reverseId = wordCardId(lesson.id, deckIndex, cardIndex, "ru-ar");
+    storeCardProgress((items) => ({
+      ...items,
+      [forwardId]: nextCardProgress(items[forwardId], remembered),
+      [reverseId]: items[reverseId] ?? {
+        box: 0,
+        nextReview: localDate(),
+        lastReviewed: "",
+        correct: 0,
+        wrong: 0,
+      },
+    }));
+    nextCard();
+  }
+
+  function startDailyReview() {
+    if (!dueCards.length) {
+      setBackupMessage("На сегодня всё повторено.");
+      return;
+    }
+    setReviewQueue(shuffle(dueCards));
+    setReviewIndex(0);
+    setReviewRevealed(false);
+    setView("review");
+  }
+
+  function rateReviewCard(remembered: boolean) {
+    if (!currentReviewCard) return;
+    storeCardProgress((items) => ({
+      ...items,
+      [currentReviewCard.id]: nextCardProgress(items[currentReviewCard.id], remembered),
+    }));
+    if (!remembered) {
+      setReviewQueue((items) => [...items, currentReviewCard]);
+    }
+    if (reviewIndex < reviewQueue.length - 1 || !remembered) {
+      setReviewIndex((value) => value + 1);
+      setReviewRevealed(false);
+    } else {
+      setView("home");
+      setBackupMessage("Повторение на сегодня завершено.");
+    }
+  }
+
+  function exportProgress() {
+    const payload = {
+      format: "shifahiya-progress",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      scores: savedScores,
+      sessions: savedSessions,
+      cards: cardProgress,
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `shifahiya-progress-${localDate()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setBackupMessage("Резервная копия сохранена.");
+  }
+
+  async function importProgress(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const payload = JSON.parse(await file.text());
+      if (payload.format !== "shifahiya-progress" || payload.version !== 1) throw new Error("Invalid backup");
+      const scores = payload.scores ?? {};
+      const sessions = payload.sessions ?? {};
+      const cards = payload.cards ?? {};
+      Object.entries(scores).forEach(([id, value]) =>
+        window.localStorage.setItem(`shifahiya-lesson-${id}`, String(value)),
+      );
+      Object.entries(sessions).forEach(([id, value]) =>
+        window.localStorage.setItem(`shifahiya-session-${id}`, JSON.stringify(value)),
+      );
+      window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(cards));
+      setSavedScores(scores);
+      setSavedSessions(sessions);
+      setCardProgress(cards);
+      setBackupMessage("Прогресс восстановлен.");
+    } catch {
+      setBackupMessage("Не удалось прочитать файл прогресса.");
+    }
   }
 
   function nextCard() {
@@ -1239,7 +1428,11 @@ export default function Home() {
           <button className="close" onClick={() => setView("home")} aria-label="Закрыть урок">×</button>
           <div className="track"><span style={{ width: `${Math.min(progress, 100)}%` }} /></div>
           <span className="counter">
-            {view === "learn" ? `${cardIndex + 1}/${words.length}` : `${questionIndex + 1}/${lesson.questions.length}`}
+            {view === "learn"
+              ? `${cardIndex + 1}/${words.length}`
+              : view === "review"
+                ? `${Math.min(reviewIndex + 1, reviewQueue.length)}/${reviewQueue.length}`
+                : `${questionIndex + 1}/${lesson.questions.length}`}
           </span>
         </div>
       )}
@@ -1249,6 +1442,29 @@ export default function Home() {
           <div className="eyebrow">Ваш путь · 15 из 100 уроков готовы</div>
           <h1>Учимся через<br /><em>повторение и практику</em></h1>
           <p className="lead">Каждая форма встречается дважды в карточках, затем возвращается в переводах и предложениях. Второй урок продолжает первый и вводит женский род.</p>
+
+          <div className="daily-review">
+            <div>
+              <span className="daily-icon">◷</span>
+              <div>
+                <strong>{dueCards.length ? `${dueCards.length} карточек на сегодня` : "Всё повторено на сегодня"}</strong>
+                <small>{dueCards.length ? `Около ${Math.max(1, Math.ceil(dueCards.length / 4))} мин · трудные формы вернутся в очередь` : `${learnedCards} направлений уже в памяти`}</small>
+              </div>
+            </div>
+            <button className="primary" onClick={startDailyReview} disabled={!dueCards.length}>
+              {dueCards.length ? "Повторить сейчас" : "Готово ✓"}
+            </button>
+          </div>
+
+          <div className="backup-tools">
+            <span>Прогресс хранится на этом устройстве</span>
+            <div>
+              <button className="text-button" onClick={exportProgress}>Сохранить копию</button>
+              <button className="text-button" onClick={() => importInput.current?.click()}>Восстановить</button>
+              <input ref={importInput} type="file" accept="application/json" onChange={importProgress} hidden />
+            </div>
+            {backupMessage && <small>{backupMessage}</small>}
+          </div>
 
           <div className="lesson-list">
             {lessons.map((item) => {
@@ -1299,10 +1515,50 @@ export default function Home() {
             {!revealed ? (
               <button className="primary wide" onClick={() => setRevealed(true)}>Показать перевод</button>
             ) : (
-              <><button className="secondary" onClick={nextCard}>Пока трудно</button><button className="primary" onClick={nextCard}>Запомнил <span>→</span></button></>
+              <><button className="secondary" onClick={() => rateLearningCard(false)}>Пока трудно</button><button className="primary" onClick={() => rateLearningCard(true)}>Запомнил <span>→</span></button></>
             )}
           </div>
           <button className="text-button" onClick={() => speak(currentWord.arabic)}>Прослушать ещё раз</button>
+        </section>
+      )}
+
+      {view === "review" && currentReviewCard && (
+        <section className="study-view">
+          <div className="stage-label"><span>◷</span>Повторение на сегодня</div>
+          <div className="repeat-badge active">
+            Урок {currentReviewCard.lessonId} · {currentReviewCard.promptLang === "ar" ? "арабский → русский" : "русский → арабский"}
+          </div>
+          <p className="instruction">Сначала произнесите ответ самостоятельно, затем откройте его и оцените себя честно</p>
+          <article className={`word-card ${reviewRevealed ? "is-revealed" : ""}`}>
+            <div className="card-ornament">•</div>
+            {currentReviewCard.promptLang === "ar" && (
+              <button className="sound" onClick={() => speak(currentReviewCard.prompt)} aria-label="Прослушать произношение">◖))</button>
+            )}
+            <div
+              className={currentReviewCard.promptLang === "ar" ? "arabic-word" : "review-russian"}
+              lang={currentReviewCard.promptLang === "ar" ? "ar" : "ru"}
+              dir={currentReviewCard.promptLang === "ar" ? "rtl" : "ltr"}
+            >
+              {currentReviewCard.prompt}
+            </div>
+            <div className="divider" />
+            {reviewRevealed ? (
+              <div className={currentReviewCard.answerLang === "ar" ? "review-arabic-answer" : "translation"} dir={currentReviewCard.answerLang === "ar" ? "rtl" : "ltr"}>
+                <strong>{currentReviewCard.answer}</strong>
+                {currentReviewCard.answerLang === "ar" && <button className="mini-inline-sound" onClick={() => speak(currentReviewCard.answer)}>◖))</button>}
+              </div>
+            ) : <div className="hidden-translation">ответ скрыт</div>}
+          </article>
+          <div className="study-actions">
+            {!reviewRevealed ? (
+              <button className="primary wide" onClick={() => setReviewRevealed(true)}>Показать ответ</button>
+            ) : (
+              <>
+                <button className="secondary" onClick={() => rateReviewCard(false)}>Не вспомнил</button>
+                <button className="primary" onClick={() => rateReviewCard(true)}>Вспомнил <span>→</span></button>
+              </>
+            )}
+          </div>
         </section>
       )}
 

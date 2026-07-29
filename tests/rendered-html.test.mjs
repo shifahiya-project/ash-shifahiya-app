@@ -48,6 +48,12 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(page, /shifahiya-session-\$\{lessonId\}/);
   assert.match(page, /unfinished \? "Продолжить"/);
   assert.match(page, /restoreSession\(storedSession\)/);
+  assert.match(page, /shifahiya-card-progress-v1/);
+  assert.match(page, /REVIEW_INTERVALS = \[0, 1, 3, 7, 14, 30\]/);
+  assert.match(page, /Повторить сейчас/);
+  assert.match(page, /rateLearningCard\(false\)/);
+  assert.match(page, /rateReviewCard\(true\)/);
+  assert.match(page, /Сохранить копию/);
   assert.match(page, /shifahiya-lesson-\$\{item\.id\}/);
   assert.match(page, /shuffle\(currentQuestion\?\.options/);
   assert.match(page, /const targetCount = words\.length \* 2/);
