@@ -45,6 +45,9 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(page, /مُتَأَهِّلَاتٌ/);
   assert.match(page, /أَمَّا \.\.\. فَـ \.\.\./);
   assert.match(page, /shifahiya-active-session/);
+  assert.match(page, /shifahiya-session-\$\{lessonId\}/);
+  assert.match(page, /unfinished \? "Продолжить"/);
+  assert.match(page, /restoreSession\(storedSession\)/);
   assert.match(page, /shifahiya-lesson-\$\{item\.id\}/);
   assert.match(page, /shuffle\(currentQuestion\?\.options/);
   assert.match(page, /const targetCount = words\.length \* 2/);
