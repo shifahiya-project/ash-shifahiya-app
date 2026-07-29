@@ -22,6 +22,12 @@ type CardProgress = {
   wrong: number;
 };
 
+type LearningStats = {
+  activeDates: string[];
+  totalSeconds: number;
+  masteredPhrases: string[];
+};
+
 type ReviewCard = {
   id: string;
   lessonId: number;
@@ -32,7 +38,11 @@ type ReviewCard = {
 };
 
 const CARD_PROGRESS_KEY = "shifahiya-card-progress-v1";
+const LEARNING_STATS_KEY = "shifahiya-learning-stats-v1";
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
+const WORD_ACHIEVEMENTS = [10, 50, 100, 250, 500, 1000, 1500, 2000];
+const DAY_ACHIEVEMENTS = [7, 14, 30, 50, 100, 150, 250, 365];
+const EMPTY_STATS: LearningStats = { activeDates: [], totalSeconds: 0, masteredPhrases: [] };
 
 function buildOptions(answer: string, candidates: string[]) {
   const alternatives = [...new Set(candidates)].filter((item) => item !== answer);
@@ -86,6 +96,41 @@ function localDate(daysFromNow = 0) {
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + daysFromNow);
   return date.toISOString().slice(0, 10);
+}
+
+function streaks(activeDates: string[]) {
+  const dates = [...new Set(activeDates)].sort();
+  let longest = 0;
+  let run = 0;
+  let previous = "";
+  for (const date of dates) {
+    const consecutive = previous &&
+      (new Date(`${date}T12:00:00Z`).getTime() - new Date(`${previous}T12:00:00Z`).getTime()) / 86400000 === 1;
+    run = consecutive ? run + 1 : 1;
+    longest = Math.max(longest, run);
+    previous = date;
+  }
+
+  const today = localDate();
+  const yesterday = localDate(-1);
+  if (!dates.length || (dates.at(-1) !== today && dates.at(-1) !== yesterday)) {
+    return { current: 0, longest };
+  }
+  let current = 1;
+  for (let index = dates.length - 1; index > 0; index -= 1) {
+    const difference =
+      (new Date(`${dates[index]}T12:00:00Z`).getTime() - new Date(`${dates[index - 1]}T12:00:00Z`).getTime()) / 86400000;
+    if (difference !== 1) break;
+    current += 1;
+  }
+  return { current, longest };
+}
+
+function formatStudyTime(totalSeconds: number) {
+  if (totalSeconds < 60) return "< 1 мин";
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  return hours ? `${hours} ч ${minutes} мин` : `${minutes} мин`;
 }
 
 function wordCardId(lessonId: number, deckIndex: number, wordIndex: number, direction: "ar-ru" | "ru-ar") {
@@ -164,6 +209,7 @@ export default function Home() {
   const [savedScores, setSavedScores] = useState<Record<number, number>>({});
   const [savedSessions, setSavedSessions] = useState<Record<number, SavedSession>>({});
   const [cardProgress, setCardProgress] = useState<Record<string, CardProgress>>({});
+  const [learningStats, setLearningStats] = useState<LearningStats>(EMPTY_STATS);
   const [reviewQueue, setReviewQueue] = useState<ReviewCard[]>([]);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [reviewRevealed, setReviewRevealed] = useState(false);
@@ -188,6 +234,29 @@ export default function Home() {
     () => Object.values(cardProgress).filter((item) => item.box > 0).length,
     [cardProgress],
   );
+  const wordProgress = useMemo(() => {
+    const wordIds = [...new Set(Object.keys(cardProgress).map((id) => id.replace(/-(ar-ru|ru-ar)$/, "")))];
+    const mastered = wordIds.filter((id) =>
+      cardProgress[`${id}-ar-ru`]?.box === REVIEW_INTERVALS.length - 1 &&
+      cardProgress[`${id}-ru-ar`]?.box === REVIEW_INTERVALS.length - 1,
+    ).length;
+    return { encountered: wordIds.length, mastered };
+  }, [cardProgress]);
+  const studyStreaks = useMemo(() => streaks(learningStats.activeDates), [learningStats.activeDates]);
+  const achievements = useMemo(() => [
+    ...WORD_ACHIEVEMENTS.map((target) => ({
+      id: `words-${target}`,
+      label: `${target} слов`,
+      unlocked: wordProgress.mastered >= target,
+      progress: Math.min(wordProgress.mastered / target, 1),
+    })),
+    ...DAY_ACHIEVEMENTS.map((target) => ({
+      id: `days-${target}`,
+      label: `${target} дней`,
+      unlocked: learningStats.activeDates.length >= target,
+      progress: Math.min(learningStats.activeDates.length / target, 1),
+    })),
+  ], [learningStats.activeDates.length, wordProgress.mastered]);
 
   function restoreSession(session: SavedSession) {
     setLessonId(session.lessonId);
@@ -228,6 +297,14 @@ export default function Home() {
         window.localStorage.removeItem(CARD_PROGRESS_KEY);
       }
     }
+    const storedLearningStats = window.localStorage.getItem(LEARNING_STATS_KEY);
+    if (storedLearningStats) {
+      try {
+        setLearningStats({ ...EMPTY_STATS, ...JSON.parse(storedLearningStats) });
+      } catch {
+        window.localStorage.removeItem(LEARNING_STATS_KEY);
+      }
+    }
     const storedSession = window.localStorage.getItem("shifahiya-active-session");
     if (storedSession) {
       try {
@@ -261,6 +338,25 @@ export default function Home() {
     window.localStorage.setItem(`shifahiya-session-${lessonId}`, JSON.stringify(session));
     setSavedSessions((items) => ({ ...items, [lessonId]: session }));
   }, [storageReady, view, lessonId, deckIndex, round, cardIndex, questionIndex, score, mistakes]);
+
+  useEffect(() => {
+    if (!storageReady || !["learn", "practice", "review"].includes(view)) return;
+    const recordActivity = (seconds: number) => {
+      if (document.visibilityState !== "visible") return;
+      setLearningStats((items) => {
+        const next = {
+          ...items,
+          activeDates: items.activeDates.includes(localDate()) ? items.activeDates : [...items.activeDates, localDate()],
+          totalSeconds: items.totalSeconds + seconds,
+        };
+        window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(next));
+        return next;
+      });
+    };
+    recordActivity(0);
+    const timer = window.setInterval(() => recordActivity(10), 10000);
+    return () => window.clearInterval(timer);
+  }, [storageReady, view]);
 
   const progress =
     view === "practice"
@@ -296,6 +392,14 @@ export default function Home() {
     setCardProgress((items) => {
       const next = updater(items);
       window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function storeLearningStats(updater: (items: LearningStats) => LearningStats) {
+    setLearningStats((items) => {
+      const next = updater(items);
+      window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(next));
       return next;
     });
   }
@@ -354,6 +458,7 @@ export default function Home() {
       scores: savedScores,
       sessions: savedSessions,
       cards: cardProgress,
+      stats: learningStats,
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
     const link = document.createElement("a");
@@ -374,6 +479,7 @@ export default function Home() {
       const scores = payload.scores ?? {};
       const sessions = payload.sessions ?? {};
       const cards = payload.cards ?? {};
+      const stats = { ...EMPTY_STATS, ...(payload.stats ?? {}) };
       Object.entries(scores).forEach(([id, value]) =>
         window.localStorage.setItem(`shifahiya-lesson-${id}`, String(value)),
       );
@@ -381,9 +487,11 @@ export default function Home() {
         window.localStorage.setItem(`shifahiya-session-${id}`, JSON.stringify(value)),
       );
       window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(cards));
+      window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(stats));
       setSavedScores(scores);
       setSavedSessions(sessions);
       setCardProgress(cards);
+      setLearningStats(stats);
       setBackupMessage("Прогресс восстановлен.");
     } catch {
       setBackupMessage("Не удалось прочитать файл прогресса.");
@@ -413,8 +521,20 @@ export default function Home() {
   function answer(option: string) {
     if (selected) return;
     setSelected(option);
-    if (option === currentQuestion.answer) setScore((value) => value + 1);
-    else setMistakes((items) => [...items, currentQuestion.prompt]);
+    if (option === currentQuestion.answer) {
+      setScore((value) => value + 1);
+      const isPhrase = currentQuestion.prompt.trim().split(/\s+/).length > 1 ||
+        currentQuestion.answer.trim().split(/\s+/).length > 1;
+      if (isPhrase) {
+        const phraseId = `lesson-${lesson.id}-question-${questionIndex}`;
+        storeLearningStats((items) => ({
+          ...items,
+          masteredPhrases: items.masteredPhrases.includes(phraseId)
+            ? items.masteredPhrases
+            : [...items.masteredPhrases, phraseId],
+        }));
+      }
+    } else setMistakes((items) => [...items, currentQuestion.prompt]);
   }
 
   function nextQuestion() {
@@ -459,7 +579,7 @@ export default function Home() {
           <span className="brand-mark">ش</span>
           <span><strong>Аш-Шифахия</strong><small>арабский шаг за шагом</small></span>
         </button>
-        <div className="streak" title="Серия занятий"><span>✦</span> 1 день</div>
+        <div className="streak" title="Текущая серия занятий"><span>✦</span> {studyStreaks.current} дн.</div>
       </header>
 
       {view !== "home" && view !== "result" && (
@@ -494,6 +614,40 @@ export default function Home() {
               {dueCards.length ? "Повторить сейчас" : "Готово ✓"}
             </button>
           </div>
+
+          <section className="student-progress" aria-labelledby="student-progress-title">
+            <div className="progress-heading">
+              <div>
+                <span className="eyebrow">Личный прогресс</span>
+                <h2 id="student-progress-title">Ваш путь в цифрах</h2>
+              </div>
+              <small>Статистика обновляется во время занятий</small>
+            </div>
+            <div className="stats-grid">
+              <div><strong>{learningStats.activeDates.length}</strong><span>дней занятий</span></div>
+              <div><strong>{Object.keys(savedScores).length}</strong><span>уроков завершено</span></div>
+              <div><strong>{formatStudyTime(learningStats.totalSeconds)}</strong><span>времени в учёбе</span></div>
+              <div><strong>{wordProgress.encountered}</strong><span>новых слов пройдено</span></div>
+              <div><strong>{wordProgress.mastered}</strong><span>слов выучено</span></div>
+              <div><strong>{learningStats.masteredPhrases.length}</strong><span>фраз освоено</span></div>
+              <div><strong>{studyStreaks.longest}</strong><span>рекорд без перерыва</span></div>
+            </div>
+            <div className="achievements">
+              <div className="achievements-title">
+                <strong>Достижения</strong>
+                <span>{achievements.filter((item) => item.unlocked).length}/{achievements.length} открыто</span>
+              </div>
+              <div className="achievement-list">
+                {achievements.map((item) => (
+                  <div className={`achievement ${item.unlocked ? "unlocked" : ""}`} key={item.id} title={`${Math.round(item.progress * 100)}%`}>
+                    <span>{item.unlocked ? "✓" : "◇"}</span>
+                    <strong>{item.label}</strong>
+                    <i><b style={{ width: `${item.progress * 100}%` }} /></i>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
 
           <div className="backup-tools">
             <span>Прогресс хранится на этом устройстве</span>

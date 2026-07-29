@@ -307,6 +307,34 @@ h1 em { color: var(--green); font-weight: inherit; }
 .backup-tools .text-button { margin: 0; font-size: 11px; }
 .backup-tools > small { color: var(--green); }
 
+.student-progress {
+  margin: 0 0 18px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 16px 45px rgba(24,60,51,.05);
+}
+.progress-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 18px; }
+.progress-heading .eyebrow { display: block; margin-bottom: 4px; }
+.progress-heading h2 { margin: 0; font: 500 27px Georgia, serif; }
+.progress-heading > small { color: var(--ink-soft); }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--line); }
+.stats-grid div { min-height: 92px; padding: 17px 14px; background: rgba(255,255,255,.9); display: flex; flex-direction: column; justify-content: center; }
+.stats-grid strong { color: var(--green); font: 500 24px Georgia, serif; }
+.stats-grid span { margin-top: 5px; color: var(--ink-soft); font-size: 10px; line-height: 1.35; }
+.achievements { margin-top: 22px; }
+.achievements-title { display: flex; justify-content: space-between; margin-bottom: 11px; }
+.achievements-title strong { font: 500 17px Georgia, serif; }
+.achievements-title span { color: var(--ink-soft); font-size: 11px; }
+.achievement-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.achievement { padding: 11px; border: 1px solid var(--line); border-radius: 11px; color: #9a988f; background: rgba(249,247,241,.8); }
+.achievement > span { margin-right: 5px; }
+.achievement > strong { font-size: 11px; }
+.achievement.unlocked { border-color: rgba(197,154,85,.65); color: var(--green); background: var(--mint); }
+.achievement i { display: block; height: 3px; margin-top: 8px; overflow: hidden; border-radius: 4px; background: #e5e1d7; }
+.achievement i b { display: block; height: 100%; border-radius: inherit; background: var(--gold); }
+
 .word-card {
   min-height: 330px;
   position: relative;
@@ -439,6 +467,9 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .daily-review { align-items: stretch; flex-direction: column; }
   .daily-review .primary { width: 100%; }
   .backup-tools { align-items: flex-start; flex-direction: column; }
+  .progress-heading { align-items: flex-start; flex-direction: column; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .achievement-list { grid-template-columns: repeat(2, 1fr); }
   .card-score { top: 10px; right: 10px; }
   .chips { display: none; }
   .lesson-progress, .study-view, .practice-view { width: calc(100% - 28px); }
