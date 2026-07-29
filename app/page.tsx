@@ -629,7 +629,63 @@ const lessonTen: Lesson = {
   ],
 };
 
-const lessons = [lessonOne, lessonTwo, lessonThree, lessonFour, lessonFive, lessonSix, lessonSeven, lessonEight, lessonNine, lessonTen];
+function buildOptions(answer: string, candidates: string[]) {
+  const alternatives = [...new Set(candidates)].filter((item) => item !== answer);
+  return [answer, ...alternatives.slice(0, 2)];
+}
+
+function expandLessonQuestions(lesson: Lesson): Lesson {
+  const words = lesson.decks.flatMap((deck) => deck.words);
+  const targetCount = words.length * 2;
+  if (lesson.questions.length >= targetCount) return lesson;
+
+  const arabicAnswers = words.map((word) => word.arabic);
+  const russianAnswers = words.map((word) => word.russian);
+  const generated = words.flatMap<Question>((word) => [
+    {
+      prompt: word.arabic,
+      promptLang: "ar",
+      answer: word.russian,
+      options: buildOptions(word.russian, russianAnswers),
+      explanation: `${word.arabic} означает «${word.russian}».`,
+    },
+    {
+      prompt: word.russian,
+      promptLang: "ru",
+      answer: word.arabic,
+      options: buildOptions(word.arabic, arabicAnswers),
+      explanation: `${word.arabic} — правильная арабская форма для «${word.russian}».`,
+    },
+  ]);
+
+  const needed = targetCount - lesson.questions.length;
+  const finalCorrection = lesson.questions.at(-1);
+  const contextualQuestions = lesson.questions.slice(0, -1);
+  const expandedQuestions = [
+    ...contextualQuestions,
+    ...generated.slice(0, needed),
+    ...(finalCorrection ? [finalCorrection] : []),
+  ];
+
+  return {
+    ...lesson,
+    description: lesson.description.replace(/\d+ заданий/, `${targetCount} заданий`),
+    questions: expandedQuestions,
+  };
+}
+
+const lessons = [
+  lessonOne,
+  lessonTwo,
+  lessonThree,
+  lessonFour,
+  lessonFive,
+  lessonSix,
+  lessonSeven,
+  lessonEight,
+  lessonNine,
+  lessonTen,
+].map(expandLessonQuestions);
 
 function speak(text: string) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;

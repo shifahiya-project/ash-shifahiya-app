@@ -33,6 +33,7 @@ test("server-renders the Shifahiya course with lesson ten", async () => {
   assert.match(html, /10 из 100 уроков готовы/);
   assert.match(html, /Портной, плотник и кузнец/);
   assert.match(html, /الدَّرْسُ العَاشِرُ/);
+  assert.match(html, /64 заданий/);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 
@@ -46,4 +47,6 @@ test("keeps lesson ten data and local progress support in the app", async () => 
   assert.match(page, /shifahiya-active-session/);
   assert.match(page, /shifahiya-lesson-\$\{item\.id\}/);
   assert.match(page, /shuffle\(currentQuestion\?\.options/);
+  assert.match(page, /const targetCount = words\.length \* 2/);
+  assert.match(page, /\.map\(expandLessonQuestions\)/);
 });
