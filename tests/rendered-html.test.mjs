@@ -67,6 +67,8 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(page, /рекорд без перерыва/);
   assert.match(page, /Продолжить обучение/);
   assert.match(page, /latestSessionPosition/);
+  assert.match(page, /Следующий шаг/);
+  assert.match(page, /recommendedLesson/);
   assert.match(page, /updatedAt: Date\.now\(\)/);
   assert.doesNotMatch(page, /setSavedSessions\(\{ \.\.\.sessions \}\);\s+restoreSession\(session\)/);
   assert.match(page, /shifahiya-lesson-\$\{item\.id\}/);

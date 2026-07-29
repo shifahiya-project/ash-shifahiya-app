@@ -267,6 +267,9 @@ export default function Home() {
   const latestSessionLesson = latestSession
     ? lessons.find((item) => item.id === latestSession.lessonId)
     : undefined;
+  const recommendedLesson = latestSessionLesson ??
+    lessons.find((item) => savedScores[item.id] === undefined) ??
+    lessons.at(-1);
   const latestSessionPosition = latestSession && latestSessionLesson
     ? latestSession.view === "practice"
       ? `Упражнение ${latestSession.questionIndex + 1} из ${latestSessionLesson.questions.length}`
@@ -643,16 +646,21 @@ export default function Home() {
             </button>
           </div>
 
-          {latestSession && latestSessionLesson && (
-            <button className="continue-learning" onClick={() => restoreSession(latestSession)}>
+          {recommendedLesson && (
+            <button
+              className="continue-learning"
+              onClick={() => latestSession && latestSessionLesson
+                ? restoreSession(latestSession)
+                : startLesson(recommendedLesson.id)}
+            >
               <span className="continue-mark">▶</span>
               <span className="continue-copy">
-                <small>Продолжить обучение</small>
-                <strong>Урок {latestSessionLesson.id}. {latestSessionLesson.title}</strong>
-                <em>{latestSessionPosition}</em>
-                <i><b style={{ width: `${Math.min(latestSessionProgress, 100)}%` }} /></i>
+                <small>{latestSession ? "Продолжить обучение" : "Следующий шаг"}</small>
+                <strong>Урок {recommendedLesson.id}. {recommendedLesson.title}</strong>
+                <em>{latestSession ? latestSessionPosition : "Начните урок — прогресс будет сохранён автоматически"}</em>
+                <i><b style={{ width: `${latestSession ? Math.min(latestSessionProgress, 100) : 0}%` }} /></i>
               </span>
-              <span className="continue-action">Продолжить <b>→</b></span>
+              <span className="continue-action">{latestSession ? "Продолжить" : "Начать урок"} <b>→</b></span>
             </button>
           )}
 
