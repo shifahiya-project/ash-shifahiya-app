@@ -23,27 +23,27 @@ async function render() {
   );
 }
 
-test("server-renders the Shifahiya course with lesson twelve", async () => {
+test("server-renders the Shifahiya course with lesson thirteen", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
   assert.match(html, /<title>Аш-Шифахия — арабский шаг за шагом<\/title>/i);
-  assert.match(html, /12 из 100 уроков готовы/);
-  assert.match(html, /Он не большой. Они не маленькие/);
-  assert.match(html, /الدَّرْسُ الثَّانِي عَشَرَ/);
-  assert.match(html, /40 заданий/);
+  assert.match(html, /13 из 100 уроков готовы/);
+  assert.match(html, /Он терпеливый. Она терпеливая/);
+  assert.match(html, /الدَّرْسُ الثَّالِثُ عَشَرَ/);
+  assert.match(html, /56 заданий/);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 
-test("keeps lesson twelve data and local progress support in the app", async () => {
+test("keeps lesson thirteen data and local progress support in the app", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /const lessonTwelve: Lesson/);
-  assert.match(page, /لَيْسُوا/);
-  assert.match(page, /لَسْتُنَّ/);
-  assert.match(page, /لَيْسَ أَحَدٌ بِغَنِيٍّ/);
+  assert.match(page, /const lessonThirteen: Lesson/);
+  assert.match(page, /صَبُورٌ/);
+  assert.match(page, /عُجُلٌ/);
+  assert.match(page, /أَكْثَرُ الرِّجَالِ/);
   assert.match(page, /shifahiya-active-session/);
   assert.match(page, /shifahiya-lesson-\$\{item\.id\}/);
   assert.match(page, /shuffle\(currentQuestion\?\.options/);
