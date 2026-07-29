@@ -12,6 +12,7 @@ type SavedSession = {
   questionIndex: number;
   score: number;
   mistakes: string[];
+  updatedAt?: number;
 };
 
 type CardProgress = {
@@ -257,6 +258,33 @@ export default function Home() {
       progress: Math.min(learningStats.activeDates.length / target, 1),
     })),
   ], [learningStats.activeDates.length, wordProgress.mastered]);
+  const latestSession = useMemo(
+    () => Object.values(savedSessions).sort((a, b) =>
+      (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId),
+    )[0],
+    [savedSessions],
+  );
+  const latestSessionLesson = latestSession
+    ? lessons.find((item) => item.id === latestSession.lessonId)
+    : undefined;
+  const latestSessionPosition = latestSession && latestSessionLesson
+    ? latestSession.view === "practice"
+      ? `Упражнение ${latestSession.questionIndex + 1} из ${latestSessionLesson.questions.length}`
+      : `${latestSessionLesson.decks[latestSession.deckIndex]?.title ?? "Новые слова"} · круг ${latestSession.round} · карточка ${latestSession.cardIndex + 1}`
+    : "";
+  const latestSessionProgress = latestSession && latestSessionLesson
+    ? latestSession.view === "practice"
+      ? 70 + ((latestSession.questionIndex + 1) / latestSessionLesson.questions.length) * 30
+      : (() => {
+          const completedWords = latestSessionLesson.decks
+            .slice(0, latestSession.deckIndex)
+            .reduce((sum, item) => sum + item.words.length * 2, 0);
+          const currentDeckWords = latestSessionLesson.decks[latestSession.deckIndex]?.words.length ?? 1;
+          const position = completedWords + (latestSession.round - 1) * currentDeckWords + latestSession.cardIndex + 1;
+          const total = latestSessionLesson.decks.reduce((sum, item) => sum + item.words.length * 2, 0);
+          return (position / total) * 70;
+        })()
+    : 0;
 
   function restoreSession(session: SavedSession) {
     setLessonId(session.lessonId);
@@ -313,7 +341,6 @@ export default function Home() {
           sessions[session.lessonId] = session;
           window.localStorage.setItem(`shifahiya-session-${session.lessonId}`, JSON.stringify(session));
           setSavedSessions({ ...sessions });
-          restoreSession(session);
         }
       } catch {
         window.localStorage.removeItem("shifahiya-active-session");
@@ -333,6 +360,7 @@ export default function Home() {
       questionIndex,
       score,
       mistakes,
+      updatedAt: Date.now(),
     };
     window.localStorage.setItem("shifahiya-active-session", JSON.stringify(session));
     window.localStorage.setItem(`shifahiya-session-${lessonId}`, JSON.stringify(session));
@@ -614,6 +642,19 @@ export default function Home() {
               {dueCards.length ? "Повторить сейчас" : "Готово ✓"}
             </button>
           </div>
+
+          {latestSession && latestSessionLesson && (
+            <button className="continue-learning" onClick={() => restoreSession(latestSession)}>
+              <span className="continue-mark">▶</span>
+              <span className="continue-copy">
+                <small>Продолжить обучение</small>
+                <strong>Урок {latestSessionLesson.id}. {latestSessionLesson.title}</strong>
+                <em>{latestSessionPosition}</em>
+                <i><b style={{ width: `${Math.min(latestSessionProgress, 100)}%` }} /></i>
+              </span>
+              <span className="continue-action">Продолжить <b>→</b></span>
+            </button>
+          )}
 
           <section className="student-progress" aria-labelledby="student-progress-title">
             <div className="progress-heading">

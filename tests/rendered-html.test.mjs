@@ -65,6 +65,10 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(page, /Ваш путь в цифрах/);
   assert.match(page, /слов выучено/);
   assert.match(page, /рекорд без перерыва/);
+  assert.match(page, /Продолжить обучение/);
+  assert.match(page, /latestSessionPosition/);
+  assert.match(page, /updatedAt: Date\.now\(\)/);
+  assert.doesNotMatch(page, /setSavedSessions\(\{ \.\.\.sessions \}\);\s+restoreSession\(session\)/);
   assert.match(page, /shifahiya-lesson-\$\{item\.id\}/);
   assert.match(page, /shuffle\(currentQuestion\?\.options/);
   assert.match(page, /const targetCount = words\.length \* 2/);

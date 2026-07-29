@@ -302,6 +302,34 @@ h1 em { color: var(--green); font-weight: inherit; }
 .daily-review small { margin-top: 4px; color: var(--ink-soft); }
 .daily-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: var(--green); color: white; font-size: 22px; }
 .daily-review button:disabled { opacity: .55; cursor: default; }
+.continue-learning {
+  width: 100%;
+  margin: 0 0 18px;
+  padding: 20px 22px;
+  border: 1px solid rgba(23,107,85,.32);
+  border-radius: 18px;
+  background: var(--green);
+  color: white;
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 15px 35px rgba(23,107,85,.16);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.continue-learning:hover { transform: translateY(-2px); box-shadow: 0 19px 42px rgba(23,107,85,.22); }
+.continue-mark { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.14); color: var(--gold); }
+.continue-copy { min-width: 0; }
+.continue-copy small, .continue-copy strong, .continue-copy em { display: block; }
+.continue-copy small { margin-bottom: 3px; color: rgba(255,255,255,.68); font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+.continue-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 18px Georgia, serif; }
+.continue-copy em { margin-top: 4px; color: rgba(255,255,255,.72); font-size: 11px; font-style: normal; }
+.continue-copy > i { display: block; height: 4px; margin-top: 10px; overflow: hidden; border-radius: 5px; background: rgba(255,255,255,.16); }
+.continue-copy > i b { display: block; height: 100%; border-radius: inherit; background: var(--gold); }
+.continue-action { font-size: 12px; font-weight: 700; white-space: nowrap; }
+.continue-action b { margin-left: 5px; color: var(--gold); }
 .backup-tools { margin: 0 0 30px; padding: 0 4px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--ink-soft); font-size: 11px; }
 .backup-tools > div { display: flex; gap: 14px; }
 .backup-tools .text-button { margin: 0; font-size: 11px; }
@@ -466,6 +494,9 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .lesson-card .primary { grid-column: 1 / -1; width: 100%; }
   .daily-review { align-items: stretch; flex-direction: column; }
   .daily-review .primary { width: 100%; }
+  .continue-learning { grid-template-columns: 42px 1fr; padding: 18px; }
+  .continue-mark { width: 42px; height: 42px; }
+  .continue-action { grid-column: 1 / -1; width: 100%; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.14); text-align: center; }
   .backup-tools { align-items: flex-start; flex-direction: column; }
   .progress-heading { align-items: flex-start; flex-direction: column; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
