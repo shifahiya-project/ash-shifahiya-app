@@ -46,6 +46,12 @@ import { lessonFortyFive } from "./lesson-45";
 import { lessonFortySix } from "./lesson-46";
 import { lessonFortySeven } from "./lesson-47";
 import { lessonFortyEight } from "./lesson-48";
+import { lessonFortyNine } from "./lesson-49";
+import { lessonFifty } from "./lesson-50";
+import { lessonFiftyOne } from "./lesson-51";
+import { lessonFiftyTwo } from "./lesson-52";
+import { lessonFiftyThree } from "./lesson-53";
+import { lessonFiftyFour } from "./lesson-54";
 
 export type { Lesson, Question, Word } from "./types";
 
@@ -98,4 +104,10 @@ export const rawLessons = [
   lessonFortySix,
   lessonFortySeven,
   lessonFortyEight,
+  lessonFortyNine,
+  lessonFifty,
+  lessonFiftyOne,
+  lessonFiftyTwo,
+  lessonFiftyThree,
+  lessonFiftyFour,
 ];
