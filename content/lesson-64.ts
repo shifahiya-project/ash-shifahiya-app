@@ -1,7 +1,7 @@
 import type { Lesson } from "./types";
 export const lessonSixtyFour: Lesson = {
   id: 64, arabicTitle: "الدَّرْسُ الرَّابِعُ وَالسِّتُّونَ", title: "Числительные от одного до десяти.",
-  description: "Все формы урока · 2 круга повторения", tags: ["Числительные", "Род", "Согласование", "Счёт"],
+  description: "44 формы · 2 круга повторения · 88 заданий", tags: ["Числительные", "Род", "Согласование", "Счёт"],
   decks: [
     { title: "Мужской род", words: [
       { arabic: "وَاحِدٌ", russian: "один" }, { arabic: "اِثْنَانِ", russian: "два" }, { arabic: "ثَلَاثَةٌ", russian: "три" }, { arabic: "أَرْبَعَةٌ", russian: "четыре" }, { arabic: "خَمْسَةٌ", russian: "пять" },

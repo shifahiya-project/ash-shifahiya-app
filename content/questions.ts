@@ -136,14 +136,28 @@ export function buildOptions(answer: string, candidates: Candidate[], deckIndex:
   return [answer, ...picked];
 }
 
-/** "1 задание", "72 задания", "28 заданий". */
-function taskCount(count: number) {
+/** Russian counts agree with the noun: 1 форма, 2 формы, 5 форм. */
+function plural(count: number, one: string, few: string, many: string) {
   const tens = count % 100;
   const ones = count % 10;
-  if (tens >= 11 && tens <= 14) return `${count} заданий`;
-  if (ones === 1) return `${count} задание`;
-  if (ones >= 2 && ones <= 4) return `${count} задания`;
-  return `${count} заданий`;
+  if (tens >= 11 && tens <= 14) return `${count} ${many}`;
+  if (ones === 1) return `${count} ${one}`;
+  if (ones >= 2 && ones <= 4) return `${count} ${few}`;
+  return `${count} ${many}`;
+}
+
+/**
+ * The card subtitle states how much work a lesson is. Both numbers follow from
+ * the decks, so they are recomputed rather than trusted — a hand-written count
+ * left behind by an edit would otherwise mislead the learner.
+ */
+function describeLesson(description: string, wordCount: number, taskCount: number) {
+  const forms = plural(wordCount, "форма", "формы", "форм");
+  const tasks = plural(taskCount, "задание", "задания", "заданий");
+  const rewritten = description
+    .replace(/\d+\s+форм\S*/, forms)
+    .replace(/\d+\s+задани\S*/, tasks);
+  return /задани/.test(rewritten) ? rewritten : `${rewritten} · ${tasks}`;
 }
 
 /**
@@ -189,9 +203,7 @@ export function expandLessonQuestions(lesson: Lesson): Lesson {
 
   return {
     ...lesson,
-    // Matches every Russian plural the descriptions use, so the count is never
-    // left stale by a form the pattern failed to recognise.
-    description: lesson.description.replace(/\d+\s+задани\S*/, taskCount(targetCount)),
+    description: describeLesson(lesson.description, entries.length, targetCount),
     questions: [
       ...contextualQuestions,
       ...generated.slice(0, needed),

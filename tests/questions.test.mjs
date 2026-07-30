@@ -41,12 +41,26 @@ test("every lesson is topped up to two questions per word", () => {
       Math.max(target, rawLessons[index].questions.length),
       `lesson ${lesson.id}`,
     );
-    // Lessons 61+ describe themselves without a task count; where a count is
-    // stated it has to be the count the learner will actually get.
-    if (/\d+\s+задани/.test(rawLessons[index].description)) {
-      assert.match(lesson.description, new RegExp(`\\b${target} задани`), `lesson ${lesson.id}`);
-    }
+    assert.match(lesson.description, new RegExp(`\\b${target} задани`), `lesson ${lesson.id}`);
+    assert.match(
+      lesson.description,
+      new RegExp(`\\b${wordsOf(rawLessons[index]).length} форм`),
+      `lesson ${lesson.id}`,
+    );
   });
+});
+
+test("a description states the counts even when the source forgot them", () => {
+  const lesson = expandLessonQuestions({
+    id: 0,
+    arabicTitle: "",
+    title: "",
+    description: "Все формы урока · 2 круга повторения",
+    tags: [],
+    decks: [{ title: "", words: [{ arabic: "ا", russian: "а" }, { arabic: "ب", russian: "б" }] }],
+    questions: [],
+  });
+  assert.equal(lesson.description, "Все формы урока · 2 круга повторения · 4 задания");
 });
 
 test("the authored correction question stays last", () => {
