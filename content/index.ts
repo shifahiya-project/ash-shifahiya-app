@@ -34,6 +34,7 @@ import { lessonThirtyThree } from "./lesson-33";
 import { lessonThirtyFour } from "./lesson-34";
 import { lessonThirtyFive } from "./lesson-35";
 import { lessonThirtySix } from "./lesson-36";
+import { lessonThirtySeven } from "./lesson-37";
 
 export type { Lesson, Question, Word } from "./types";
 
@@ -74,4 +75,5 @@ export const rawLessons = [
   lessonThirtyFour,
   lessonThirtyFive,
   lessonThirtySix,
+  lessonThirtySeven,
 ];
