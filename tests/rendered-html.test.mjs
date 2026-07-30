@@ -270,7 +270,7 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(lessonNinetyFour, /قَنِعَ، يَقْنَعُ/);
   assert.match(lessonNinetyFive, /طُوبَى لِلطَّلَبَةِ الْمُجْتَهِدِينَ/);
   assert.match(lessonFortyEight, /لَمْ يَقْرَأْ وَلَمْ يَكْتُبْ/);
-  assert.match(lessonFortySix, /الدُّنْيَا فَانِيَةٌ وَالْآخِرَةُ بَاقِيَةٌ/);
+  assert.match(lessonFortySix, /دَارُ الدُّنْيَا فَانِيَةٌ وَدَارُ الْآخِرَةِ بَاقِيَةٌ/);
   assert.match(page, /import \{ rawLessons \} from "\.\.\/content"/);
   assert.match(page, /shifahiya-active-session/);
   assert.match(page, /shifahiya-session-\$\{lessonId\}/);
