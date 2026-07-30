@@ -23,14 +23,14 @@ async function render() {
   );
 }
 
-test("server-renders the Shifahiya course with lesson sixty", async () => {
+test("server-renders the Shifahiya course with lesson sixty-six", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
   assert.match(html, /<title>Аш-Шифахия — арабский шаг за шагом<\/title>/i);
-  assert.match(html, /60 из 100 уроков готовы/);
+  assert.match(html, /66 из 100 уроков готовы/);
   assert.match(html, /Известный правитель и занятый министр/);
   assert.match(html, /الدَّرْسُ الخَامِسُ عَشَرَ/);
   assert.match(html, /48 заданий/);
@@ -88,7 +88,13 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   const lessonFiftyEight = await readFile(new URL("../content/lesson-58.ts", import.meta.url), "utf8");
   const lessonFiftyNine = await readFile(new URL("../content/lesson-59.ts", import.meta.url), "utf8");
   const lessonSixty = await readFile(new URL("../content/lesson-60.ts", import.meta.url), "utf8");
-  assert.equal(contentFiles.filter((file) => /^lesson-\d{2}\.ts$/.test(file)).length, 60);
+  const lessonSixtyOne = await readFile(new URL("../content/lesson-61.ts", import.meta.url), "utf8");
+  const lessonSixtyTwo = await readFile(new URL("../content/lesson-62.ts", import.meta.url), "utf8");
+  const lessonSixtyThree = await readFile(new URL("../content/lesson-63.ts", import.meta.url), "utf8");
+  const lessonSixtyFour = await readFile(new URL("../content/lesson-64.ts", import.meta.url), "utf8");
+  const lessonSixtyFive = await readFile(new URL("../content/lesson-65.ts", import.meta.url), "utf8");
+  const lessonSixtySix = await readFile(new URL("../content/lesson-66.ts", import.meta.url), "utf8");
+  assert.equal(contentFiles.filter((file) => /^lesson-\d{2}\.ts$/.test(file)).length, 66);
   assert.match(lessonFifteen, /export const lessonFifteen: Lesson/);
   assert.match(lessonFifteen, /مَلِكٌ/);
   assert.match(lessonFifteen, /مُتَأَهِّلَاتٌ/);
@@ -199,6 +205,12 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(lessonFiftyEight, /زَرَعَ الْفَلَّاحُ الْبُذُورَ فِي الْحَقْلِ/);
   assert.match(lessonFiftyNine, /الْبَيْتُ مَفْرُوشٌ بِالطَّنَافِسِ/);
   assert.match(lessonSixty, /تَشْرُقُ الشَّمْسُ مِنَ الْمَشْرِقِ/);
+  assert.match(lessonSixtyOne, /الزُّجَاجَةُ شَفَّافَةٌ/);
+  assert.match(lessonSixtyTwo, /السِّكَّةُ الْحَدِيدِيَّةُ/);
+  assert.match(lessonSixtyThree, /مَزَجَ، يَمْزُجُ، الْمَزْجُ/);
+  assert.match(lessonSixtyFour, /ثَلَاثَةُ رِجَالٍ/);
+  assert.match(lessonSixtyFive, /كَمْ كِتَابًا قَرَأْتَ/);
+  assert.match(lessonSixtySix, /أَلْفُ أَلْفٍ/);
   assert.match(lessonFortyEight, /لَمْ يَقْرَأْ وَلَمْ يَكْتُبْ/);
   assert.match(lessonFortySix, /الدُّنْيَا فَانِيَةٌ وَالْآخِرَةُ بَاقِيَةٌ/);
   assert.match(page, /import \{ rawLessons, type Lesson, type Question \} from "\.\.\/content"/);
