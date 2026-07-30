@@ -271,7 +271,7 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(lessonNinetyFive, /طُوبَى لِلطَّلَبَةِ الْمُجْتَهِدِينَ/);
   assert.match(lessonFortyEight, /لَمْ يَقْرَأْ وَلَمْ يَكْتُبْ/);
   assert.match(lessonFortySix, /الدُّنْيَا فَانِيَةٌ وَالْآخِرَةُ بَاقِيَةٌ/);
-  assert.match(page, /import \{ rawLessons, type Lesson, type Question \} from "\.\.\/content"/);
+  assert.match(page, /import \{ rawLessons \} from "\.\.\/content"/);
   assert.match(page, /shifahiya-active-session/);
   assert.match(page, /shifahiya-session-\$\{lessonId\}/);
   assert.match(page, /unfinished \? "Продолжить"/);
@@ -295,6 +295,7 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.doesNotMatch(page, /setSavedSessions\(\{ \.\.\.sessions \}\);\s+restoreSession\(session\)/);
   assert.match(page, /shifahiya-lesson-\$\{item\.id\}/);
   assert.match(page, /shuffle\(currentQuestion\?\.options/);
-  assert.match(page, /const targetCount = words\.length \* 2/);
+  // Question generation itself lives in content/questions.ts and is covered by
+  // tests/questions.test.mjs; the page only has to keep applying it.
   assert.match(page, /\.map\(expandLessonQuestions\)/);
 });
