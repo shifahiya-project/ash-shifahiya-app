@@ -13,6 +13,7 @@ import { lessonTwelve } from "./lesson-12";
 import { lessonThirteen } from "./lesson-13";
 import { lessonFourteen } from "./lesson-14";
 import { lessonFifteen } from "./lesson-15";
+import { lessonSixteen } from "./lesson-16";
 
 export type { Lesson, Question, Word } from "./types";
 
@@ -32,4 +33,5 @@ export const rawLessons = [
   lessonThirteen,
   lessonFourteen,
   lessonFifteen,
+  lessonSixteen,
 ];
