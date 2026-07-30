@@ -23,14 +23,14 @@ async function render() {
   );
 }
 
-test("server-renders the Shifahiya course with lesson twenty-eight", async () => {
+test("server-renders the Shifahiya course with lesson twenty-nine", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
   assert.match(html, /<title>Аш-Шифахия — арабский шаг за шагом<\/title>/i);
-  assert.match(html, /28 из 100 уроков готовы/);
+  assert.match(html, /29 из 100 уроков готовы/);
   assert.match(html, /Известный правитель и занятый министр/);
   assert.match(html, /الدَّرْسُ الخَامِسُ عَشَرَ/);
   assert.match(html, /48 заданий/);
@@ -56,7 +56,8 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   const lessonTwentySix = await readFile(new URL("../content/lesson-26.ts", import.meta.url), "utf8");
   const lessonTwentySeven = await readFile(new URL("../content/lesson-27.ts", import.meta.url), "utf8");
   const lessonTwentyEight = await readFile(new URL("../content/lesson-28.ts", import.meta.url), "utf8");
-  assert.equal(contentFiles.filter((file) => /^lesson-\d{2}\.ts$/.test(file)).length, 28);
+  const lessonTwentyNine = await readFile(new URL("../content/lesson-29.ts", import.meta.url), "utf8");
+  assert.equal(contentFiles.filter((file) => /^lesson-\d{2}\.ts$/.test(file)).length, 29);
   assert.match(lessonFifteen, /export const lessonFifteen: Lesson/);
   assert.match(lessonFifteen, /مَلِكٌ/);
   assert.match(lessonFifteen, /مُتَأَهِّلَاتٌ/);
@@ -101,6 +102,9 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(lessonTwentyEight, /export const lessonTwentyEight: Lesson/);
   assert.match(lessonTwentyEight, /أَشْرِبَةٌ/);
   assert.match(lessonTwentyEight, /لَعِبَ هَذَا الْوَلَدُ/);
+  assert.match(lessonTwentyNine, /export const lessonTwentyNine: Lesson/);
+  assert.match(lessonTwentyNine, /جَرَائِدُ/);
+  assert.match(lessonTwentyNine, /عَمَلِي عَسِيرٌ/);
   assert.match(page, /import \{ rawLessons, type Lesson, type Question \} from "\.\.\/content"/);
   assert.match(page, /shifahiya-active-session/);
   assert.match(page, /shifahiya-session-\$\{lessonId\}/);
