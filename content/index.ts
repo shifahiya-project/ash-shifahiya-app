@@ -16,6 +16,7 @@ import { lessonFifteen } from "./lesson-15";
 import { lessonSixteen } from "./lesson-16";
 import { lessonSeventeen } from "./lesson-17";
 import { lessonEighteen } from "./lesson-18";
+import { lessonNineteen } from "./lesson-19";
 
 export type { Lesson, Question, Word } from "./types";
 
@@ -38,4 +39,5 @@ export const rawLessons = [
   lessonSixteen,
   lessonSeventeen,
   lessonEighteen,
+  lessonNineteen,
 ];
