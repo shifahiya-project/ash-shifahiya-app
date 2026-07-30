@@ -41,3 +41,6 @@ next-env.d.ts
 /outputs/
 /work/
 /tmp/
+
+# Source book PDF. Lives on the `book-source` branch only, never in main.
+/sources/
