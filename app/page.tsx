@@ -629,7 +629,7 @@ export default function Home() {
 
       {view === "home" && (
         <section className="home-view">
-          <div className="eyebrow">Ваш путь · 17 из 100 уроков готовы</div>
+          <div className="eyebrow">Ваш путь · 18 из 100 уроков готовы</div>
           <h1>Учимся через<br /><em>повторение и практику</em></h1>
           <p className="lead">Каждая форма встречается дважды в карточках, затем возвращается в переводах и предложениях. Второй урок продолжает первый и вводит женский род.</p>
 
