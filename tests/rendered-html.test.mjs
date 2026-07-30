@@ -230,8 +230,8 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(lessonFiftyFour, /لِلْحَيَوَانَاتِ فَوَائِدُ كَثِيرَةٌ/);
   assert.match(lessonFiftyFive, /الْقِرْدُ يُشَابِهُ الْإِنْسَانَ/);
   assert.match(lessonFiftySix, /يَجْمَعُ النَّحْلُ الْعَسَلَ مِنَ الْأَزْهَارِ/);
-  assert.match(lessonFiftySeven, /لِلشَّجَرَةِ جُذُورٌ وَأَغْصَانٌ/);
-  assert.match(lessonFiftyEight, /زَرَعَ الْفَلَّاحُ الْبُذُورَ فِي الْحَقْلِ/);
+  assert.match(lessonFiftySeven, /الْفَوَاكِهُ أَثْمَارُ النَّبَاتَاتِ/);
+  assert.match(lessonFiftyEight, /الْفَلَّاحُونَ يَزْرَعُونَ الْحِنْطَةَ فِي مَزَارِعِهِمْ/);
   assert.match(lessonFiftyNine, /الْبَيْتُ مَفْرُوشٌ بِالطَّنَافِسِ/);
   assert.match(lessonSixty, /تَشْرُقُ الشَّمْسُ مِنَ الْمَشْرِقِ/);
   assert.match(lessonSixtyOne, /الزُّجَاجَةُ شَفَّافَةٌ/);
