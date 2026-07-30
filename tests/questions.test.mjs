@@ -182,6 +182,19 @@ test("the known-duplicate list stays honest", () => {
   }
 });
 
+// A stray character from another script in a gloss is invisible in review but
+// reaches the learner as the answer to a card.
+test("glosses are Russian, Arabic is Arabic", () => {
+  const RUSSIAN_GLOSS = /^[Ѐ-ӿ\s\d.,()/«»—–\-:;!?"'ʼ]+$/;
+  const ARABIC_FORM = /^[؀-ۿ\s.,()/؟،:—\-]+$/;
+  for (const lesson of rawLessons) {
+    for (const word of wordsOf(lesson)) {
+      assert.match(word.russian, RUSSIAN_GLOSS, `lesson ${lesson.id}: gloss "${word.russian}"`);
+      assert.match(word.arabic, ARABIC_FORM, `lesson ${lesson.id}: form "${word.arabic}"`);
+    }
+  }
+});
+
 test("generation is deterministic", () => {
   const again = rawLessons.map(expandLessonQuestions);
   assert.deepEqual(again, expanded);
