@@ -255,15 +255,26 @@ h1 em { color: var(--green); font-weight: inherit; }
 .lesson-progress {
   width: min(760px, calc(100% - 40px));
   margin: 28px auto 0;
-  display: grid;
-  grid-template-columns: 32px 1fr 42px;
+  display: flex;
   gap: 14px;
   align-items: center;
 }
-.close { border: 0; background: transparent; color: var(--ink-soft); font-size: 24px; cursor: pointer; }
-.track { height: 7px; border-radius: 10px; background: #e5e1d7; overflow: hidden; }
+.part-badge {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid rgba(23,107,85,.22);
+  background: var(--mint);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.close { flex: none; width: 32px; border: 0; background: transparent; color: var(--ink-soft); font-size: 24px; cursor: pointer; }
+.track { flex: 1; height: 7px; border-radius: 10px; background: #e5e1d7; overflow: hidden; }
 .track span { display: block; height: 100%; background: linear-gradient(90deg, var(--green), #68a58a); border-radius: inherit; transition: width .3s ease; }
-.counter { color: var(--ink-soft); font-size: 11px; }
+.counter { flex: none; color: var(--ink-soft); font-size: 11px; white-space: nowrap; }
 
 .study-view, .practice-view {
   width: min(660px, calc(100% - 40px));
@@ -504,6 +515,7 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .card-score { top: 10px; right: 10px; }
   .chips { display: none; }
   .lesson-progress, .study-view, .practice-view { width: calc(100% - 28px); }
+  .part-badge { padding: 3px 8px; font-size: 9px; }
   .word-card { min-height: 310px; padding-left: 18px; padding-right: 18px; }
   .arabic-word { font-size: 70px; }
   .feedback { align-items: stretch; flex-direction: column; }

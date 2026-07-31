@@ -6,6 +6,7 @@ import { loadLessons } from "../content/lessons";
 import { plural } from "../content/questions";
 import type { Lesson } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
+import { lessonParts } from "../content/lesson-parts";
 import {
   EMPTY_STATS,
   progressStore,
@@ -143,6 +144,7 @@ function shuffle<T>(items: T[]) {
 export default function Home() {
   const [view, setView] = useState<"home" | "learn" | "practice" | "review" | "result">("home");
   const [lessonId, setLessonId] = useState(1);
+  const [partIndex, setPartIndex] = useState(0);
   const [deckIndex, setDeckIndex] = useState(0);
   const [round, setRound] = useState(1);
   const [cardIndex, setCardIndex] = useState(0);
@@ -169,6 +171,8 @@ export default function Home() {
   const learningStats = stored.stats;
 
   const lesson = openLessons[lessonId];
+  const parts = useMemo(() => (lesson ? lessonParts(lesson) : []), [lesson]);
+  const part = parts[partIndex] ?? parts[0];
   const deck = lesson?.decks[deckIndex];
   const words = deck?.words ?? [];
   const currentWord = words[cardIndex];
@@ -255,7 +259,7 @@ export default function Home() {
     ? latestSession.view === "practice"
       ? 70 + ((latestSession.questionIndex + 1) / latestSessionLesson.questions.length) * 30
       : cardPhaseProgress(
-          latestSessionLesson,
+          latestSessionLesson.decks,
           latestSession.deckIndex,
           latestSession.round,
           latestSession.cardIndex,
@@ -266,6 +270,7 @@ export default function Home() {
   async function restoreSession(session: SavedSession) {
     await openLessonsById([session.lessonId]);
     setLessonId(session.lessonId);
+    setPartIndex(session.partIndex ?? 0);
     setDeckIndex(session.deckIndex);
     setRound(session.round);
     setCardIndex(session.cardIndex);
@@ -301,6 +306,7 @@ export default function Home() {
     progressStore.saveSession({
       view,
       lessonId,
+      partIndex,
       deckIndex,
       round,
       cardIndex,
@@ -309,7 +315,7 @@ export default function Home() {
       mistakes,
       updatedAt: Date.now(),
     });
-  }, [view, lessonId, deckIndex, round, cardIndex, questionIndex, score, mistakes]);
+  }, [view, lessonId, partIndex, deckIndex, round, cardIndex, questionIndex, score, mistakes]);
 
   useEffect(() => {
     if (!["learn", "practice", "review"].includes(view)) return;
@@ -328,11 +334,18 @@ export default function Home() {
     return () => window.clearInterval(timer);
   }, [view]);
 
-  const progress = !lesson
+  const progress = !lesson || !part
     ? 0
     : view === "practice"
-      ? ((questionIndex + (selected ? 1 : 0)) / lesson.questions.length) * 100
-      : cardPhaseProgress(lesson, deckIndex, round, cardIndex, revealed ? 1 : 0) * 100;
+      ? ((questionIndex - part.questionStart + (selected ? 1 : 0)) /
+          (part.questionEnd - part.questionStart)) * 100
+      : cardPhaseProgress(
+          lesson.decks.slice(part.deckStart, part.deckEnd),
+          deckIndex - part.deckStart,
+          round,
+          cardIndex,
+          revealed ? 1 : 0,
+        ) * 100;
 
   // Re-shuffles whenever the question changes, which is the only thing it reads.
   const options = useMemo(() => shuffle(currentQuestion?.options ?? []), [currentQuestion]);
@@ -345,6 +358,7 @@ export default function Home() {
     }
     await openLessonsById([id]);
     setLessonId(id);
+    setPartIndex(0);
     setDeckIndex(0);
     setRound(1);
     setCardIndex(0);
@@ -441,21 +455,19 @@ export default function Home() {
   }
 
   function nextCard() {
-    if (!lesson) return;
+    if (!lesson || !part) return;
     if (cardIndex < words.length - 1) {
       setCardIndex((value) => value + 1);
     } else if (round === 1) {
       setRound(2);
       setCardIndex(0);
-    } else if (deckIndex < lesson.decks.length - 1) {
+    } else if (deckIndex < part.deckEnd - 1) {
       setDeckIndex((value) => value + 1);
       setRound(1);
       setCardIndex(0);
     } else {
-      setQuestionIndex(0);
+      setQuestionIndex(part.questionStart);
       setSelected(null);
-      setScore(0);
-      setMistakes([]);
       setView("practice");
     }
     setRevealed(false);
@@ -481,14 +493,46 @@ export default function Home() {
   }
 
   function nextQuestion() {
-    if (!lesson) return;
-    if (questionIndex < lesson.questions.length - 1) {
+    if (!lesson || !part) return;
+    if (questionIndex < part.questionEnd - 1) {
       setQuestionIndex((value) => value + 1);
       setSelected(null);
       return;
     }
-    progressStore.finishLesson(lesson.id, score);
+
+    const following = parts[partIndex + 1];
+    if (following) {
+      // Leaving from the result screen must not lose the part just finished, so
+      // the next part is parked as a resumable session right away.
+      progressStore.saveSession({
+        view: "learn",
+        lessonId: lesson.id,
+        partIndex: following.index,
+        deckIndex: following.deckStart,
+        round: 1,
+        cardIndex: 0,
+        questionIndex: following.questionStart,
+        score,
+        mistakes,
+        updatedAt: Date.now(),
+      });
+    } else {
+      progressStore.finishLesson(lesson.id, score);
+    }
     setView("result");
+  }
+
+  function startPart(index: number) {
+    const following = parts[index];
+    if (!following) return;
+    setPartIndex(index);
+    setDeckIndex(following.deckStart);
+    setRound(1);
+    setCardIndex(0);
+    setQuestionIndex(following.questionStart);
+    setSelected(null);
+    setRevealed(false);
+    setView("learn");
   }
 
   function resetLesson() {
@@ -510,13 +554,16 @@ export default function Home() {
       {view !== "home" && view !== "result" && (
         <div className="lesson-progress" aria-label="Прогресс урока">
           <button className="close" onClick={() => setView("home")} aria-label="Закрыть урок">×</button>
+          {parts.length > 1 && view !== "review" && (
+            <span className="part-badge">Часть {partIndex + 1} из {parts.length}</span>
+          )}
           <div className="track"><span style={{ width: `${Math.min(progress, 100)}%` }} /></div>
           <span className="counter">
             {view === "learn"
               ? `${cardIndex + 1}/${words.length}`
               : view === "review"
                 ? `${Math.min(reviewIndex + 1, reviewQueue.length)}/${reviewQueue.length}`
-                : `${questionIndex + 1}/${lesson.questions.length}`}
+                : `${questionIndex - (part?.questionStart ?? 0) + 1}/${(part?.questionEnd ?? 0) - (part?.questionStart ?? 0)}`}
           </span>
         </div>
       )}
@@ -612,7 +659,7 @@ export default function Home() {
                   <div className="lesson-copy">
                     <div className="lesson-label">Урок {item.id} · <span dir="rtl">{item.arabicTitle}</span></div>
                     <h2>{item.title}</h2>
-                    <p>{item.description}</p>
+                    <p>{item.description}{item.partCount > 1 ? ` · в ${item.partCount} части` : ""}</p>
                     <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
                   </div>
                   <button className="primary" onClick={() => startLesson(item.id)}>
@@ -709,6 +756,7 @@ export default function Home() {
           <div className="stage-label"><span>3</span>Закрепляем в заданиях</div>
           <div className="repeat-badge active">Слова возвращаются в обе стороны перевода</div>
           <p className="instruction">{questionIndex === lesson.questions.length - 1 ? "Найдите и исправьте ошибку" : "Выберите правильный ответ"}</p>
+          {parts.length > 1 && <div className="repeat-badge">Задания части {partIndex + 1} из {parts.length}</div>}
           <div className="prompt-card">
             <span>{currentQuestion.promptLang === "ar" ? "Арабский" : "Русский"}</span>
             <strong className={currentQuestion.promptLang === "ar" ? "arabic-prompt" : ""} dir={currentQuestion.promptLang === "ar" ? "rtl" : "ltr"}>{currentQuestion.prompt}</strong>
@@ -728,32 +776,60 @@ export default function Home() {
           {selected && (
             <div className={`feedback ${selected === currentQuestion.answer ? "good" : "bad"}`}>
               <div><strong>{selected === currentQuestion.answer ? "Верно!" : "Почти получилось"}</strong><p>{currentQuestion.explanation}</p></div>
-              <button className="primary" onClick={nextQuestion}>{questionIndex === lesson.questions.length - 1 ? "Результат" : "Дальше"} <span>→</span></button>
+              <button className="primary" onClick={nextQuestion}>{questionIndex === (part?.questionEnd ?? 0) - 1 ? "Результат" : "Дальше"} <span>→</span></button>
             </div>
           )}
         </section>
       )}
 
-      {view === "result" && lesson && (
-        <section className="result-view">
-          <div className="result-mark">✓</div>
-          <div className="eyebrow">Урок {lesson.id} завершён</div>
-          <h1>{score >= Math.ceil(lesson.questions.length * 0.75) ? "Материал закреплён!" : "Хороший результат"}</h1>
-          <p>{score >= Math.ceil(lesson.questions.length * 0.75) ? "Вы дважды повторили формы и применили их в предложениях. Завтра они вернутся в коротком повторении." : "Ошибочные формы стоит пройти ещё раз — повторение займёт всего несколько минут."}</p>
-          <div className="result-grid">
-            <div><strong>{score}/{lesson.questions.length}</strong><span>верных ответов</span></div>
-            <div><strong>{Math.round((score / lesson.questions.length) * 100)}%</strong><span>точность</span></div>
-            <div><strong>{mistakes.length}</strong><span>форм повторить</span></div>
-          </div>
-          <div className="review-note"><span>◷</span><div><strong>Следующее повторение — завтра</strong><small>Слова, фразы и ваши ошибки · около 3 минут</small></div></div>
-          <div className="result-actions">
-            <button className="secondary" onClick={resetLesson}>Сбросить результат</button>
-            {nextLesson
-              ? <button className="primary" onClick={() => startLesson(nextLesson.id)}>Перейти к уроку {nextLesson.id} <span>→</span></button>
-              : <button className="primary" onClick={() => setView("home")}>Вернуться к курсу <span>→</span></button>}
-          </div>
-        </section>
-      )}
+      {view === "result" && lesson && part && (() => {
+        // A part's result counts everything answered in the lesson so far, so the
+        // halves add up instead of restarting the score.
+        const answered = part.questionEnd;
+        const remaining = parts[partIndex + 1];
+        const strong = score >= Math.ceil(answered * 0.75);
+        return (
+          <section className="result-view">
+            <div className="result-mark">✓</div>
+            <div className="eyebrow">
+              {remaining
+                ? `Урок ${lesson.id} · часть ${partIndex + 1} из ${parts.length} пройдена`
+                : `Урок ${lesson.id} завершён`}
+            </div>
+            <h1>{strong ? "Материал закреплён!" : "Хороший результат"}</h1>
+            <p>
+              {remaining
+                ? "Вторая часть вводит остальные формы урока. Можно продолжить сейчас или вернуться позже — место сохранено."
+                : strong
+                  ? "Вы дважды повторили формы и применили их в предложениях. Завтра они вернутся в коротком повторении."
+                  : "Ошибочные формы стоит пройти ещё раз — повторение займёт всего несколько минут."}
+            </p>
+            <div className="result-grid">
+              <div><strong>{score}/{answered}</strong><span>верных ответов</span></div>
+              <div><strong>{Math.round((score / answered) * 100)}%</strong><span>точность</span></div>
+              <div><strong>{mistakes.length}</strong><span>форм повторить</span></div>
+            </div>
+            <div className="review-note"><span>◷</span><div><strong>Следующее повторение — завтра</strong><small>Слова, фразы и ваши ошибки · около 3 минут</small></div></div>
+            <div className="result-actions">
+              {remaining ? (
+                <>
+                  <button className="secondary" onClick={() => setView("home")}>Вернуться позже</button>
+                  <button className="primary" onClick={() => startPart(remaining.index)}>
+                    Часть {remaining.index + 1} <span>→</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="secondary" onClick={resetLesson}>Сбросить результат</button>
+                  {nextLesson
+                    ? <button className="primary" onClick={() => startLesson(nextLesson.id)}>Перейти к уроку {nextLesson.id} <span>→</span></button>
+                    : <button className="primary" onClick={() => setView("home")}>Вернуться к курсу <span>→</span></button>}
+                </>
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       <footer><span>Учимся осмысленно, повторяем вовремя</span><span lang="ar" dir="rtl">العِلْمُ بِالتَّعَلُّمِ</span></footer>
     </main>

@@ -35,15 +35,15 @@ function walk() {
 
 test("progress runs from zero to one across the whole lesson", () => {
   const steps = walk();
-  assert.equal(cardPhaseProgress(lesson, 0, 1, 0, 0), 0);
+  assert.equal(cardPhaseProgress(lesson.decks, 0, 1, 0, 0), 0);
   const last = steps.at(-1);
-  assert.equal(cardPhaseProgress(lesson, last.deckIndex, last.round, last.cardIndex, 1), 1);
+  assert.equal(cardPhaseProgress(lesson.decks, last.deckIndex, last.round, last.cardIndex, 1), 1);
 });
 
 test("progress never goes backwards, including at deck boundaries", () => {
   let previous = -1;
   for (const step of walk()) {
-    const value = cardPhaseProgress(lesson, step.deckIndex, step.round, step.cardIndex, 1);
+    const value = cardPhaseProgress(lesson.decks, step.deckIndex, step.round, step.cardIndex, 1);
     assert.ok(
       value > previous,
       `deck ${step.deckIndex} round ${step.round} card ${step.cardIndex}: ${value} after ${previous}`,
@@ -55,7 +55,7 @@ test("progress never goes backwards, including at deck boundaries", () => {
 test("every card advances the bar by the same amount", () => {
   const steps = walk();
   const values = steps.map((step) =>
-    cardPhaseProgress(lesson, step.deckIndex, step.round, step.cardIndex, 1),
+    cardPhaseProgress(lesson.decks, step.deckIndex, step.round, step.cardIndex, 1),
   );
   const deltas = values.slice(1).map((value, index) => value - values[index]);
   const expected = 1 / steps.length;
@@ -68,5 +68,5 @@ test("every card advances the bar by the same amount", () => {
 });
 
 test("a lesson without words does not divide by zero", () => {
-  assert.equal(cardPhaseProgress({ ...lesson, decks: [] }, 0, 1, 0, 0), 0);
+  assert.equal(cardPhaseProgress([], 0, 1, 0, 0), 0);
 });

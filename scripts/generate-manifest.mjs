@@ -3,6 +3,7 @@
 import { readdir, writeFile } from "node:fs/promises";
 
 import { expandLessonQuestions } from "../content/questions.ts";
+import { partCount } from "../content/lesson-parts.ts";
 
 const contentDirectory = new URL("../content/", import.meta.url);
 
@@ -21,6 +22,7 @@ const summaries = await Promise.all(
       description: lesson.description,
       tags: lesson.tags,
       questionCount: lesson.questions.length,
+      partCount: partCount(lesson),
     };
   }),
 );
@@ -35,6 +37,7 @@ const entries = summaries
       `    description: ${JSON.stringify(summary.description)},\n` +
       `    tags: [${summary.tags.map((tag) => JSON.stringify(tag)).join(", ")}],\n` +
       `    questionCount: ${summary.questionCount},\n` +
+      `    partCount: ${summary.partCount},\n` +
       `  },`,
   )
   .join("\n");
@@ -53,6 +56,8 @@ export type LessonSummary = {
   description: string;
   tags: string[];
   questionCount: number;
+  /** 2 for a lesson long enough to be taught in halves, otherwise 1. */
+  partCount: number;
 };
 
 export const lessonSummaries: LessonSummary[] = [

@@ -3,6 +3,8 @@ import { lessonSummaries } from "../content/manifest";
 export type SavedSession = {
   view: "learn" | "practice";
   lessonId: number;
+  /** Which half of a long lesson the learner is in; 0 for a one-part lesson. */
+  partIndex: number;
   deckIndex: number;
   round: number;
   cardIndex: number;
