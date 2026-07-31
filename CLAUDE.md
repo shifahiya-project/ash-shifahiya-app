@@ -39,6 +39,7 @@ app/page.tsx        всё приложение: один "use client" комп�
 app/globals.css     вся вёрстка вручную (~520 строк), мобильные брейкпоинты 720/420
 app/layout.tsx      lang="ru", метаданные
 app/progress-store.ts   прогресс в localStorage через useSyncExternalStore
+app/lesson-progress.ts  доля пройденных карточек урока (чистая функция)
 app/chatgpt-auth.ts хелперы Sign in with ChatGPT (пока нигде не вызываются)
 content/            lesson-01..95.ts, types.ts — учебные данные
 content/questions.ts    генерация вопросов и подбор дистракторов (чистый модуль)
@@ -47,7 +48,7 @@ content/lessons.ts      ленивая загрузка урока по id че�
 scripts/            generate-manifest.mjs — пересборка манифеста
 worker/index.ts     точка входа Worker: /_vinext/image + vinext handler
 build/              vite-плагин, копирующий .openai/ и drizzle/ в dist/
-tests/              rendered-html (SSR) и questions (генератор вопросов)
+tests/              rendered-html (SSR), questions (генератор), lesson-progress
 db/, examples/d1/   неиспользуемый скаффолдинг стартера (D1 не подключён)
 ```
 
@@ -227,13 +228,8 @@ git reset sources/     # чтобы не утащить PDF в коммит ра
 
 ## Известные проблемы (актуальный техдолг)
 
-1. **Прогресс-бар режима `learn`** считает по длине текущей колоды, хотя колоды
-   разного размера — шкала прыгает между колодами.
-2. **`lessonId < lessonSummaries.length`** в кнопке «следующий урок» верно
-   только пока id идут подряд 1..N.
-3. **Регулярка `^lesson-\d{2}\.ts$`** в тесте не поймает `lesson-100.ts`.
-4. **Нет favicon** — каждый заход даёт 404 на `/favicon.ico` в консоли.
-5. Неиспользуемый скаффолдинг стартера: `db/`, `examples/d1/`, `drizzle/`,
+1. **Нет favicon** — каждый заход даёт 404 на `/favicon.ico` в консоли.
+2. Неиспользуемый скаффолдинг стартера: `db/`, `examples/d1/`, `drizzle/`,
    `drizzle.config.ts`, `public/*.svg`.
 
 ## Принятые решения

@@ -123,7 +123,7 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   const lessonNinetyThree = await readFile(new URL("../content/lesson-93.ts", import.meta.url), "utf8");
   const lessonNinetyFour = await readFile(new URL("../content/lesson-94.ts", import.meta.url), "utf8");
   const lessonNinetyFive = await readFile(new URL("../content/lesson-95.ts", import.meta.url), "utf8");
-  assert.equal(contentFiles.filter((file) => /^lesson-\d{2}\.ts$/.test(file)).length, 95);
+  assert.equal(contentFiles.filter((file) => /^lesson-\d+\.ts$/.test(file)).length, 95);
   assert.match(lessonFifteen, /export const lessonFifteen: Lesson/);
   assert.match(lessonFifteen, /مَلِكٌ/);
   assert.match(lessonFifteen, /مُتَأَهِّلَاتٌ/);

@@ -5,6 +5,7 @@ import { lessonSummaries } from "../content/manifest";
 import { loadLessons } from "../content/lessons";
 import { plural } from "../content/questions";
 import type { Lesson } from "../content/types";
+import { cardPhaseProgress } from "./lesson-progress";
 import {
   EMPTY_STATS,
   progressStore,
@@ -236,6 +237,8 @@ export default function Home() {
     )[0],
     [savedSessions],
   );
+  // The course order is the manifest order, which need not be a run of 1..N.
+  const nextLesson = lessonSummaries[lessonSummaries.findIndex((item) => item.id === lessonId) + 1];
   const latestSessionLesson = latestSession ? openLessons[latestSession.lessonId] : undefined;
   const latestSessionSummary = latestSession
     ? lessonSummaries.find((item) => item.id === latestSession.lessonId)
@@ -251,15 +254,13 @@ export default function Home() {
   const latestSessionProgress = latestSession && latestSessionLesson
     ? latestSession.view === "practice"
       ? 70 + ((latestSession.questionIndex + 1) / latestSessionLesson.questions.length) * 30
-      : (() => {
-          const completedWords = latestSessionLesson.decks
-            .slice(0, latestSession.deckIndex)
-            .reduce((sum, item) => sum + item.words.length * 2, 0);
-          const currentDeckWords = latestSessionLesson.decks[latestSession.deckIndex]?.words.length ?? 1;
-          const position = completedWords + (latestSession.round - 1) * currentDeckWords + latestSession.cardIndex + 1;
-          const total = latestSessionLesson.decks.reduce((sum, item) => sum + item.words.length * 2, 0);
-          return (position / total) * 70;
-        })()
+      : cardPhaseProgress(
+          latestSessionLesson,
+          latestSession.deckIndex,
+          latestSession.round,
+          latestSession.cardIndex,
+          1,
+        ) * 70
     : 0;
 
   async function restoreSession(session: SavedSession) {
@@ -331,9 +332,7 @@ export default function Home() {
     ? 0
     : view === "practice"
       ? ((questionIndex + (selected ? 1 : 0)) / lesson.questions.length) * 100
-      : (((deckIndex * 2 + round - 1) * words.length + cardIndex + (revealed ? 1 : 0)) /
-          (lesson.decks.length * 2 * words.length)) *
-        100;
+      : cardPhaseProgress(lesson, deckIndex, round, cardIndex, revealed ? 1 : 0) * 100;
 
   // Re-shuffles whenever the question changes, which is the only thing it reads.
   const options = useMemo(() => shuffle(currentQuestion?.options ?? []), [currentQuestion]);
@@ -749,8 +748,8 @@ export default function Home() {
           <div className="review-note"><span>◷</span><div><strong>Следующее повторение — завтра</strong><small>Слова, фразы и ваши ошибки · около 3 минут</small></div></div>
           <div className="result-actions">
             <button className="secondary" onClick={resetLesson}>Сбросить результат</button>
-            {lessonId < lessonSummaries.length
-              ? <button className="primary" onClick={() => startLesson(lesson.id + 1)}>Перейти к уроку {lesson.id + 1} <span>→</span></button>
+            {nextLesson
+              ? <button className="primary" onClick={() => startLesson(nextLesson.id)}>Перейти к уроку {nextLesson.id} <span>→</span></button>
               : <button className="primary" onClick={() => setView("home")}>Вернуться к курсу <span>→</span></button>}
           </div>
         </section>
