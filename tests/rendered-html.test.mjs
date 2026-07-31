@@ -39,6 +39,7 @@ test("server-renders the Shifahiya course with lesson ninety-five", async () => 
 
 test("keeps lesson fifteen data and local progress support in the app", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const store = await readFile(new URL("../app/progress-store.ts", import.meta.url), "utf8");
   const lessonFifteen = await readFile(new URL("../content/lesson-15.ts", import.meta.url), "utf8");
   const contentFiles = await readdir(new URL("../content/", import.meta.url));
 
@@ -271,17 +272,17 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(lessonFortySix, /دَارُ الدُّنْيَا فَانِيَةٌ وَدَارُ الْآخِرَةِ بَاقِيَةٌ/);
   assert.match(page, /import \{ lessonSummaries \} from "\.\.\/content\/manifest"/);
   assert.match(page, /import \{ loadLessons \} from "\.\.\/content\/lessons"/);
-  assert.match(page, /shifahiya-active-session/);
-  assert.match(page, /shifahiya-session-\$\{lessonId\}/);
+  assert.match(store, /shifahiya-active-session/);
+  assert.match(store, /shifahiya-session-\$\{id\}/);
   assert.match(page, /unfinished \? "Продолжить"/);
   assert.match(page, /restoreSession\(storedSession\)/);
-  assert.match(page, /shifahiya-card-progress-v1/);
+  assert.match(store, /shifahiya-card-progress-v1/);
   assert.match(page, /REVIEW_INTERVALS = \[0, 1, 3, 7, 14, 30\]/);
   assert.match(page, /Повторить сейчас/);
   assert.match(page, /rateLearningCard\(false\)/);
   assert.match(page, /rateReviewCard\(true\)/);
   assert.match(page, /Сохранить копию/);
-  assert.match(page, /shifahiya-learning-stats-v1/);
+  assert.match(store, /shifahiya-learning-stats-v1/);
   assert.match(page, /WORD_ACHIEVEMENTS = \[10, 50, 100, 250, 500, 1000, 1500, 2000\]/);
   assert.match(page, /Ваш путь в цифрах/);
   assert.match(page, /слов выучено/);
@@ -292,8 +293,9 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(page, /recommendedLesson/);
   assert.match(page, /updatedAt: Date\.now\(\)/);
   assert.doesNotMatch(page, /setSavedSessions\(\{ \.\.\.sessions \}\);\s+restoreSession\(session\)/);
-  assert.match(page, /shifahiya-lesson-\$\{item\.id\}/);
+  assert.match(store, /shifahiya-lesson-\$\{id\}/);
   assert.match(page, /shuffle\(currentQuestion\?\.options/);
+  assert.match(page, /useSyncExternalStore/);
   // Question generation lives in content/questions.ts and is covered by
   // tests/questions.test.mjs; the page only has to keep loading lessons lazily.
   assert.match(page, /openLessonsById/);

@@ -1,35 +1,16 @@
 "use client";
 
-import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { lessonSummaries } from "../content/manifest";
 import { loadLessons } from "../content/lessons";
+import { plural } from "../content/questions";
 import type { Lesson } from "../content/types";
-
-type SavedSession = {
-  view: "learn" | "practice";
-  lessonId: number;
-  deckIndex: number;
-  round: number;
-  cardIndex: number;
-  questionIndex: number;
-  score: number;
-  mistakes: string[];
-  updatedAt?: number;
-};
-
-type CardProgress = {
-  box: number;
-  nextReview: string;
-  lastReviewed: string;
-  correct: number;
-  wrong: number;
-};
-
-type LearningStats = {
-  activeDates: string[];
-  totalSeconds: number;
-  masteredPhrases: string[];
-};
+import {
+  EMPTY_STATS,
+  progressStore,
+  type CardProgress,
+  type SavedSession,
+} from "./progress-store";
 
 type ReviewCard = {
   id: string;
@@ -40,12 +21,9 @@ type ReviewCard = {
   answerLang: "ar" | "ru";
 };
 
-const CARD_PROGRESS_KEY = "shifahiya-card-progress-v1";
-const LEARNING_STATS_KEY = "shifahiya-learning-stats-v1";
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
 const WORD_ACHIEVEMENTS = [10, 50, 100, 250, 500, 1000, 1500, 2000];
 const DAY_ACHIEVEMENTS = [7, 14, 30, 50, 100, 150, 250, 365];
-const EMPTY_STATS: LearningStats = { activeDates: [], totalSeconds: 0, masteredPhrases: [] };
 
 function localDate(daysFromNow = 0) {
   const date = new Date();
@@ -172,17 +150,22 @@ export default function Home() {
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [mistakes, setMistakes] = useState<string[]>([]);
-  const [savedScores, setSavedScores] = useState<Record<number, number>>({});
-  const [savedSessions, setSavedSessions] = useState<Record<number, SavedSession>>({});
-  const [cardProgress, setCardProgress] = useState<Record<string, CardProgress>>({});
-  const [learningStats, setLearningStats] = useState<LearningStats>(EMPTY_STATS);
   const [reviewQueue, setReviewQueue] = useState<ReviewCard[]>([]);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [reviewRevealed, setReviewRevealed] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
-  const [storageReady, setStorageReady] = useState(false);
   const [openLessons, setOpenLessons] = useState<Record<number, Lesson>>({});
   const importInput = useRef<HTMLInputElement>(null);
+
+  const stored = useSyncExternalStore(
+    progressStore.subscribe,
+    progressStore.getSnapshot,
+    progressStore.getServerSnapshot,
+  );
+  const savedScores = stored.scores;
+  const savedSessions = stored.sessions;
+  const cardProgress = stored.cards;
+  const learningStats = stored.stats;
 
   const lesson = openLessons[lessonId];
   const deck = lesson?.decks[deckIndex];
@@ -191,16 +174,21 @@ export default function Home() {
   const currentQuestion = lesson?.questions[questionIndex];
   const currentReviewCard = reviewQueue[reviewIndex];
 
-  /** Pulls lessons into memory and hands them to the render. */
-  const openLessonsById = useCallback(async (ids: number[]) => {
-    const wanted = ids.filter(Boolean);
-    if (!wanted.length) return;
-    const loaded = await loadLessons(wanted);
+  const mergeLessons = useCallback((loaded: Lesson[]) => {
     setOpenLessons((items) => ({
       ...items,
       ...Object.fromEntries(loaded.map((item) => [item.id, item])),
     }));
   }, []);
+
+  /** Pulls lessons into memory and hands them to the render. */
+  const openLessonsById = useCallback(
+    async (ids: number[]) => {
+      const wanted = ids.filter(Boolean);
+      if (wanted.length) mergeLessons(await loadLessons(wanted));
+    },
+    [mergeLessons],
+  );
 
   // Only lessons the learner has actually touched are in memory, so the review
   // queue is built from those rather than from the whole course.
@@ -289,67 +277,27 @@ export default function Home() {
   }
 
   useEffect(() => {
-    const scores: Record<number, number> = {};
-    const sessions: Record<number, SavedSession> = {};
-    lessonSummaries.forEach((item) => {
-      const stored = window.localStorage.getItem(`shifahiya-lesson-${item.id}`);
-      if (stored !== null) scores[item.id] = Number(stored);
-      const storedLessonSession = window.localStorage.getItem(`shifahiya-session-${item.id}`);
-      if (storedLessonSession) {
-        try {
-          const session = JSON.parse(storedLessonSession) as SavedSession;
-          if (session.lessonId === item.id) sessions[item.id] = session;
-        } catch {
-          window.localStorage.removeItem(`shifahiya-session-${item.id}`);
-        }
-      }
-    });
-    setSavedScores(scores);
-    setSavedSessions(sessions);
-    const storedCardProgress = window.localStorage.getItem(CARD_PROGRESS_KEY);
-    if (storedCardProgress) {
-      try {
-        setCardProgress(JSON.parse(storedCardProgress) as Record<string, CardProgress>);
-      } catch {
-        window.localStorage.removeItem(CARD_PROGRESS_KEY);
-      }
-    }
-    const storedLearningStats = window.localStorage.getItem(LEARNING_STATS_KEY);
-    if (storedLearningStats) {
-      try {
-        setLearningStats({ ...EMPTY_STATS, ...JSON.parse(storedLearningStats) });
-      } catch {
-        window.localStorage.removeItem(LEARNING_STATS_KEY);
-      }
-    }
-    const storedSession = window.localStorage.getItem("shifahiya-active-session");
-    if (storedSession) {
-      try {
-        const session = JSON.parse(storedSession) as SavedSession;
-        if (lessonSummaries.some((item) => item.id === session.lessonId)) {
-          sessions[session.lessonId] = session;
-          window.localStorage.setItem(`shifahiya-session-${session.lessonId}`, JSON.stringify(session));
-          setSavedSessions({ ...sessions });
-        }
-      } catch {
-        window.localStorage.removeItem("shifahiya-active-session");
-      }
-    }
-    setStorageReady(true);
-
     // Bring in only what the home screen actually needs: the lesson the learner
     // stopped in, and the lessons their review cards belong to.
-    const stored = window.localStorage.getItem(CARD_PROGRESS_KEY);
-    const progress = stored ? (JSON.parse(stored) as Record<string, CardProgress>) : {};
+    const { cards, sessions } = progressStore.getSnapshot();
     const resume = Object.values(sessions).sort(
       (a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId),
     )[0];
-    openLessonsById([...lessonIdsInProgress(progress), ...(resume ? [resume.lessonId] : [])]);
-  }, [openLessonsById]);
+    const wanted = [...lessonIdsInProgress(cards), ...(resume ? [resume.lessonId] : [])];
+    if (!wanted.length) return;
+
+    let cancelled = false;
+    loadLessons(wanted).then((loaded) => {
+      if (!cancelled) mergeLessons(loaded);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mergeLessons]);
 
   useEffect(() => {
-    if (!storageReady || (view !== "learn" && view !== "practice")) return;
-    const session: SavedSession = {
+    if (view !== "learn" && view !== "practice") return;
+    progressStore.saveSession({
       view,
       lessonId,
       deckIndex,
@@ -359,30 +307,25 @@ export default function Home() {
       score,
       mistakes,
       updatedAt: Date.now(),
-    };
-    window.localStorage.setItem("shifahiya-active-session", JSON.stringify(session));
-    window.localStorage.setItem(`shifahiya-session-${lessonId}`, JSON.stringify(session));
-    setSavedSessions((items) => ({ ...items, [lessonId]: session }));
-  }, [storageReady, view, lessonId, deckIndex, round, cardIndex, questionIndex, score, mistakes]);
+    });
+  }, [view, lessonId, deckIndex, round, cardIndex, questionIndex, score, mistakes]);
 
   useEffect(() => {
-    if (!storageReady || !["learn", "practice", "review"].includes(view)) return;
+    if (!["learn", "practice", "review"].includes(view)) return;
     const recordActivity = (seconds: number) => {
       if (document.visibilityState !== "visible") return;
-      setLearningStats((items) => {
-        const next = {
-          ...items,
-          activeDates: items.activeDates.includes(localDate()) ? items.activeDates : [...items.activeDates, localDate()],
-          totalSeconds: items.totalSeconds + seconds,
-        };
-        window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(next));
-        return next;
-      });
+      progressStore.updateStats((items) => ({
+        ...items,
+        activeDates: items.activeDates.includes(localDate())
+          ? items.activeDates
+          : [...items.activeDates, localDate()],
+        totalSeconds: items.totalSeconds + seconds,
+      }));
     };
     recordActivity(0);
     const timer = window.setInterval(() => recordActivity(10), 10000);
     return () => window.clearInterval(timer);
-  }, [storageReady, view]);
+  }, [view]);
 
   const progress = !lesson
     ? 0
@@ -392,10 +335,8 @@ export default function Home() {
           (lesson.decks.length * 2 * words.length)) *
         100;
 
-  const options = useMemo(
-    () => shuffle(currentQuestion?.options ?? []),
-    [lessonId, questionIndex, currentQuestion],
-  );
+  // Re-shuffles whenever the question changes, which is the only thing it reads.
+  const options = useMemo(() => shuffle(currentQuestion?.options ?? []), [currentQuestion]);
 
   async function startLesson(id: number) {
     const storedSession = savedSessions[id];
@@ -416,27 +357,11 @@ export default function Home() {
     setView("learn");
   }
 
-  function storeCardProgress(updater: (items: Record<string, CardProgress>) => Record<string, CardProgress>) {
-    setCardProgress((items) => {
-      const next = updater(items);
-      window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(next));
-      return next;
-    });
-  }
-
-  function storeLearningStats(updater: (items: LearningStats) => LearningStats) {
-    setLearningStats((items) => {
-      const next = updater(items);
-      window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(next));
-      return next;
-    });
-  }
-
   function rateLearningCard(remembered: boolean) {
     if (!lesson) return;
     const forwardId = wordCardId(lesson.id, deckIndex, cardIndex, "ar-ru");
     const reverseId = wordCardId(lesson.id, deckIndex, cardIndex, "ru-ar");
-    storeCardProgress((items) => ({
+    progressStore.updateCards((items) => ({
       ...items,
       [forwardId]: nextCardProgress(items[forwardId], remembered),
       [reverseId]: items[reverseId] ?? {
@@ -463,7 +388,7 @@ export default function Home() {
 
   function rateReviewCard(remembered: boolean) {
     if (!currentReviewCard) return;
-    storeCardProgress((items) => ({
+    progressStore.updateCards((items) => ({
       ...items,
       [currentReviewCard.id]: nextCardProgress(items[currentReviewCard.id], remembered),
     }));
@@ -509,18 +434,7 @@ export default function Home() {
       const sessions = payload.sessions ?? {};
       const cards = payload.cards ?? {};
       const stats = { ...EMPTY_STATS, ...(payload.stats ?? {}) };
-      Object.entries(scores).forEach(([id, value]) =>
-        window.localStorage.setItem(`shifahiya-lesson-${id}`, String(value)),
-      );
-      Object.entries(sessions).forEach(([id, value]) =>
-        window.localStorage.setItem(`shifahiya-session-${id}`, JSON.stringify(value)),
-      );
-      window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(cards));
-      window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(stats));
-      setSavedScores(scores);
-      setSavedSessions(sessions);
-      setCardProgress(cards);
-      setLearningStats(stats);
+      progressStore.replaceAll({ scores, sessions, cards, stats });
       setBackupMessage("Прогресс восстановлен.");
     } catch {
       setBackupMessage("Не удалось прочитать файл прогресса.");
@@ -557,7 +471,7 @@ export default function Home() {
         currentQuestion.answer.trim().split(/\s+/).length > 1;
       if (isPhrase) {
         const phraseId = `lesson-${lesson.id}-question-${questionIndex}`;
-        storeLearningStats((items) => ({
+        progressStore.updateStats((items) => ({
           ...items,
           masteredPhrases: items.masteredPhrases.includes(phraseId)
             ? items.masteredPhrases
@@ -574,33 +488,13 @@ export default function Home() {
       setSelected(null);
       return;
     }
-    window.localStorage.setItem(`shifahiya-lesson-${lesson.id}`, String(score));
-    window.localStorage.removeItem("shifahiya-active-session");
-    window.localStorage.removeItem(`shifahiya-session-${lesson.id}`);
-    setSavedScores((items) => ({ ...items, [lesson.id]: score }));
-    setSavedSessions((items) => {
-      const next = { ...items };
-      delete next[lesson.id];
-      return next;
-    });
+    progressStore.finishLesson(lesson.id, score);
     setView("result");
   }
 
   function resetLesson() {
     if (!lesson) return;
-    window.localStorage.removeItem(`shifahiya-lesson-${lesson.id}`);
-    window.localStorage.removeItem("shifahiya-active-session");
-    window.localStorage.removeItem(`shifahiya-session-${lesson.id}`);
-    setSavedScores((items) => {
-      const next = { ...items };
-      delete next[lesson.id];
-      return next;
-    });
-    setSavedSessions((items) => {
-      const next = { ...items };
-      delete next[lesson.id];
-      return next;
-    });
+    progressStore.resetLesson(lesson.id);
     setView("home");
   }
 
@@ -638,8 +532,8 @@ export default function Home() {
             <div>
               <span className="daily-icon">◷</span>
               <div>
-                <strong>{dueCards.length ? `${dueCards.length} карточек на сегодня` : "Всё повторено на сегодня"}</strong>
-                <small>{dueCards.length ? `Около ${Math.max(1, Math.ceil(dueCards.length / 4))} мин · трудные формы вернутся в очередь` : `${learnedCards} направлений уже в памяти`}</small>
+                <strong>{dueCards.length ? `${plural(dueCards.length, "карточка", "карточки", "карточек")} на сегодня` : "Всё повторено на сегодня"}</strong>
+                <small>{dueCards.length ? `Около ${Math.max(1, Math.ceil(dueCards.length / 4))} мин · трудные формы вернутся в очередь` : `${plural(learnedCards, "направление", "направления", "направлений")} уже в памяти`}</small>
               </div>
             </div>
             <button className="primary" onClick={startDailyReview} disabled={!dueCards.length}>

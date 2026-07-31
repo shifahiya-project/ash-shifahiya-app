@@ -38,6 +38,7 @@ npm run db:generate  # drizzle-kit generate (пока не использует�
 app/page.tsx        всё приложение: один "use client" компонент (~815 строк)
 app/globals.css     вся вёрстка вручную (~520 строк), мобильные брейкпоинты 720/420
 app/layout.tsx      lang="ru", метаданные
+app/progress-store.ts   прогресс в localStorage через useSyncExternalStore
 app/chatgpt-auth.ts хелперы Sign in with ChatGPT (пока нигде не вызываются)
 content/            lesson-01..95.ts, types.ts — учебные данные
 content/questions.ts    генерация вопросов и подбор дистракторов (чистый модуль)
@@ -186,7 +187,12 @@ git reset sources/     # чтобы не утащить PDF в коммит ра
   коробки Лейтнера. Каждое слово даёт две карточки (`ar-ru` и `ru-ar`), id вида
   `lesson-{id}-deck-{i}-word-{j}-{direction}`. Слово считается выученным, когда
   **обе** карточки в максимальной коробке.
-- **Хранилище — только `localStorage`**, сервера нет. Ключи:
+- **Хранилище — только `localStorage`**, читается через `useSyncExternalStore`
+  в `app/progress-store.ts`: сервер отдаёт пустой снимок, гидрация с ним
+  совпадает, сохранённые значения приезжают тем же механизмом, что React
+  использует для любого внешнего источника. Копировать localStorage в
+  `useState` на маунте не нужно и нельзя — правило `set-state-in-effect`
+  на это ругается. Ключи:
   `shifahiya-lesson-{id}` (счёт), `shifahiya-session-{id}` и
   `shifahiya-active-session` (незавершённая сессия), `shifahiya-card-progress-v1`,
   `shifahiya-learning-stats-v1`. Плюс ручной экспорт/импорт JSON
@@ -221,20 +227,17 @@ git reset sources/     # чтобы не утащить PDF в коммит ра
 
 ## Известные проблемы (актуальный техдолг)
 
-1. **`npm run lint` красный**: две ошибки `react-hooks/set-state-in-effect`
-   в `app/page.tsx` (загрузка из localStorage и автосохранение сессии) плюс
-   warning `exhaustive-deps` на `useMemo` с `shuffle`.
-2. **Прогресс-бар режима `learn`** считает по длине текущей колоды, хотя колоды
+1. **Прогресс-бар режима `learn`** считает по длине текущей колоды, хотя колоды
    разного размера — шкала прыгает между колодами.
-3. **`lesson.id < lessons.length`** в кнопке «следующий урок» верно только пока
+2. **`lesson.id < lessons.length`** в кнопке «следующий урок» верно только пока
    id идут подряд 1..N.
-4. **Регулярка `^lesson-\d{2}\.ts$`** в тесте не поймает `lesson-100.ts`.
-5. **Дубли в 14 уроках** (список — `LESSONS_WITH_KNOWN_DUPLICATES` в
+3. **Регулярка `^lesson-\d{2}\.ts$`** в тесте не поймает `lesson-100.ts`.
+4. **Дубли в 14 уроках** (список — `LESSONS_WITH_KNOWN_DUPLICATES` в
    `tests/questions.test.mjs`). Повтор арабской формы — это одна и та же
    карточка дважды; повтор русской глоссы у разных слов даёт задание ру→ар
    с двумя правильными ответами. Чинить сверкой с книгой, список только
    сокращать.
-6. Неиспользуемый скаффолдинг стартера: `db/`, `examples/d1/`, `drizzle/`,
+5. Неиспользуемый скаффолдинг стартера: `db/`, `examples/d1/`, `drizzle/`,
    `drizzle.config.ts`, `public/*.svg`.
 
 ## Принятые решения

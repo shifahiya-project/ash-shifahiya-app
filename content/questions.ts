@@ -137,7 +137,7 @@ export function buildOptions(answer: string, candidates: Candidate[], deckIndex:
 }
 
 /** Russian counts agree with the noun: 1 форма, 2 формы, 5 форм. */
-function plural(count: number, one: string, few: string, many: string) {
+export function plural(count: number, one: string, few: string, many: string) {
   const tens = count % 100;
   const ones = count % 10;
   if (tens >= 11 && tens <= 14) return `${count} ${many}`;
