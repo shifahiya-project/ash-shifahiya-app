@@ -16,7 +16,7 @@
 - **React 19**, **Vite 8**, **Tailwind 4** (подключён, но вёрстка почти целиком
   на своём CSS в `app/globals.css`).
 - Хостинг — платформа OpenAI Sites. `.openai/hosting.json` объявляет
-  опциональные биндинги D1/R2 (сейчас оба `null`).
+  опциональные биндинги D1/R2 (сейчас оба `null`); ни один не используется.
 - Node.js `>= 22.13.0`.
 
 ## Команды
@@ -27,7 +27,6 @@ npm run build     # сборка в dist/ (vinext build)
 npm test          # build + node --test tests/*.test.mjs
 npm run lint      # eslint
 npm run content:manifest  # пересобрать content/manifest.ts после правки урока
-npm run db:generate  # drizzle-kit generate (пока не используется)
 ```
 
 `npm test` включает в себя `npm run build` — отдельно собирать не нужно.
@@ -47,9 +46,9 @@ content/manifest.ts     сгенерированные метаданные вс
 content/lessons.ts      ленивая загрузка урока по id через import.meta.glob
 scripts/            generate-manifest.mjs — пересборка манифеста
 worker/index.ts     точка входа Worker: /_vinext/image + vinext handler
-build/              vite-плагин, копирующий .openai/ и drizzle/ в dist/
+build/              vite-плагин, копирующий .openai/ в dist/
 tests/              rendered-html (SSR), questions (генератор), lesson-progress
-db/, examples/d1/   неиспользуемый скаффолдинг стартера (D1 не подключён)
+public/favicon.svg  знак ش, нарисованный путями (шрифты не нужны)
 ```
 
 ## Модель данных
@@ -228,19 +227,27 @@ git reset sources/     # чтобы не утащить PDF в коммит ра
 
 ## Известные проблемы (актуальный техдолг)
 
-1. **Нет favicon** — каждый заход даёт 404 на `/favicon.ico` в консоли.
-2. Неиспользуемый скаффолдинг стартера: `db/`, `examples/d1/`, `drizzle/`,
-   `drizzle.config.ts`, `public/*.svg`.
+Крупного долга не осталось. Мелочи:
+
+1. `worker/index.ts` ссылается на тип `Fetcher` из Cloudflare Workers, которого
+   нет в `tsconfig` — единственная ошибка `npx tsc --noEmit`. На сборку не
+   влияет, типы стираются.
+2. Второй тест в `tests/rendered-html.test.mjs` проверяет исходники
+   регулярками и растёт линейно с числом уроков.
 
 ## Принятые решения
 
 - **Прогресс остаётся локальным.** Решение делегировано и принято так: курс
   анонимный и работает без входа, а `localStorage` + ручной экспорт/импорт это
-  закрывают. D1 и SIWC (`app/chatgpt-auth.ts`, `hosting.json`) подключать
-  только если появится реальное требование синхронизации между устройствами —
-  тогда порядок такой: выставить `d1: "DB"` в `.openai/hosting.json`, описать
-  таблицы в `db/schema.ts`, `npm run db:generate`, и синхронизировать поверх
-  локального состояния, а не вместо него (офлайн-режим не должен ломаться).
+  закрывают. Скаффолдинг D1 (`db/`, `drizzle/`, `drizzle.config.ts`,
+  `examples/d1/`, пакеты `drizzle-orm` и `drizzle-kit`) поэтому **удалён** —
+  он лежал мёртвым грузом. Если появится реальное требование синхронизации
+  между устройствами, порядок такой: вернуть `drizzle-orm` и `drizzle-kit`,
+  выставить `d1: "DB"` в `.openai/hosting.json`, описать таблицы в новом
+  `db/schema.ts`, сгенерировать миграции `drizzle-kit generate` — и
+  синхронизировать поверх локального состояния, а не вместо него (офлайн-режим
+  ломаться не должен). SIWC-хелперы (`app/chatgpt-auth.ts`) оставлены: они
+  ничего не тянут за собой.
 - **Рефакторинг `app/page.tsx` и тестов разрешён** без отдельного согласования.
 - Дописывать уроки 96–100 сейчас не требуется; книга-источник уже в репозитории
   (см. раздел «Источник контента»).
