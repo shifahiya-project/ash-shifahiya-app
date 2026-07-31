@@ -17,7 +17,7 @@ export const lessonSixteen: Lesson = {
         { arabic: "مَكْتَبٌ", russian: "школа" },
         { arabic: "مَكَاتِبُ", russian: "школы" },
         { arabic: "مَدْرَسَةٌ", russian: "медресе" },
-        { arabic: "مَدَارِسُ", russian: "медресе", note: "множественное число" },
+        { arabic: "مَدَارِسُ", russian: "медресе (мн. ч.)", note: "множественное число" },
       ],
     },
     {

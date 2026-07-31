@@ -6,7 +6,7 @@ export const lessonSeventyFour: Lesson = {
     { title: "Частицы", words: [
       { arabic: "أَنْ", russian: "чтобы / открыть" }, { arabic: "لَنْ", russian: "не (будущее)" }, { arabic: "كَيْ", russian: "чтобы / для того чтобы" },
       { arabic: "أَنْ يَفْتَحَ", russian: "открыть / чтобы он открыл" }, { arabic: "كَيْ يَفْتَحَ", russian: "чтобы он открыл" }, { arabic: "لَنْ يَفْتَحَ", russian: "он не откроет" },
-      { arabic: "أَنْ يَذْهَبَ", russian: "чтобы он пошёл" }, { arabic: "لَنْ يَذْهَبَ", russian: "он не пойдёт" }, { arabic: "كَيْ يَذْهَبَ", russian: "чтобы он пошёл" },
+      { arabic: "أَنْ يَذْهَبَ", russian: "чтобы он пошёл" }, { arabic: "لَنْ يَذْهَبَ", russian: "он не пойдёт" }, { arabic: "كَيْ يَذْهَبَ", russian: "для того чтобы он пошёл" },
     ] },
     { title: "Личные формы", words: [
       { arabic: "أَنْ أَذْهَبَ", russian: "чтобы я пошёл" }, { arabic: "أَنْ نَذْهَبَ", russian: "чтобы мы пошли" }, { arabic: "أَنْ تَذْهَبَ", russian: "чтобы ты / она пошла" },

@@ -6,7 +6,7 @@ export const lessonSeventy: Lesson = {
     { title: "Основные частицы", words: [
       { arabic: "إِنَّ", russian: "поистине" }, { arabic: "أَنَّ", russian: "что" }, { arabic: "كَأَنَّ", russian: "как будто" },
       { arabic: "لَكِنَّ", russian: "но" }, { arabic: "لَيْتَ", russian: "если бы" }, { arabic: "لَعَلَّ", russian: "возможно / быть может" },
-      { arabic: "لَيْسَ", russian: "не является" }, { arabic: "مَا", russian: "не" }, { arabic: "لَا", russian: "не" },
+      { arabic: "لَيْسَ", russian: "не является" }, { arabic: "مَا", russian: "не (при прошедшем времени)" }, { arabic: "لَا", russian: "не (при настоящем времени)" },
     ] },
     { title: "إِنَّ с местоимениями", words: [
       { arabic: "إِنِّي / إِنَّنِي", russian: "поистине я" }, { arabic: "إِنَّا / إِنَّنَا", russian: "поистине мы" }, { arabic: "إِنَّكَ", russian: "поистине ты (м.р.)" }, { arabic: "إِنَّكِ", russian: "поистине ты (ж.р.)" },

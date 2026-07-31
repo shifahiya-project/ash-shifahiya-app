@@ -16,7 +16,7 @@ export const lessonSixtyTwo: Lesson = {
       { arabic: "نَصَرَ", russian: "он помог / даровал победу" }, { arabic: "يَنْصُرُ", russian: "он помогает" }, { arabic: "جَيْشٌ كَبِيرٌ", russian: "большая армия" }, { arabic: "حَرْبٌ مَاضِيَةٌ", russian: "прошедшая война" },
     ] },
     { title: "Транспорт", words: [
-      { arabic: "عَرَبَةٌ", russian: "повозка" }, { arabic: "سَفِينَةٌ", russian: "корабль" }, { arabic: "بُخَارٌ", russian: "пар" }, { arabic: "رِيحٌ", russian: "ветер" },
+      { arabic: "عَرَبَةٌ", russian: "повозка / телега" }, { arabic: "سَفِينَةٌ", russian: "корабль" }, { arabic: "بُخَارٌ", russian: "пар" }, { arabic: "رِيحٌ", russian: "ветер" },
       { arabic: "حَرَكَةٌ", russian: "движение" }, { arabic: "سَرِيعٌ", russian: "быстрый" }, { arabic: "بَطِيءٌ", russian: "медленный" }, { arabic: "سُوقٌ", russian: "рынок" },
     ] },
     { title: "Народы", words: [
@@ -30,8 +30,8 @@ export const lessonSixtyTwo: Lesson = {
     ] },
     { title: "Дорога и путь", words: [
       { arabic: "أَلْمَانِيٌّ", russian: "немец" }, { arabic: "يُونَانِيٌّ", russian: "грек" }, { arabic: "يَابَانِيٌّ", russian: "японец" }, { arabic: "مَوْقِفٌ", russian: "остановка" },
-      { arabic: "مُسَافِرٌ", russian: "путник" }, { arabic: "عَرَبَةٌ", russian: "телега" }, { arabic: "مَغَارَةٌ", russian: "пещера" }, { arabic: "سَرِيعٌ", russian: "быстрый" },
-      { arabic: "بَطِيءٌ", russian: "медленный" }, { arabic: "سَائِسٌ", russian: "конюх" }, { arabic: "سِكَّةٌ", russian: "дорога / путь" }, { arabic: "السِّكَّةُ الْحَدِيدِيَّةُ", russian: "железная дорога" },
+      { arabic: "مُسَافِرٌ", russian: "путник" }, { arabic: "مَغَارَةٌ", russian: "пещера" },
+      { arabic: "سَائِسٌ", russian: "конюх" }, { arabic: "سِكَّةٌ", russian: "дорога / путь" }, { arabic: "السِّكَّةُ الْحَدِيدِيَّةُ", russian: "железная дорога" },
     ] },
     { title: "Выражения урока", words: [
       { arabic: "لِكُلِّ مَمْلَكَةٍ مَلِكٌ أَوْ رَئِيسٌ", russian: "у каждого государства есть правитель или президент" },

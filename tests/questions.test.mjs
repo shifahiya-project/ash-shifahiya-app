@@ -146,15 +146,10 @@ test("no single option dominates a lesson's generated questions", () => {
   }
 });
 
-// Lessons that already carried duplicates before this check existed. A repeated
-// Arabic form is the same card twice; a repeated gloss makes the ru→ar question
-// have two right answers. Both want fixing against the book — shrink this list,
-// never grow it.
-const LESSONS_WITH_KNOWN_DUPLICATES = new Set([4, 6, 12, 16, 21, 26, 31, 35, 62, 66, 70, 74, 79, 86]);
-
+// A repeated Arabic form is the same card twice; a repeated gloss makes the
+// ru→ar question have two right answers.
 test("no two words in a lesson share a form or a gloss", () => {
   for (const lesson of rawLessons) {
-    if (LESSONS_WITH_KNOWN_DUPLICATES.has(lesson.id)) continue;
     const words = wordsOf(lesson);
     const arabic = words.map((word) => word.arabic);
     const russian = words.map((word) => word.russian);
@@ -167,18 +162,6 @@ test("no two words in a lesson share a form or a gloss", () => {
       new Set(russian).size,
       russian.length,
       `lesson ${lesson.id}: repeated gloss "${russian.find((v, i) => russian.indexOf(v) !== i)}"`,
-    );
-  }
-});
-
-test("the known-duplicate list stays honest", () => {
-  for (const id of LESSONS_WITH_KNOWN_DUPLICATES) {
-    const words = wordsOf(rawLessons.find((lesson) => lesson.id === id));
-    const values = [...words.map((w) => w.arabic), ...words.map((w) => w.russian)];
-    assert.notEqual(
-      new Set(values).size,
-      values.length,
-      `lesson ${id} is clean now — drop it from LESSONS_WITH_KNOWN_DUPLICATES`,
     );
   }
 });

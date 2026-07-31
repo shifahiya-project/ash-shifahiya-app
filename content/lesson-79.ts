@@ -12,7 +12,7 @@ export const lessonSeventyNine: Lesson = {
       { arabic: "فَارٌّ", russian: "убегающий" }, { arabic: "مَفْرُورٌ", russian: "тот, от кого убежали" }, { arabic: "فِرَارٌ", russian: "бегство" }, { arabic: "أَفِرُّ", russian: "я убегаю" },
     ] },
     { title: "مَسَّ — трогать", words: [
-      { arabic: "مَسَّ", russian: "он тронул" }, { arabic: "يَمَسُّ", russian: "он трогает" }, { arabic: "مَسَّ", russian: "трогай" }, { arabic: "لَا تَمَسَّ", russian: "не трогай" },
+      { arabic: "مَسَّ", russian: "он тронул", note: "форма повеления совпадает" }, { arabic: "يَمَسُّ", russian: "он трогает" }, { arabic: "لَا تَمَسَّ", russian: "не трогай" },
       { arabic: "مَاسٌّ", russian: "касающийся" }, { arabic: "مَمْسُوسٌ", russian: "тронутый" }, { arabic: "مَسٌّ", russian: "касание" }, { arabic: "أَمَسُّ", russian: "я трогаю" },
     ] },
     { title: "Полные личные формы", words: [
