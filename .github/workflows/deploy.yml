@@ -1,0 +1,43 @@
+# Rebuilds the static copy of the site and publishes it to the gh-pages branch,
+# which GitHub Pages serves at https://shifahiya-project.github.io/ash-shifahiya-app/.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build:static
+
+      - name: Publish to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # The branch holds only the built site, so each deploy replaces it wholesale.
+          git checkout --orphan gh-pages
+          git rm -rf --cached . >/dev/null
+          find . -maxdepth 1 ! -name . ! -name .git ! -name .static-site -exec rm -rf {} +
+          cp -r .static-site/. .
+          rm -rf .static-site
+          git add -A
+          git commit -m "Publish the site built from ${GITHUB_SHA::7}"
+          git push -f origin gh-pages

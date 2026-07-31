@@ -44,6 +44,10 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
+    // A static export lives under a subdirectory (GitHub Pages), where absolute
+    // asset URLs would resolve against the domain root. Set STATIC_BASE=./ for
+    // that build; the Worker build keeps the default.
+    base: process.env.STATIC_BASE ?? "/",
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
