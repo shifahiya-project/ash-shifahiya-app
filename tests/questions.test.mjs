@@ -3,9 +3,10 @@ import { readdir } from "node:fs/promises";
 import test from "node:test";
 
 import { buildOptions, expandLessonQuestions } from "../content/questions.ts";
+import { lessonSummaries } from "../content/manifest.ts";
 
-// content/index.ts uses extensionless imports that only a bundler resolves, so
-// the lessons are loaded straight from disk instead.
+// The app loads lessons through a Vite glob, which Node cannot resolve, so the
+// tests read the lesson files straight off disk.
 async function loadLessons() {
   const directory = new URL("../content/", import.meta.url);
   const files = (await readdir(directory))
@@ -193,6 +194,34 @@ test("glosses are Russian, Arabic is Arabic", () => {
       assert.match(word.arabic, ARABIC_FORM, `lesson ${lesson.id}: form "${word.arabic}"`);
     }
   }
+});
+
+// content/manifest.ts is generated; a stale one would show wrong counts on the
+// home screen while the lesson itself is right.
+test("the manifest matches the lessons", () => {
+  assert.equal(lessonSummaries.length, expanded.length);
+  expanded.forEach((lesson, index) => {
+    const summary = lessonSummaries[index];
+    assert.deepEqual(
+      {
+        id: summary.id,
+        arabicTitle: summary.arabicTitle,
+        title: summary.title,
+        description: summary.description,
+        tags: summary.tags,
+        questionCount: summary.questionCount,
+      },
+      {
+        id: lesson.id,
+        arabicTitle: lesson.arabicTitle,
+        title: lesson.title,
+        description: lesson.description,
+        tags: lesson.tags,
+        questionCount: lesson.questions.length,
+      },
+      `lesson ${lesson.id}: run npm run content:manifest`,
+    );
+  });
 });
 
 test("generation is deterministic", () => {

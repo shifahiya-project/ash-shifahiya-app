@@ -1,8 +1,9 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { rawLessons } from "../content";
-import { expandLessonQuestions } from "../content/questions";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lessonSummaries } from "../content/manifest";
+import { loadLessons } from "../content/lessons";
+import type { Lesson } from "../content/types";
 
 type SavedSession = {
   view: "learn" | "practice";
@@ -45,8 +46,6 @@ const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
 const WORD_ACHIEVEMENTS = [10, 50, 100, 250, 500, 1000, 1500, 2000];
 const DAY_ACHIEVEMENTS = [7, 14, 30, 50, 100, 150, 250, 365];
 const EMPTY_STATS: LearningStats = { activeDates: [], totalSeconds: 0, masteredPhrases: [] };
-
-const lessons = rawLessons.map(expandLessonQuestions);
 
 function localDate(daysFromNow = 0) {
   const date = new Date();
@@ -94,8 +93,8 @@ function wordCardId(lessonId: number, deckIndex: number, wordIndex: number, dire
   return `lesson-${lessonId}-deck-${deckIndex}-word-${wordIndex}-${direction}`;
 }
 
-const reviewCatalog: ReviewCard[] = lessons.flatMap((lesson) =>
-  lesson.decks.flatMap((deck, deckIndex) =>
+function reviewCardsOf(lesson: Lesson): ReviewCard[] {
+  return lesson.decks.flatMap((deck, deckIndex) =>
     deck.words.flatMap((word, wordIndex) => [
       {
         id: wordCardId(lesson.id, deckIndex, wordIndex, "ar-ru"),
@@ -114,8 +113,18 @@ const reviewCatalog: ReviewCard[] = lessons.flatMap((lesson) =>
         answerLang: "ar" as const,
       },
     ]),
-  ),
-);
+  );
+}
+
+/** Lesson ids the learner has any card progress in, read off the stored keys. */
+function lessonIdsInProgress(progress: Record<string, CardProgress>) {
+  const ids = new Set<number>();
+  for (const id of Object.keys(progress)) {
+    const match = id.match(/^lesson-(\d+)-deck-/);
+    if (match) ids.add(Number(match[1]));
+  }
+  return [...ids];
+}
 
 function nextCardProgress(previous: CardProgress | undefined, remembered: boolean): CardProgress {
   const box = remembered ? Math.min((previous?.box ?? 0) + 1, REVIEW_INTERVALS.length - 1) : 0;
@@ -172,21 +181,40 @@ export default function Home() {
   const [reviewRevealed, setReviewRevealed] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
   const [storageReady, setStorageReady] = useState(false);
+  const [openLessons, setOpenLessons] = useState<Record<number, Lesson>>({});
   const importInput = useRef<HTMLInputElement>(null);
 
-  const lesson = lessons.find((item) => item.id === lessonId) ?? lessons[0];
-  const deck = lesson.decks[deckIndex];
-  const words = deck.words;
+  const lesson = openLessons[lessonId];
+  const deck = lesson?.decks[deckIndex];
+  const words = deck?.words ?? [];
   const currentWord = words[cardIndex];
-  const currentQuestion = lesson.questions[questionIndex];
+  const currentQuestion = lesson?.questions[questionIndex];
   const currentReviewCard = reviewQueue[reviewIndex];
+
+  /** Pulls lessons into memory and hands them to the render. */
+  const openLessonsById = useCallback(async (ids: number[]) => {
+    const wanted = ids.filter(Boolean);
+    if (!wanted.length) return;
+    const loaded = await loadLessons(wanted);
+    setOpenLessons((items) => ({
+      ...items,
+      ...Object.fromEntries(loaded.map((item) => [item.id, item])),
+    }));
+  }, []);
+
+  // Only lessons the learner has actually touched are in memory, so the review
+  // queue is built from those rather than from the whole course.
+  const reviewCatalog = useMemo(
+    () => Object.values(openLessons).flatMap(reviewCardsOf),
+    [openLessons],
+  );
   const dueCards = useMemo(() => {
     const today = localDate();
     return reviewCatalog.filter((card) => {
       const progressItem = cardProgress[card.id];
       return progressItem && progressItem.nextReview <= today;
     });
-  }, [cardProgress]);
+  }, [reviewCatalog, cardProgress]);
   const learnedCards = useMemo(
     () => Object.values(cardProgress).filter((item) => item.box > 0).length,
     [cardProgress],
@@ -220,12 +248,13 @@ export default function Home() {
     )[0],
     [savedSessions],
   );
-  const latestSessionLesson = latestSession
-    ? lessons.find((item) => item.id === latestSession.lessonId)
+  const latestSessionLesson = latestSession ? openLessons[latestSession.lessonId] : undefined;
+  const latestSessionSummary = latestSession
+    ? lessonSummaries.find((item) => item.id === latestSession.lessonId)
     : undefined;
-  const recommendedLesson = latestSessionLesson ??
-    lessons.find((item) => savedScores[item.id] === undefined) ??
-    lessons.at(-1);
+  const recommendedLesson = latestSessionSummary ??
+    lessonSummaries.find((item) => savedScores[item.id] === undefined) ??
+    lessonSummaries.at(-1);
   const latestSessionPosition = latestSession && latestSessionLesson
     ? latestSession.view === "practice"
       ? `Упражнение ${latestSession.questionIndex + 1} из ${latestSessionLesson.questions.length}`
@@ -245,7 +274,8 @@ export default function Home() {
         })()
     : 0;
 
-  function restoreSession(session: SavedSession) {
+  async function restoreSession(session: SavedSession) {
+    await openLessonsById([session.lessonId]);
     setLessonId(session.lessonId);
     setDeckIndex(session.deckIndex);
     setRound(session.round);
@@ -261,7 +291,7 @@ export default function Home() {
   useEffect(() => {
     const scores: Record<number, number> = {};
     const sessions: Record<number, SavedSession> = {};
-    lessons.forEach((item) => {
+    lessonSummaries.forEach((item) => {
       const stored = window.localStorage.getItem(`shifahiya-lesson-${item.id}`);
       if (stored !== null) scores[item.id] = Number(stored);
       const storedLessonSession = window.localStorage.getItem(`shifahiya-session-${item.id}`);
@@ -296,7 +326,7 @@ export default function Home() {
     if (storedSession) {
       try {
         const session = JSON.parse(storedSession) as SavedSession;
-        if (lessons.some((item) => item.id === session.lessonId)) {
+        if (lessonSummaries.some((item) => item.id === session.lessonId)) {
           sessions[session.lessonId] = session;
           window.localStorage.setItem(`shifahiya-session-${session.lessonId}`, JSON.stringify(session));
           setSavedSessions({ ...sessions });
@@ -306,7 +336,16 @@ export default function Home() {
       }
     }
     setStorageReady(true);
-  }, []);
+
+    // Bring in only what the home screen actually needs: the lesson the learner
+    // stopped in, and the lessons their review cards belong to.
+    const stored = window.localStorage.getItem(CARD_PROGRESS_KEY);
+    const progress = stored ? (JSON.parse(stored) as Record<string, CardProgress>) : {};
+    const resume = Object.values(sessions).sort(
+      (a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId),
+    )[0];
+    openLessonsById([...lessonIdsInProgress(progress), ...(resume ? [resume.lessonId] : [])]);
+  }, [openLessonsById]);
 
   useEffect(() => {
     if (!storageReady || (view !== "learn" && view !== "practice")) return;
@@ -345,8 +384,9 @@ export default function Home() {
     return () => window.clearInterval(timer);
   }, [storageReady, view]);
 
-  const progress =
-    view === "practice"
+  const progress = !lesson
+    ? 0
+    : view === "practice"
       ? ((questionIndex + (selected ? 1 : 0)) / lesson.questions.length) * 100
       : (((deckIndex * 2 + round - 1) * words.length + cardIndex + (revealed ? 1 : 0)) /
           (lesson.decks.length * 2 * words.length)) *
@@ -357,12 +397,13 @@ export default function Home() {
     [lessonId, questionIndex, currentQuestion],
   );
 
-  function startLesson(id: number) {
+  async function startLesson(id: number) {
     const storedSession = savedSessions[id];
     if (storedSession) {
       restoreSession(storedSession);
       return;
     }
+    await openLessonsById([id]);
     setLessonId(id);
     setDeckIndex(0);
     setRound(1);
@@ -392,6 +433,7 @@ export default function Home() {
   }
 
   function rateLearningCard(remembered: boolean) {
+    if (!lesson) return;
     const forwardId = wordCardId(lesson.id, deckIndex, cardIndex, "ar-ru");
     const reverseId = wordCardId(lesson.id, deckIndex, cardIndex, "ru-ar");
     storeCardProgress((items) => ({
@@ -486,6 +528,7 @@ export default function Home() {
   }
 
   function nextCard() {
+    if (!lesson) return;
     if (cardIndex < words.length - 1) {
       setCardIndex((value) => value + 1);
     } else if (round === 1) {
@@ -506,7 +549,7 @@ export default function Home() {
   }
 
   function answer(option: string) {
-    if (selected) return;
+    if (selected || !lesson || !currentQuestion) return;
     setSelected(option);
     if (option === currentQuestion.answer) {
       setScore((value) => value + 1);
@@ -525,6 +568,7 @@ export default function Home() {
   }
 
   function nextQuestion() {
+    if (!lesson) return;
     if (questionIndex < lesson.questions.length - 1) {
       setQuestionIndex((value) => value + 1);
       setSelected(null);
@@ -543,6 +587,7 @@ export default function Home() {
   }
 
   function resetLesson() {
+    if (!lesson) return;
     window.localStorage.removeItem(`shifahiya-lesson-${lesson.id}`);
     window.localStorage.removeItem("shifahiya-active-session");
     window.localStorage.removeItem(`shifahiya-session-${lesson.id}`);
@@ -665,7 +710,7 @@ export default function Home() {
           </div>
 
           <div className="lesson-list">
-            {lessons.map((item) => {
+            {lessonSummaries.map((item) => {
               const saved = savedScores[item.id];
               const unfinished = savedSessions[item.id];
               return (
@@ -680,7 +725,7 @@ export default function Home() {
                   <button className="primary" onClick={() => startLesson(item.id)}>
                     {unfinished ? "Продолжить" : saved === undefined ? "Начать урок" : "Повторить"} <span>→</span>
                   </button>
-                  {saved !== undefined && <div className="card-score">✓ {saved}/{item.questions.length}</div>}
+                  {saved !== undefined && <div className="card-score">✓ {saved}/{item.questionCount}</div>}
                 </div>
               );
             })}
@@ -693,7 +738,13 @@ export default function Home() {
         </section>
       )}
 
-      {view === "learn" && (
+      {!lesson && view !== "home" && view !== "review" && (
+        <section className="study-view">
+          <p className="instruction">Загружаем урок…</p>
+        </section>
+      )}
+
+      {view === "learn" && lesson && deck && currentWord && (
         <section className="study-view">
           <div className="stage-label"><span>{deckIndex + 1}</span>{deck.title}</div>
           <div className={`repeat-badge ${round === 2 ? "active" : ""}`}>
@@ -760,7 +811,7 @@ export default function Home() {
         </section>
       )}
 
-      {view === "practice" && (
+      {view === "practice" && lesson && currentQuestion && (
         <section className="practice-view">
           <div className="stage-label"><span>3</span>Закрепляем в заданиях</div>
           <div className="repeat-badge active">Слова возвращаются в обе стороны перевода</div>
@@ -790,7 +841,7 @@ export default function Home() {
         </section>
       )}
 
-      {view === "result" && (
+      {view === "result" && lesson && (
         <section className="result-view">
           <div className="result-mark">✓</div>
           <div className="eyebrow">Урок {lesson.id} завершён</div>
@@ -804,7 +855,7 @@ export default function Home() {
           <div className="review-note"><span>◷</span><div><strong>Следующее повторение — завтра</strong><small>Слова, фразы и ваши ошибки · около 3 минут</small></div></div>
           <div className="result-actions">
             <button className="secondary" onClick={resetLesson}>Сбросить результат</button>
-            {lesson.id < lessons.length
+            {lessonId < lessonSummaries.length
               ? <button className="primary" onClick={() => startLesson(lesson.id + 1)}>Перейти к уроку {lesson.id + 1} <span>→</span></button>
               : <button className="primary" onClick={() => setView("home")}>Вернуться к курсу <span>→</span></button>}
           </div>

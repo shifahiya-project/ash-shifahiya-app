@@ -40,7 +40,6 @@ test("server-renders the Shifahiya course with lesson ninety-five", async () => 
 test("keeps lesson fifteen data and local progress support in the app", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const lessonFifteen = await readFile(new URL("../content/lesson-15.ts", import.meta.url), "utf8");
-  const catalog = await readFile(new URL("../content/index.ts", import.meta.url), "utf8");
   const contentFiles = await readdir(new URL("../content/", import.meta.url));
 
   const lessonSixteen = await readFile(new URL("../content/lesson-16.ts", import.meta.url), "utf8");
@@ -128,7 +127,6 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(lessonFifteen, /مَلِكٌ/);
   assert.match(lessonFifteen, /مُتَأَهِّلَاتٌ/);
   assert.match(lessonFifteen, /أَمَّا \.\.\. فَـ \.\.\./);
-  assert.match(catalog, /export const rawLessons/);
   assert.match(lessonSixteen, /export const lessonSixteen: Lesson/);
   assert.match(lessonSixteen, /بِلَادٌ/);
   assert.match(lessonSixteen, /هَذِهِ الْبُيُوتُ وَاسِعَةٌ/);
@@ -271,7 +269,8 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(lessonNinetyFive, /طُوبَى لِلطَّلَبَةِ الْمُجْتَهِدِينَ/);
   assert.match(lessonFortyEight, /لَمْ يَقْرَأْ وَلَمْ يَكْتُبْ/);
   assert.match(lessonFortySix, /دَارُ الدُّنْيَا فَانِيَةٌ وَدَارُ الْآخِرَةِ بَاقِيَةٌ/);
-  assert.match(page, /import \{ rawLessons \} from "\.\.\/content"/);
+  assert.match(page, /import \{ lessonSummaries \} from "\.\.\/content\/manifest"/);
+  assert.match(page, /import \{ loadLessons \} from "\.\.\/content\/lessons"/);
   assert.match(page, /shifahiya-active-session/);
   assert.match(page, /shifahiya-session-\$\{lessonId\}/);
   assert.match(page, /unfinished \? "Продолжить"/);
@@ -295,7 +294,7 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.doesNotMatch(page, /setSavedSessions\(\{ \.\.\.sessions \}\);\s+restoreSession\(session\)/);
   assert.match(page, /shifahiya-lesson-\$\{item\.id\}/);
   assert.match(page, /shuffle\(currentQuestion\?\.options/);
-  // Question generation itself lives in content/questions.ts and is covered by
-  // tests/questions.test.mjs; the page only has to keep applying it.
-  assert.match(page, /\.map\(expandLessonQuestions\)/);
+  // Question generation lives in content/questions.ts and is covered by
+  // tests/questions.test.mjs; the page only has to keep loading lessons lazily.
+  assert.match(page, /openLessonsById/);
 });
