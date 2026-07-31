@@ -24,12 +24,28 @@
 ```bash
 npm run dev       # локальная разработка (vinext dev)
 npm run build     # сборка в dist/ (vinext build)
+npm run build:static  # статическая копия сайта в .static-site/
 npm test          # build + node --test tests/*.test.mjs
 npm run lint      # eslint
 npm run content:manifest  # пересобрать content/manifest.ts после правки урока
 ```
 
 `npm test` включает в себя `npm run build` — отдельно собирать не нужно.
+
+## Публикация
+
+Приложение целиком рендерится в браузере и держит состояние в `localStorage`,
+поэтому курс работает и как набор статических файлов.
+`scripts/build-static.mjs` рендерит главную через собранный Worker, переписывает
+абсолютные адреса ассетов на относительные (иначе сайт ломается в подкаталоге —
+для этого же в `vite.config.ts` есть `base: process.env.STATIC_BASE ?? "/"`) и
+складывает всё в `.static-site/`. Рерайт нужен в двух местах: в разметке и в
+экранированном payload гидрации — React пересобирает `<head>` на клиенте.
+
+`.github/workflows/deploy.yml` повторяет сборку на каждый push в `main` и
+выкладывает результат в ветку `gh-pages`; GitHub Pages отдаёт её по адресу
+`https://shifahiya-project.github.io/ash-shifahiya-app/`. Ветка `gh-pages`
+содержит только собранный сайт и переписывается целиком — руками её не править.
 
 ## Структура
 
