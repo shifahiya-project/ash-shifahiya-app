@@ -204,22 +204,23 @@ export function startSync() {
   });
 }
 
-export async function sendMagicLink(email: string) {
+/**
+ * Sends the browser to Google and back. Sign-in deliberately goes through a
+ * provider rather than an emailed link: Supabase's built-in mail is capped at
+ * a couple of messages an hour, which a shared course would hit immediately.
+ */
+export async function signInWithGoogle() {
   if (!isSyncConfigured) return;
   setState({ status: "working", message: null });
   const supabase = await client();
-  // The link must come back to this exact page; the hash carries the session.
-  const redirect = `${window.location.origin}${window.location.pathname}`;
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: redirect },
+  // Google must return to this exact page; the client picks the session out of
+  // the URL it lands on.
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: `${window.location.origin}${window.location.pathname}` },
   });
-  setState({
-    status: "signed-out",
-    message: error
-      ? `Не удалось отправить письмо: ${error.message}`
-      : `Ссылка для входа отправлена на ${email}. Откройте её на этом устройстве.`,
-  });
+  // A successful call navigates away, so reaching here at all means it failed.
+  if (error) setState({ status: "signed-out", message: `Не удалось начать вход: ${error.message}` });
 }
 
 export async function signOut() {

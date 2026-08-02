@@ -357,18 +357,9 @@ h1 em { color: var(--green); font-weight: inherit; }
 .account-copy strong { font: 500 16px Georgia, serif; color: var(--ink); }
 .account-copy span { color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
 .account-actions { display: flex; align-items: center; gap: 10px; }
-.account-actions input {
-  width: 190px;
-  padding: 11px 13px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--paper);
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
-}
-.account-actions input:focus { outline: 2px solid var(--mint); border-color: var(--green); }
 .account-actions .secondary { padding: 11px 16px; font-size: 13px; }
+.google-button { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; }
+.google-button svg { width: 16px; height: 16px; }
 .account-actions button:disabled { opacity: .55; cursor: default; }
 .account-actions .text-button { margin: 0; font-size: 12px; }
 .account-panel > small { flex-basis: 100%; color: var(--green); font-size: 12px; }
@@ -543,7 +534,7 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .backup-tools { align-items: flex-start; flex-direction: column; }
   .account-panel { align-items: flex-start; flex-direction: column; }
   .account-actions { width: 100%; }
-  .account-actions input { flex: 1; width: auto; }
+  .account-actions .google-button { flex: 1; justify-content: center; }
   .progress-heading { align-items: flex-start; flex-direction: column; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .achievement-list { grid-template-columns: repeat(2, 1fr); }

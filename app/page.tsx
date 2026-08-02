@@ -13,7 +13,7 @@ import {
   type CardProgress,
   type SavedSession,
 } from "./progress-store";
-import { sendMagicLink, signOut, startSync, syncNow, syncStore } from "./sync";
+import { signInWithGoogle, signOut, startSync, syncNow, syncStore } from "./sync";
 
 type ReviewCard = {
   id: string;
@@ -27,6 +27,18 @@ type ReviewCard = {
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
 const WORD_ACHIEVEMENTS = [10, 50, 100, 250, 500, 1000, 1500, 2000];
 const DAY_ACHIEVEMENTS = [7, 14, 30, 50, 100, 150, 250, 365];
+
+/** Google's mark, inline so the sign-in button pulls in no outside asset. */
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.2-.4-4.7H24v8.9h11.8c-.5 2.8-2 5.1-4.4 6.7v5.5h7.1c4.1-3.8 6.6-9.4 6.6-16.4z" />
+      <path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.3l-7.1-5.5c-2 1.3-4.5 2.1-7.4 2.1-5.7 0-10.6-3.9-12.3-9.1H4.4v5.7C8 41.1 15.4 46 24 46z" />
+      <path fill="#FBBC05" d="M11.7 28.2c-.4-1.3-.7-2.7-.7-4.2s.3-2.9.7-4.2v-5.7H4.4A22 22 0 0 0 2 24c0 3.6.9 6.9 2.4 9.9l7.3-5.7z" />
+      <path fill="#EA4335" d="M24 10.7c3.2 0 6.1 1.1 8.4 3.3l6.3-6.3C34.9 4.1 29.9 2 24 2 15.4 2 8 6.9 4.4 14.1l7.3 5.7c1.7-5.2 6.6-9.1 12.3-9.1z" />
+    </svg>
+  );
+}
 
 function localDate(daysFromNow = 0) {
   const date = new Date();
@@ -673,21 +685,14 @@ export default function Home() {
                 <>
                   <div className="account-copy">
                     <strong>Занимаетесь с нескольких устройств?</strong>
-                    <span>Введите почту — придёт ссылка для входа, пароль не нужен. Прогресс объединится с тем, что уже пройдено здесь.</span>
+                    <span>Войдите через Google — пароль не нужен. Прогресс объединится с тем, что уже пройдено здесь, ничего не потеряется.</span>
                   </div>
-                  <form
-                    className="account-actions"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const email = new FormData(event.currentTarget).get("email");
-                      if (typeof email === "string" && email) void sendMagicLink(email);
-                    }}
-                  >
-                    <input name="email" type="email" required placeholder="почта" autoComplete="email" disabled={sync.status === "working"} />
-                    <button type="submit" className="secondary" disabled={sync.status === "working"}>
-                      {sync.status === "working" ? "Отправляем…" : "Войти"}
+                  <div className="account-actions">
+                    <button className="secondary google-button" onClick={() => void signInWithGoogle()} disabled={sync.status === "working"}>
+                      <GoogleMark />
+                      {sync.status === "working" ? "Открываем…" : "Войти через Google"}
                     </button>
-                  </form>
+                  </div>
                 </>
               )}
               {sync.message && <small>{sync.message}</small>}

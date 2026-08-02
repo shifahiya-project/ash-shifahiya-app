@@ -23,19 +23,31 @@
 ## Вход и синхронизация между устройствами
 
 По умолчанию прогресс лежит только в браузере, вход не нужен. Если подключить
-проект Supabase, на главной появляется панель входа по почте: приходит ссылка,
-пароль не нужен, и прогресс начинает ходить между устройствами.
+проект Supabase, на главной появляется кнопка входа через Google, и прогресс
+начинает ходить между устройствами.
+
+Вход сделан через Google, а не по ссылке на почту, намеренно: встроенная
+отправка писем у Supabase ограничена парой сообщений в час и не предназначена
+для боевого использования.
 
 Настраивается один раз:
 
 1. Завести бесплатный проект на [supabase.com](https://supabase.com).
 2. `SQL Editor` → `New query` → вставить [`supabase/schema.sql`](./supabase/schema.sql) → `Run`.
    Создаётся таблица `progress` и правила доступа: каждый видит только свою строку.
-3. `Project Settings` → `API`: скопировать **Project URL** и ключ **anon public**
-   в [`app/supabase-config.ts`](./app/supabase-config.ts).
-4. `Authentication` → `URL Configuration`: добавить адрес сайта
-   (`https://shifahiya-project.github.io/ash-shifahiya-app/`) в **Redirect URLs**.
-5. Закоммитить и запушить — workflow пересоберёт сайт.
+3. Завести OAuth-клиент в [Google Cloud Console](https://console.cloud.google.com):
+   `APIs & Services` → `Credentials` → `Create credentials` → `OAuth client ID` →
+   тип **Web application**. В **Authorized redirect URIs** вписать
+   `https://<ссылка-на-проект>.supabase.co/auth/v1/callback` — точный адрес
+   показан в Supabase на странице провайдера.
+4. В Supabase: `Authentication` → `Providers` → `Google` → включить и вставить
+   **Client ID** и **Client Secret** из предыдущего шага.
+5. `Authentication` → `URL Configuration`: в **Site URL** и **Redirect URLs**
+   указать `https://shifahiya-project.github.io/ash-shifahiya-app/`.
+6. `Project Settings` → `API`: скопировать **Project URL** и публичный ключ
+   (`anon public`, в новом интерфейсе — `Publishable key`) в
+   [`app/supabase-config.ts`](./app/supabase-config.ts).
+7. Закоммитить и запушить — workflow пересоберёт сайт.
 
 Ключ `anon public` открытый по замыслу и лежит в репозитории намеренно: доступ
 ограничивают правила уровня строк из `schema.sql`, а не секретность ключа.
