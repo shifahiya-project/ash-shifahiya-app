@@ -341,6 +341,38 @@ h1 em { color: var(--green); font-weight: inherit; }
 .continue-copy > i b { display: block; height: 100%; border-radius: inherit; background: var(--gold); }
 .continue-action { font-size: 12px; font-weight: 700; white-space: nowrap; }
 .continue-action b { margin-left: 5px; color: var(--gold); }
+.account-panel {
+  margin: 0 0 14px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,.72);
+}
+.account-copy { display: flex; flex-direction: column; gap: 4px; max-width: 52ch; }
+.account-copy strong { font: 500 16px Georgia, serif; color: var(--ink); }
+.account-copy span { color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+.account-actions { display: flex; align-items: center; gap: 10px; }
+.account-actions input {
+  width: 190px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+.account-actions input:focus { outline: 2px solid var(--mint); border-color: var(--green); }
+.account-actions .secondary { padding: 11px 16px; font-size: 13px; }
+.account-actions button:disabled { opacity: .55; cursor: default; }
+.account-actions .text-button { margin: 0; font-size: 12px; }
+.account-panel > small { flex-basis: 100%; color: var(--green); font-size: 12px; }
+
 .backup-tools { margin: 0 0 30px; padding: 0 4px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--ink-soft); font-size: 11px; }
 .backup-tools > div { display: flex; gap: 14px; }
 .backup-tools .text-button { margin: 0; font-size: 11px; }
@@ -509,6 +541,9 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .continue-mark { width: 42px; height: 42px; }
   .continue-action { grid-column: 1 / -1; width: 100%; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.14); text-align: center; }
   .backup-tools { align-items: flex-start; flex-direction: column; }
+  .account-panel { align-items: flex-start; flex-direction: column; }
+  .account-actions { width: 100%; }
+  .account-actions input { flex: 1; width: auto; }
   .progress-heading { align-items: flex-start; flex-direction: column; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .achievement-list { grid-template-columns: repeat(2, 1fr); }

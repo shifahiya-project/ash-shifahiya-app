@@ -12,9 +12,10 @@
     "build:static": "STATIC_BASE=./ npm run build && node scripts/build-static.mjs",
     "test": "npm run build && node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/*.test.mjs",
     "content:manifest": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/generate-manifest.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .static-site"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.111.0",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6"

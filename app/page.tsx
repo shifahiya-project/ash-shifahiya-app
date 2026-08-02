@@ -13,6 +13,7 @@ import {
   type CardProgress,
   type SavedSession,
 } from "./progress-store";
+import { sendMagicLink, signOut, startSync, syncNow, syncStore } from "./sync";
 
 type ReviewCard = {
   id: string;
@@ -170,6 +171,8 @@ export default function Home() {
   const cardProgress = stored.cards;
   const learningStats = stored.stats;
 
+  const sync = useSyncExternalStore(syncStore.subscribe, syncStore.getSnapshot, syncStore.getServerSnapshot);
+
   const lesson = openLessons[lessonId];
   const parts = useMemo(() => (lesson ? lessonParts(lesson) : []), [lesson]);
   const part = parts[partIndex] ?? parts[0];
@@ -282,24 +285,35 @@ export default function Home() {
     setView(session.view);
   }
 
-  useEffect(() => {
-    // Bring in only what the home screen actually needs: the lesson the learner
-    // stopped in, and the lessons their review cards belong to.
-    const { cards, sessions } = progressStore.getSnapshot();
-    const resume = Object.values(sessions).sort(
+  // Connects the progress store to Supabase when a project is configured, and
+  // does nothing otherwise. A pull after sign-in can add lessons to load, so
+  // this runs before the loader below.
+  useEffect(startSync, []);
+
+  // Only what the home screen actually needs: the lesson the learner stopped
+  // in, and the lessons their review cards belong to. Signing in can pull a
+  // history from another device, so this is derived from the store rather than
+  // read once on mount.
+  const wantedLessonIds = useMemo(() => {
+    const resume = Object.values(savedSessions).sort(
       (a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId),
     )[0];
-    const wanted = [...lessonIdsInProgress(cards), ...(resume ? [resume.lessonId] : [])];
-    if (!wanted.length) return;
+    return [...new Set([...lessonIdsInProgress(cardProgress), ...(resume ? [resume.lessonId] : [])])]
+      .sort((a, b) => a - b)
+      .join(",");
+  }, [cardProgress, savedSessions]);
+
+  useEffect(() => {
+    if (!wantedLessonIds) return;
 
     let cancelled = false;
-    loadLessons(wanted).then((loaded) => {
+    loadLessons(wantedLessonIds.split(",").map(Number)).then((loaded) => {
       if (!cancelled) mergeLessons(loaded);
     });
     return () => {
       cancelled = true;
     };
-  }, [mergeLessons]);
+  }, [wantedLessonIds, mergeLessons]);
 
   useEffect(() => {
     if (view !== "learn" && view !== "practice") return;
@@ -639,8 +653,49 @@ export default function Home() {
             </div>
           </section>
 
+          {sync.status !== "off" && (
+            <div className="account-panel">
+              {sync.status === "signed-in" ? (
+                <>
+                  <div className="account-copy">
+                    <strong>Прогресс синхронизируется</strong>
+                    <span>
+                      {sync.email}
+                      {sync.syncedAt ? ` · сохранено в ${new Date(sync.syncedAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}` : ""}
+                    </span>
+                  </div>
+                  <div className="account-actions">
+                    <button className="text-button" onClick={() => void syncNow()}>Обновить</button>
+                    <button className="text-button" onClick={() => void signOut()}>Выйти</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="account-copy">
+                    <strong>Занимаетесь с нескольких устройств?</strong>
+                    <span>Введите почту — придёт ссылка для входа, пароль не нужен. Прогресс объединится с тем, что уже пройдено здесь.</span>
+                  </div>
+                  <form
+                    className="account-actions"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const email = new FormData(event.currentTarget).get("email");
+                      if (typeof email === "string" && email) void sendMagicLink(email);
+                    }}
+                  >
+                    <input name="email" type="email" required placeholder="почта" autoComplete="email" disabled={sync.status === "working"} />
+                    <button type="submit" className="secondary" disabled={sync.status === "working"}>
+                      {sync.status === "working" ? "Отправляем…" : "Войти"}
+                    </button>
+                  </form>
+                </>
+              )}
+              {sync.message && <small>{sync.message}</small>}
+            </div>
+          )}
+
           <div className="backup-tools">
-            <span>Прогресс хранится на этом устройстве</span>
+            <span>{sync.status === "signed-in" ? "Прогресс хранится на устройстве и в вашем аккаунте" : "Прогресс хранится на этом устройстве"}</span>
             <div>
               <button className="text-button" onClick={exportProgress}>Сохранить копию</button>
               <button className="text-button" onClick={() => importInput.current?.click()}>Восстановить</button>
