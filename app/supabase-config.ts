@@ -6,7 +6,7 @@
 // Copy them from the Supabase dashboard: Project Settings → API →
 // "Project URL" and "anon public". Leave them empty to run the course purely
 // locally — the sign-in panel then stays hidden and nothing is sent anywhere.
-export const SUPABASE_URL = "";
-export const SUPABASE_ANON_KEY = "";
+export const SUPABASE_URL = "https://kauohosuoafynhthlpkf.supabase.co";
+export const SUPABASE_ANON_KEY = "sb_publishable_osZDECnpGPR-hBWAo-KQfQ_XfNTJOui";
 
 export const isSyncConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
