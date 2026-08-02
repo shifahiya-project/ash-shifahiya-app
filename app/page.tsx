@@ -631,40 +631,6 @@ export default function Home() {
             </button>
           )}
 
-          <section className="student-progress" aria-labelledby="student-progress-title">
-            <div className="progress-heading">
-              <div>
-                <span className="eyebrow">Личный прогресс</span>
-                <h2 id="student-progress-title">Ваш путь в цифрах</h2>
-              </div>
-              <small>Статистика обновляется во время занятий</small>
-            </div>
-            <div className="stats-grid">
-              <div><strong>{learningStats.activeDates.length}</strong><span>дней занятий</span></div>
-              <div><strong>{Object.keys(savedScores).length}</strong><span>уроков завершено</span></div>
-              <div><strong>{formatStudyTime(learningStats.totalSeconds)}</strong><span>времени в учёбе</span></div>
-              <div><strong>{wordProgress.encountered}</strong><span>новых слов пройдено</span></div>
-              <div><strong>{wordProgress.mastered}</strong><span>слов выучено</span></div>
-              <div><strong>{learningStats.masteredPhrases.length}</strong><span>фраз освоено</span></div>
-              <div><strong>{studyStreaks.longest}</strong><span>рекорд без перерыва</span></div>
-            </div>
-            <div className="achievements">
-              <div className="achievements-title">
-                <strong>Достижения</strong>
-                <span>{achievements.filter((item) => item.unlocked).length}/{achievements.length} открыто</span>
-              </div>
-              <div className="achievement-list">
-                {achievements.map((item) => (
-                  <div className={`achievement ${item.unlocked ? "unlocked" : ""}`} key={item.id} title={`${Math.round(item.progress * 100)}%`}>
-                    <span>{item.unlocked ? "✓" : "◇"}</span>
-                    <strong>{item.label}</strong>
-                    <i><b style={{ width: `${item.progress * 100}%` }} /></i>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
           {sync.status !== "off" && (
             <div className="account-panel">
               {sync.status === "signed-in" ? (
@@ -698,6 +664,40 @@ export default function Home() {
               {sync.message && <small>{sync.message}</small>}
             </div>
           )}
+
+          <section className="student-progress" aria-labelledby="student-progress-title">
+            <div className="progress-heading">
+              <div>
+                <span className="eyebrow">Личный прогресс</span>
+                <h2 id="student-progress-title">Ваш путь в цифрах</h2>
+              </div>
+              <small>Статистика обновляется во время занятий</small>
+            </div>
+            <div className="stats-grid">
+              <div><strong>{learningStats.activeDates.length}</strong><span>дней занятий</span></div>
+              <div><strong>{Object.keys(savedScores).length}</strong><span>уроков завершено</span></div>
+              <div><strong>{formatStudyTime(learningStats.totalSeconds)}</strong><span>времени в учёбе</span></div>
+              <div><strong>{wordProgress.encountered}</strong><span>новых слов пройдено</span></div>
+              <div><strong>{wordProgress.mastered}</strong><span>слов выучено</span></div>
+              <div><strong>{learningStats.masteredPhrases.length}</strong><span>фраз освоено</span></div>
+              <div><strong>{studyStreaks.longest}</strong><span>рекорд без перерыва</span></div>
+            </div>
+            <div className="achievements">
+              <div className="achievements-title">
+                <strong>Достижения</strong>
+                <span>{achievements.filter((item) => item.unlocked).length}/{achievements.length} открыто</span>
+              </div>
+              <div className="achievement-list">
+                {achievements.map((item) => (
+                  <div className={`achievement ${item.unlocked ? "unlocked" : ""}`} key={item.id} title={`${Math.round(item.progress * 100)}%`}>
+                    <span>{item.unlocked ? "✓" : "◇"}</span>
+                    <strong>{item.label}</strong>
+                    <i><b style={{ width: `${item.progress * 100}%` }} /></i>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
 
           <div className="backup-tools">
             <span>{sync.status === "signed-in" ? "Прогресс хранится на устройстве и в вашем аккаунте" : "Прогресс хранится на этом устройстве"}</span>

@@ -342,7 +342,7 @@ h1 em { color: var(--green); font-weight: inherit; }
 .continue-action { font-size: 12px; font-weight: 700; white-space: nowrap; }
 .continue-action b { margin-left: 5px; color: var(--gold); }
 .account-panel {
-  margin: 0 0 14px;
+  margin: 0 0 18px;
   padding: 18px 22px;
   display: flex;
   align-items: center;
