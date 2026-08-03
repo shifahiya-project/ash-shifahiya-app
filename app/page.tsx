@@ -13,7 +13,7 @@ import {
   type CardProgress,
   type SavedSession,
 } from "./progress-store";
-import { signInWithGoogle, signOut, startSync, syncNow, syncStore } from "./sync";
+import { signInWithGoogle, signOut, startSync, syncStore } from "./sync";
 
 type ReviewCard = {
   id: string;
@@ -596,7 +596,6 @@ export default function Home() {
 
       {view === "home" && (
         <section className="home-view">
-          <div className="eyebrow">Ваш путь · 100 из 100 уроков готовы</div>
           <h1>Учимся через<br /><em>повторение и практику</em></h1>
           <p className="lead">Каждая форма встречается дважды в карточках, затем возвращается в переводах и предложениях. Второй урок продолжает первый и вводит женский род.</p>
 
@@ -631,36 +630,20 @@ export default function Home() {
             </button>
           )}
 
-          {sync.status !== "off" && (
+          {/* Once signed in the panel has nothing left to say, so it goes away
+              and the account lives in the quiet line under the lesson list. */}
+          {sync.status !== "off" && !sync.email && (
             <div className="account-panel">
-              {sync.status === "signed-in" ? (
-                <>
-                  <div className="account-copy">
-                    <strong>Прогресс синхронизируется</strong>
-                    <span>
-                      {sync.email}
-                      {sync.syncedAt ? ` · сохранено в ${new Date(sync.syncedAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}` : ""}
-                    </span>
-                  </div>
-                  <div className="account-actions">
-                    <button className="text-button" onClick={() => void syncNow()}>Обновить</button>
-                    <button className="text-button" onClick={() => void signOut()}>Выйти</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="account-copy">
-                    <strong>Занимаетесь с нескольких устройств?</strong>
-                    <span>Войдите через Google — пароль не нужен. Прогресс объединится с тем, что уже пройдено здесь, ничего не потеряется.</span>
-                  </div>
-                  <div className="account-actions">
-                    <button className="secondary google-button" onClick={() => void signInWithGoogle()} disabled={sync.status === "working"}>
-                      <GoogleMark />
-                      {sync.status === "working" ? "Открываем…" : "Войти через Google"}
-                    </button>
-                  </div>
-                </>
-              )}
+              <div className="account-copy">
+                <strong>Занимаетесь с нескольких устройств?</strong>
+                <span>Войдите через Google — пароль не нужен. Прогресс объединится с тем, что уже пройдено здесь, ничего не потеряется.</span>
+              </div>
+              <div className="account-actions">
+                <button className="secondary google-button" onClick={() => void signInWithGoogle()} disabled={sync.status === "working"}>
+                  <GoogleMark />
+                  {sync.status === "working" ? "Открываем…" : "Войти через Google"}
+                </button>
+              </div>
               {sync.message && <small>{sync.message}</small>}
             </div>
           )}
@@ -700,13 +683,14 @@ export default function Home() {
           </section>
 
           <div className="backup-tools">
-            <span>{sync.status === "signed-in" ? "Прогресс хранится на устройстве и в вашем аккаунте" : "Прогресс хранится на этом устройстве"}</span>
+            <span>{sync.email ? `Прогресс синхронизируется · ${sync.email}` : "Прогресс хранится на этом устройстве"}</span>
             <div>
               <button className="text-button" onClick={exportProgress}>Сохранить копию</button>
               <button className="text-button" onClick={() => importInput.current?.click()}>Восстановить</button>
               <input ref={importInput} type="file" accept="application/json" onChange={importProgress} hidden />
+              {sync.email && <button className="text-button" onClick={() => void signOut()}>Выйти</button>}
             </div>
-            {backupMessage && <small>{backupMessage}</small>}
+            {(backupMessage || sync.message) && <small>{backupMessage || sync.message}</small>}
           </div>
 
           <div className="lesson-list">

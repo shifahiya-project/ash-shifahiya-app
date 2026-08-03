@@ -30,7 +30,6 @@ test("server-renders the complete one-hundred-lesson Shifahiya course", async ()
 
   const html = await response.text();
   assert.match(html, /<title>Аш-Шифахия — арабский шаг за шагом<\/title>/i);
-  assert.match(html, /100 из 100 уроков готовы/);
   assert.match(html, /Известный правитель и занятый министр/);
   assert.match(html, /الدَّرْسُ الخَامِسُ عَشَرَ/);
   assert.match(html, /48 заданий/);
