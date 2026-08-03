@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Аш-Шифахия">
+  <!-- The letter shin drawn as paths rather than text: a favicon cannot rely on
+       the viewer's system carrying an Arabic font. -->
+  <rect width="64" height="64" rx="14" fill="#176b55"/>
+  <g fill="#faf8f2">
+    <circle cx="21" cy="21" r="4"/>
+    <circle cx="32" cy="15" r="4"/>
+    <circle cx="43" cy="21" r="4"/>
+  </g>
+  <path d="M13 32c0 10 8 17 19 17s19-7 19-17"
+        fill="none" stroke="#faf8f2" stroke-width="6" stroke-linecap="round"/>
+</svg>
