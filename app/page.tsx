@@ -6,6 +6,7 @@ import { loadLessons } from "../content/lessons";
 import { plural } from "../content/questions";
 import type { Lesson } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
+import { unlockedLessonIds } from "./lesson-access";
 import { lessonParts } from "../content/lesson-parts";
 import {
   EMPTY_STATS,
@@ -119,8 +120,10 @@ function lessonIdsInProgress(progress: Record<string, CardProgress>) {
   return [...ids];
 }
 
+const MASTERED_BOX = REVIEW_INTERVALS.length - 1;
+
 function nextCardProgress(previous: CardProgress | undefined, remembered: boolean): CardProgress {
-  const box = remembered ? Math.min((previous?.box ?? 0) + 1, REVIEW_INTERVALS.length - 1) : 0;
+  const box = remembered ? Math.min((previous?.box ?? 0) + 1, MASTERED_BOX) : 0;
   return {
     box,
     nextReview: localDate(REVIEW_INTERVALS[box]),
@@ -128,6 +131,27 @@ function nextCardProgress(previous: CardProgress | undefined, remembered: boolea
     correct: (previous?.correct ?? 0) + (remembered ? 1 : 0),
     wrong: (previous?.wrong ?? 0) + (remembered ? 0 : 1),
   };
+}
+
+/**
+ * Puts a card straight into the last box. Pronouns and the like are known on
+ * sight, and walking them up the boxes one review at a time is time the
+ * learner would rather spend on forms they actually forget.
+ */
+function masteredCardProgress(previous: CardProgress | undefined): CardProgress {
+  return {
+    box: MASTERED_BOX,
+    nextReview: localDate(REVIEW_INTERVALS[MASTERED_BOX]),
+    lastReviewed: localDate(),
+    correct: (previous?.correct ?? 0) + 1,
+    wrong: previous?.wrong ?? 0,
+  };
+}
+
+/** Both halves of a word: the card asked in Arabic and the one asked in Russian. */
+function bothDirections(cardId: string) {
+  const word = cardId.replace(/-(ar-ru|ru-ar)$/, "");
+  return [`${word}-ar-ru`, `${word}-ru-ar`];
 }
 
 function speak(text: string) {
@@ -250,11 +274,14 @@ export default function Home() {
       progress: Math.min(learningStats.activeDates.length / target, 1),
     })),
   ], [learningStats.activeDates.length, wordProgress.mastered]);
+  const unlockedLessons = useMemo(() => unlockedLessonIds(lessonSummaries, stored), [stored]);
+  // Repeats of finished lessons resume from their own card, not from the hero
+  // prompt, which is there to carry the learner forward through the course.
   const latestSession = useMemo(
-    () => Object.values(savedSessions).sort((a, b) =>
-      (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId),
-    )[0],
-    [savedSessions],
+    () => Object.values(savedSessions)
+      .filter((session) => savedScores[session.lessonId] === undefined)
+      .sort((a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId))[0],
+    [savedSessions, savedScores],
   );
   // The course order is the manifest order, which need not be a run of 1..N.
   const nextLesson = lessonSummaries[lessonSummaries.findIndex((item) => item.id === lessonId) + 1];
@@ -377,6 +404,7 @@ export default function Home() {
   const options = useMemo(() => shuffle(currentQuestion?.options ?? []), [currentQuestion]);
 
   async function startLesson(id: number) {
+    if (!unlockedLessons.has(id)) return;
     const storedSession = savedSessions[id];
     if (storedSession) {
       restoreSession(storedSession);
@@ -414,6 +442,20 @@ export default function Home() {
     nextCard();
   }
 
+  /** Retires both directions of the current word and moves on. */
+  function masterLearningCard() {
+    if (!lesson) return;
+    const ids = [
+      wordCardId(lesson.id, deckIndex, cardIndex, "ar-ru"),
+      wordCardId(lesson.id, deckIndex, cardIndex, "ru-ar"),
+    ];
+    progressStore.updateCards((items) => ({
+      ...items,
+      ...Object.fromEntries(ids.map((id) => [id, masteredCardProgress(items[id])])),
+    }));
+    nextCard();
+  }
+
   function startDailyReview() {
     if (!dueCards.length) {
       setBackupMessage("На сегодня всё повторено.");
@@ -435,6 +477,26 @@ export default function Home() {
       setReviewQueue((items) => [...items, currentReviewCard]);
     }
     if (reviewIndex < reviewQueue.length - 1 || !remembered) {
+      setReviewIndex((value) => value + 1);
+      setReviewRevealed(false);
+    } else {
+      setView("home");
+      setBackupMessage("Повторение на сегодня завершено.");
+    }
+  }
+
+  function masterReviewCard() {
+    if (!currentReviewCard) return;
+    const ids = bothDirections(currentReviewCard.id);
+    progressStore.updateCards((items) => ({
+      ...items,
+      ...Object.fromEntries(ids.map((id) => [id, masteredCardProgress(items[id])])),
+    }));
+    // The reverse direction is retired too, so it must not be left waiting
+    // further down today's queue.
+    const queue = reviewQueue.filter((card, index) => index <= reviewIndex || !ids.includes(card.id));
+    setReviewQueue(queue);
+    if (reviewIndex < queue.length - 1) {
       setReviewIndex((value) => value + 1);
       setReviewRevealed(false);
     } else {
@@ -694,11 +756,14 @@ export default function Home() {
           </div>
 
           <div className="lesson-list">
-            {lessonSummaries.map((item) => {
+            {lessonSummaries.map((item, index) => {
               const saved = savedScores[item.id];
               const unfinished = savedSessions[item.id];
+              const completed = saved !== undefined;
+              const locked = !unlockedLessons.has(item.id);
+              const opensAfter = lessonSummaries[index - 1];
               return (
-                <div className="lesson-card" key={item.id}>
+                <div className={`lesson-card ${completed ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={item.id}>
                   <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
                   <div className="lesson-copy">
                     <div className="lesson-label">Урок {item.id} · <span dir="rtl">{item.arabicTitle}</span></div>
@@ -706,10 +771,27 @@ export default function Home() {
                     <p>{item.description}{item.partCount > 1 ? ` · в ${item.partCount} части` : ""}</p>
                     <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
                   </div>
-                  <button className="primary" onClick={() => startLesson(item.id)}>
-                    {unfinished ? "Продолжить" : saved === undefined ? "Начать урок" : "Повторить"} <span>→</span>
-                  </button>
-                  {saved !== undefined && <div className="card-score">✓ {saved}/{item.questionCount}</div>}
+                  {locked ? (
+                    <button className="locked" disabled title={`Откроется после урока ${opensAfter?.id}`}>
+                      Закрыто <span>🔒</span>
+                    </button>
+                  ) : completed ? (
+                    <div className="lesson-actions">
+                      <button className="done" disabled>Пройден <span>✓</span></button>
+                      {/* A repeat resumes silently where it stopped, so the
+                          label stays a repeat rather than turning into a
+                          "continue" the learner never asked for. */}
+                      <button className="repeat" onClick={() => startLesson(item.id)}>
+                        Повторить <span>→</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button className="primary" onClick={() => startLesson(item.id)}>
+                      {unfinished ? "Продолжить" : "Начать урок"} <span>→</span>
+                    </button>
+                  )}
+                  {completed && <div className="card-score">✓ {saved}/{item.questionCount}</div>}
+                  {locked && opensAfter && <div className="card-lock">Сначала урок {opensAfter.id}</div>}
                 </div>
               );
             })}
@@ -744,11 +826,17 @@ export default function Home() {
               <div className="translation"><strong>{currentWord.russian}</strong>{currentWord.note && <small>{currentWord.note}</small>}</div>
             ) : <div className="hidden-translation">перевод скрыт</div>}
           </article>
-          <div className="study-actions">
+          <div className={`study-actions ${revealed ? "three" : ""}`}>
             {!revealed ? (
               <button className="primary wide" onClick={() => setRevealed(true)}>Показать перевод</button>
             ) : (
-              <><button className="secondary" onClick={() => rateLearningCard(false)}>Пока трудно</button><button className="primary" onClick={() => rateLearningCard(true)}>Запомнил <span>→</span></button></>
+              <>
+                <button className="secondary" onClick={() => rateLearningCard(false)}>Пока трудно</button>
+                <button className="primary" onClick={() => rateLearningCard(true)}>Запомнил <span>→</span></button>
+                <button className="mastered" onClick={masterLearningCard} title="Убрать из ежедневного повторения">
+                  Выучил <span>✓</span>
+                </button>
+              </>
             )}
           </div>
           <button className="text-button" onClick={() => speak(currentWord.arabic)}>Прослушать ещё раз</button>
@@ -782,13 +870,16 @@ export default function Home() {
               </div>
             ) : <div className="hidden-translation">ответ скрыт</div>}
           </article>
-          <div className="study-actions">
+          <div className={`study-actions ${reviewRevealed ? "three" : ""}`}>
             {!reviewRevealed ? (
               <button className="primary wide" onClick={() => setReviewRevealed(true)}>Показать ответ</button>
             ) : (
               <>
                 <button className="secondary" onClick={() => rateReviewCard(false)}>Не вспомнил</button>
                 <button className="primary" onClick={() => rateReviewCard(true)}>Вспомнил <span>→</span></button>
+                <button className="mastered" onClick={masterReviewCard} title="Больше не показывать в повторении">
+                  Выучил <span>✓</span>
+                </button>
               </>
             )}
           </div>

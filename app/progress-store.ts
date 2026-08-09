@@ -114,8 +114,10 @@ export const progressStore = {
     publish();
   },
 
+  /** Repeating a lesson can only raise its result, never take one away. */
   finishLesson(lessonId: number, score: number) {
-    window.localStorage.setItem(lessonScoreKey(lessonId), String(score));
+    const earned = progressStore.getSnapshot().scores[lessonId] ?? 0;
+    window.localStorage.setItem(lessonScoreKey(lessonId), String(Math.max(score, earned)));
     window.localStorage.removeItem(ACTIVE_SESSION_KEY);
     window.localStorage.removeItem(lessonSessionKey(lessonId));
     publish();
