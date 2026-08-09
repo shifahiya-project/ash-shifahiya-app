@@ -442,20 +442,6 @@ export default function Home() {
     nextCard();
   }
 
-  /** Retires both directions of the current word and moves on. */
-  function masterLearningCard() {
-    if (!lesson) return;
-    const ids = [
-      wordCardId(lesson.id, deckIndex, cardIndex, "ar-ru"),
-      wordCardId(lesson.id, deckIndex, cardIndex, "ru-ar"),
-    ];
-    progressStore.updateCards((items) => ({
-      ...items,
-      ...Object.fromEntries(ids.map((id) => [id, masteredCardProgress(items[id])])),
-    }));
-    nextCard();
-  }
-
   function startDailyReview() {
     if (!dueCards.length) {
       setBackupMessage("На сегодня всё повторено.");
@@ -826,17 +812,11 @@ export default function Home() {
               <div className="translation"><strong>{currentWord.russian}</strong>{currentWord.note && <small>{currentWord.note}</small>}</div>
             ) : <div className="hidden-translation">перевод скрыт</div>}
           </article>
-          <div className={`study-actions ${revealed ? "three" : ""}`}>
+          <div className="study-actions">
             {!revealed ? (
               <button className="primary wide" onClick={() => setRevealed(true)}>Показать перевод</button>
             ) : (
-              <>
-                <button className="secondary" onClick={() => rateLearningCard(false)}>Пока трудно</button>
-                <button className="primary" onClick={() => rateLearningCard(true)}>Запомнил <span>→</span></button>
-                <button className="mastered" onClick={masterLearningCard} title="Убрать из ежедневного повторения">
-                  Выучил <span>✓</span>
-                </button>
-              </>
+              <><button className="secondary" onClick={() => rateLearningCard(false)}>Пока трудно</button><button className="primary" onClick={() => rateLearningCard(true)}>Запомнил <span>→</span></button></>
             )}
           </div>
           <button className="text-button" onClick={() => speak(currentWord.arabic)}>Прослушать ещё раз</button>
