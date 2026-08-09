@@ -1,5 +1,6 @@
-# Rebuilds the static copy of the site and publishes it to the gh-pages branch,
-# which GitHub Pages serves at https://shifahiya-project.github.io/ash-shifahiya-app/.
+# Builds the static copy of the site and publishes it to the gh-pages branch,
+# which is what GitHub Pages serves. Without this the branch has to be updated
+# by hand, and a merged change quietly never reaches the site.
 name: Deploy
 
 on:
@@ -10,8 +11,9 @@ on:
 permissions:
   contents: write
 
+# A second push while one deploy is running would race for the same branch.
 concurrency:
-  group: deploy
+  group: deploy-gh-pages
   cancel-in-progress: true
 
 jobs:
@@ -26,18 +28,24 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # Includes the build, so a broken page never reaches the site.
+      - run: npm test
+
       - run: npm run build:static
 
       - name: Publish to gh-pages
         run: |
+          set -eu
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          # The branch holds only the built site, so each deploy replaces it wholesale.
-          git checkout --orphan gh-pages
-          git rm -rf --cached . >/dev/null
-          find . -maxdepth 1 ! -name . ! -name .git ! -name .static-site -exec rm -rf {} +
-          cp -r .static-site/. .
-          rm -rf .static-site
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git worktree add site origin/gh-pages
+          # The branch holds the build and nothing else, so it is replaced whole
+          # rather than merged into.
+          find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a .static-site/. site/
+          cd site
           git add -A
-          git commit -m "Publish the site built from ${GITHUB_SHA::7}"
-          git push -f origin gh-pages
+          git diff --quiet --cached || git commit -m "Publish the built site"
+          git push origin HEAD:gh-pages
