@@ -443,9 +443,11 @@ export default function Home() {
   }
 
   /**
-   * Opens the grammar block on its own. A learner who finished the lesson
-   * before it had one has no parked session to resume, and should not have to
-   * redo the cards to reach the rules.
+   * Opens the grammar block on its own. The words and the questions are behind
+   * the learner — a lesson only offers this once its own result is stored — so
+   * the block starts at the rules. A session left inside the block resumes
+   * where it stopped; one left anywhere else is from an abandoned repeat of the
+   * cards and must not drag the learner back through them.
    */
   async function startGrammar(id: number) {
     if (!unlockedLessons.has(id)) return;
@@ -453,6 +455,11 @@ export default function Home() {
     if (!loaded?.grammar) return;
     mergeLessons([loaded]);
     const loadedParts = lessonParts(loaded);
+    const parked = savedSessions[id];
+    if (parked && loadedParts[parked.partIndex ?? 0]?.kind === "grammar") {
+      restoreSession(parked);
+      return;
+    }
     setLessonId(id);
     setPartIndex(loadedParts.length - 1);
     setRuleIndex(0);
@@ -846,10 +853,7 @@ export default function Home() {
                       Закрыто <span>🔒</span>
                     </button>
                   ) : grammarLeft ? (
-                    <button
-                      className="repeat"
-                      onClick={() => (unfinished ? startLesson(item.id) : startGrammar(item.id))}
-                    >
+                    <button className="repeat" onClick={() => startGrammar(item.id)}>
                       Грамматика <span>→</span>
                     </button>
                   ) : completed ? (
