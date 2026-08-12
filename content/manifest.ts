@@ -46,8 +46,8 @@ export const lessonSummaries: LessonSummary[] = [
     description: "14 форм · 2 круга повторения · 28 заданий",
     tags: ["Указательные слова", "Люди", "Род и число"],
     questionCount: 28,
-    partCount: 1,
-    grammarQuestionCount: 0,
+    partCount: 2,
+    grammarQuestionCount: 7,
   },
   {
     id: 4,
@@ -96,8 +96,8 @@ export const lessonSummaries: LessonSummary[] = [
     description: "28 форм · 2 круга повторения · 56 заданий",
     tags: ["Занятия людей", "Качества", "Несогласованное определение"],
     questionCount: 56,
-    partCount: 1,
-    grammarQuestionCount: 0,
+    partCount: 2,
+    grammarQuestionCount: 7,
   },
   {
     id: 9,
@@ -106,8 +106,8 @@ export const lessonSummaries: LessonSummary[] = [
     description: "30 форм · 2 круга повторения · 60 заданий",
     tags: ["Учителя", "Качества", "Согласованное определение"],
     questionCount: 60,
-    partCount: 1,
-    grammarQuestionCount: 0,
+    partCount: 2,
+    grammarQuestionCount: 7,
   },
   {
     id: 10,
@@ -116,8 +116,8 @@ export const lessonSummaries: LessonSummary[] = [
     description: "32 формы · 2 круга повторения · 64 задания",
     tags: ["Профессии", "Ремёсла", "Притяжательные формы"],
     questionCount: 64,
-    partCount: 1,
-    grammarQuestionCount: 0,
+    partCount: 2,
+    grammarQuestionCount: 7,
   },
   {
     id: 11,
