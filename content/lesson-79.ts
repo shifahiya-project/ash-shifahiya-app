@@ -1,7 +1,7 @@
 import type { Lesson } from "./types";
 export const lessonSeventyNine: Lesson = {
   id: 79, arabicTitle: "الدَّرْسُ التَّاسِعُ وَالسَّبْعُونَ", title: "Удвоенные глаголы: مرّ، فرّ، مسّ.",
-  description: "Все спряжения, производные и выражения урока · 2 круга повторения", tags: ["Удвоенные глаголы", "Спряжение", "Причастия", "Практика"],
+  description: "38 форм · 2 круга повторения · 76 заданий", tags: ["Удвоенные глаголы", "Спряжение", "Причастия", "Практика"],
   decks: [
     { title: "مَرَّ — проходить", words: [
       { arabic: "مَرَّ", russian: "он прошёл" }, { arabic: "يَمُرُّ", russian: "он проходит" }, { arabic: "مُرَّ", russian: "проходи" }, { arabic: "لَا تَمُرَّ", russian: "не проходи" },
@@ -12,7 +12,7 @@ export const lessonSeventyNine: Lesson = {
       { arabic: "فَارٌّ", russian: "убегающий" }, { arabic: "مَفْرُورٌ", russian: "тот, от кого убежали" }, { arabic: "فِرَارٌ", russian: "бегство" }, { arabic: "أَفِرُّ", russian: "я убегаю" },
     ] },
     { title: "مَسَّ — трогать", words: [
-      { arabic: "مَسَّ", russian: "он тронул" }, { arabic: "يَمَسُّ", russian: "он трогает" }, { arabic: "مَسَّ", russian: "трогай" }, { arabic: "لَا تَمَسَّ", russian: "не трогай" },
+      { arabic: "مَسَّ", russian: "он тронул", note: "форма повеления совпадает" }, { arabic: "يَمَسُّ", russian: "он трогает" }, { arabic: "لَا تَمَسَّ", russian: "не трогай" },
       { arabic: "مَاسٌّ", russian: "касающийся" }, { arabic: "مَمْسُوسٌ", russian: "тронутый" }, { arabic: "مَسٌّ", russian: "касание" }, { arabic: "أَمَسُّ", russian: "я трогаю" },
     ] },
     { title: "Полные личные формы", words: [

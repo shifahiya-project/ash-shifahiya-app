@@ -1,7 +1,7 @@
 import type { Lesson } from "./types";
 export const lessonSixtyThree: Lesson = {
   id: 63, arabicTitle: "الدَّرْسُ الثَّالِثُ وَالسِّتُّونَ", title: "Еда, напитки и гостеприимство.",
-  description: "Все слова, формы и выражения урока · 2 круга повторения", tags: ["Еда", "Напитки", "Посуда", "Гости"],
+  description: "66 форм · 2 круга повторения · 132 задания", tags: ["Еда", "Напитки", "Посуда", "Гости"],
   decks: [
     { title: "Блюда и приправы", words: [
       { arabic: "رَغِيفٌ", russian: "каравай / лепёшка" }, { arabic: "مَرَقٌ", russian: "суп / бульон" }, { arabic: "خَلٌّ", russian: "уксус" }, { arabic: "مِلْحٌ", russian: "соль" },

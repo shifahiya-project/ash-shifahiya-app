@@ -1,7 +1,7 @@
 import type { Lesson } from "./types";
 export const lessonSixtySix: Lesson = {
   id: 66, arabicTitle: "الدَّرْسُ السَّادِسُ وَالسِّتُّونَ", title: "Числительные от одиннадцати до миллиона.",
-  description: "Все числовые формы урока · 2 круга повторения", tags: ["Числительные", "Десятки", "Сотни", "Тысячи"],
+  description: "48 форм · 2 круга повторения · 96 заданий", tags: ["Числительные", "Десятки", "Сотни", "Тысячи"],
   decks: [
     { title: "11–19", words: [
       { arabic: "أَحَدَ عَشَرَ", russian: "одиннадцать" }, { arabic: "اِثْنَا عَشَرَ", russian: "двенадцать" }, { arabic: "ثَلَاثَةَ عَشَرَ", russian: "тринадцать" },
@@ -22,7 +22,7 @@ export const lessonSixtySix: Lesson = {
     { title: "Тысячи и миллион", words: [
       { arabic: "أَلْفٌ", russian: "тысяча" }, { arabic: "أَلْفٌ وَوَاحِدٌ", russian: "тысяча один" }, { arabic: "أَلْفَانِ", russian: "две тысячи" },
       { arabic: "ثَلَاثَةُ آلَافٍ", russian: "три тысячи" }, { arabic: "عَشَرَةُ آلَافٍ", russian: "десять тысяч" }, { arabic: "مِائَةُ أَلْفٍ", russian: "сто тысяч" },
-      { arabic: "أَلْفُ أَلْفٍ", russian: "миллион" }, { arabic: "مِلْيُونٌ", russian: "миллион" },
+      { arabic: "أَلْفُ أَلْفٍ", russian: "тысяча тысяч" }, { arabic: "مِلْيُونٌ", russian: "миллион" },
     ] },
     { title: "Согласование", words: [
       { arabic: "أَحَدَ عَشَرَ رَجُلًا", russian: "одиннадцать мужчин" }, { arabic: "إِحْدَى عَشْرَةَ امْرَأَةً", russian: "одиннадцать женщин" },

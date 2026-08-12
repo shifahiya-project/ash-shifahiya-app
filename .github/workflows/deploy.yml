@@ -1,0 +1,51 @@
+# Builds the static copy of the site and publishes it to the gh-pages branch,
+# which is what GitHub Pages serves. Without this the branch has to be updated
+# by hand, and a merged change quietly never reaches the site.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A second push while one deploy is running would race for the same branch.
+concurrency:
+  group: deploy-gh-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Includes the build, so a broken page never reaches the site.
+      - run: npm test
+
+      - run: npm run build:static
+
+      - name: Publish to gh-pages
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git worktree add site origin/gh-pages
+          # The branch holds the build and nothing else, so it is replaced whole
+          # rather than merged into.
+          find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a .static-site/. site/
+          cd site
+          git add -A
+          git diff --quiet --cached || git commit -m "Publish the built site"
+          git push origin HEAD:gh-pages

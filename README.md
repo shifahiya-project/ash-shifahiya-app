@@ -1,98 +1,103 @@
-# vinext-starter
+# Аш-Шифахия
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Интерактивный курс арабского языка на русском по книге
+**Ахмад Хади Максуди, «Учебник арабского языка ШИФАХИЯ»** (сост. Н.И. Фаткуллин,
+Уфа 2011).
 
-## Prerequisites
+Урок устроен так: карточки со словами → тест с вариантами ответа → результат.
+Отдельно работает режим ежедневного повторения по системе Лейтнера. Прогресс
+хранится в браузере (`localStorage`), вход не нужен, есть экспорт и импорт JSON.
 
-- Node.js `>=22.13.0`
+Сейчас готовы все **100 уроков** — около 4540 словоформ и 1075 авторских заданий,
+которые генератор добивает до полного набора «арабский → русский» и
+«русский → арабский» по каждому слову.
 
-## Quick Start
+## Где открыть
+
+Собранный сайт лежит в ветке `gh-pages` и публикуется по адресу
+<https://shifahiya-project.github.io/ash-shifahiya-app/>.
+
+Публикация — статические файлы: приложение целиком рендерится в браузере и
+никакого сервера не требует.
+
+## Вход и синхронизация между устройствами
+
+По умолчанию прогресс лежит только в браузере, вход не нужен. Если подключить
+проект Supabase, на главной появляется кнопка входа через Google, и прогресс
+начинает ходить между устройствами.
+
+Вход сделан через Google, а не по ссылке на почту, намеренно: встроенная
+отправка писем у Supabase ограничена парой сообщений в час и не предназначена
+для боевого использования.
+
+Настраивается один раз:
+
+1. Завести бесплатный проект на [supabase.com](https://supabase.com).
+2. `SQL Editor` → `New query` → вставить [`supabase/schema.sql`](./supabase/schema.sql) → `Run`.
+   Создаётся таблица `progress` и правила доступа: каждый видит только свою строку.
+3. Завести OAuth-клиент в [Google Cloud Console](https://console.cloud.google.com):
+   `APIs & Services` → `Credentials` → `Create credentials` → `OAuth client ID` →
+   тип **Web application**. В **Authorized redirect URIs** вписать
+   `https://<ссылка-на-проект>.supabase.co/auth/v1/callback` — точный адрес
+   показан в Supabase на странице провайдера.
+4. В Supabase: `Authentication` → `Providers` → `Google` → включить и вставить
+   **Client ID** и **Client Secret** из предыдущего шага.
+5. `Authentication` → `URL Configuration`: в **Site URL** и **Redirect URLs**
+   указать `https://shifahiya-project.github.io/ash-shifahiya-app/`.
+6. `Project Settings` → `API`: скопировать **Project URL** и публичный ключ
+   (`anon public`, в новом интерфейсе — `Publishable key`) в
+   [`app/supabase-config.ts`](./app/supabase-config.ts).
+7. Закоммитить и запушить — workflow пересоберёт сайт.
+
+Ключ `anon public` открытый по замыслу и лежит в репозитории намеренно: доступ
+ограничивают правила уровня строк из `schema.sql`, а не секретность ключа.
+
+Пока поля в `supabase-config.ts` пустые, панель входа скрыта и наружу не уходит
+ничего — курс работает ровно как раньше.
+
+### Как устроена синхронизация
+
+`localStorage` остаётся источником истины, сервер — копией, поэтому курс
+продолжает работать офлайн и без аккаунта. Вход не заменяет местный прогресс:
+`app/merge-progress.ts` сводит обе стороны — по каждому уроку берётся лучший
+результат, по каждой карточке та версия, где позже был ответ, дни занятий и
+освоенные фразы объединяются. Порядок слияния на результат не влияет.
+
+## Разработка
 
 ```bash
 npm install
-npm run dev
-npm run build
+npm run dev              # локальная разработка
+npm run build            # сборка Worker-версии в dist/
+npm run build:static     # статическая копия сайта в .static-site/
+npm test                 # build + тесты
+npm run lint
+npm run content:manifest # пересобрать content/manifest.ts после правки урока
 ```
 
-This starter does not use `wrangler.jsonc`.
+Нужен Node.js `>= 22.13.0`.
 
-## Included Shape
+## Как устроено
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+| Путь | Что там |
+|---|---|
+| `app/` | всё приложение: один клиентский компонент, свои стили, хранилище прогресса |
+| `content/` | уроки `lesson-01..100.ts`, генерация вопросов, ленивый загрузчик, манифест |
+| `scripts/` | пересборка манифеста и статическая сборка |
+| `worker/` | точка входа Cloudflare Worker |
+| `tests/` | SSR-разметка, генератор вопросов, деление длинных уроков, прогресс-бар |
 
-## Workspace Auth Headers
+Стек: Next.js 16 App Router поверх [vinext](https://github.com/cloudflare/vinext),
+React 19, Vite 8. Сборка идёт командой `vinext`, а не `next`; `wrangler.jsonc`
+не используется — локальные биндинги описаны в `vite.config.ts`.
 
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
+Подробные соглашения — в [CLAUDE.md](./CLAUDE.md): модель данных, порядок
+огласовок, как добавить урок, как читать книгу-источник.
 
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
+## Публикация
 
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
-```
-
-## Optional Dispatch-Owned ChatGPT Sign-In
-
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+`npm run build:static` рендерит главную через собранный Worker, переписывает
+адреса ассетов на относительные (чтобы сайт работал из подкаталога) и
+складывает результат в `.static-site/`. Workflow `.github/workflows/deploy.yml`
+повторяет это на каждый push в `main` и выкладывает содержимое в ветку
+`gh-pages`.

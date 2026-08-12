@@ -36,8 +36,13 @@ yarn-error.log*
 
 # typescript
 next-env.d.ts
+*.tsbuildinfo
 /dist/
+/.static-site/
 /.wrangler/
 /outputs/
 /work/
 /tmp/
+
+# Source book PDF. Lives on the `book-source` branch only, never in main.
+/sources/
