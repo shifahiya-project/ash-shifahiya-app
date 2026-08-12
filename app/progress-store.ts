@@ -1,15 +1,19 @@
 import { lessonSummaries } from "../content/manifest";
 
 export type SavedSession = {
-  view: "learn" | "practice";
+  view: "learn" | "practice" | "grammar";
   lessonId: number;
-  /** Which half of a long lesson the learner is in; 0 for a one-part lesson. */
+  /** Which part the learner is in; the grammar block is the last one. */
   partIndex: number;
+  /** Which rule of the grammar block is on screen, while reading them. */
+  ruleIndex?: number;
   deckIndex: number;
   round: number;
   cardIndex: number;
   questionIndex: number;
   score: number;
+  /** Counted apart from the lesson score, like the stored result. */
+  grammarScore?: number;
   mistakes: string[];
   updatedAt?: number;
 };
@@ -30,6 +34,9 @@ export type LearningStats = {
 
 export type Progress = {
   scores: Record<number, number>;
+  /** Kept apart from the lesson score so adding a grammar block to a finished
+   *  lesson neither rewrites its result nor makes it look like a loss. */
+  grammarScores: Record<number, number>;
   sessions: Record<number, SavedSession>;
   cards: Record<string, CardProgress>;
   stats: LearningStats;
@@ -39,10 +46,11 @@ export const CARD_PROGRESS_KEY = "shifahiya-card-progress-v1";
 export const LEARNING_STATS_KEY = "shifahiya-learning-stats-v1";
 export const ACTIVE_SESSION_KEY = "shifahiya-active-session";
 export const lessonScoreKey = (id: number | string) => `shifahiya-lesson-${id}`;
+export const grammarScoreKey = (id: number | string) => `shifahiya-grammar-${id}`;
 export const lessonSessionKey = (id: number | string) => `shifahiya-session-${id}`;
 
 export const EMPTY_STATS: LearningStats = { activeDates: [], totalSeconds: 0, masteredPhrases: [] };
-const EMPTY: Progress = { scores: {}, sessions: {}, cards: {}, stats: EMPTY_STATS };
+const EMPTY: Progress = { scores: {}, grammarScores: {}, sessions: {}, cards: {}, stats: EMPTY_STATS };
 
 // The learner's progress lives in localStorage, which React reads through
 // useSyncExternalStore rather than by copying into state on mount: the server
@@ -64,11 +72,14 @@ function read<T>(key: string, fallback: T): T {
 
 function readProgress(): Progress {
   const scores: Record<number, number> = {};
+  const grammarScores: Record<number, number> = {};
   const sessions: Record<number, SavedSession> = {};
 
   for (const summary of lessonSummaries) {
     const score = window.localStorage.getItem(lessonScoreKey(summary.id));
     if (score !== null) scores[summary.id] = Number(score);
+    const grammarScore = window.localStorage.getItem(grammarScoreKey(summary.id));
+    if (grammarScore !== null) grammarScores[summary.id] = Number(grammarScore);
     const session = read<SavedSession | null>(lessonSessionKey(summary.id), null);
     if (session && session.lessonId === summary.id) sessions[summary.id] = session;
   }
@@ -81,6 +92,7 @@ function readProgress(): Progress {
 
   return {
     scores,
+    grammarScores,
     sessions,
     cards: read<Record<string, CardProgress>>(CARD_PROGRESS_KEY, {}),
     stats: { ...EMPTY_STATS, ...read<Partial<LearningStats>>(LEARNING_STATS_KEY, {}) },
@@ -123,7 +135,17 @@ export const progressStore = {
     publish();
   },
 
+  /** Same rule as the lesson score: a repeat can only raise it. */
+  finishGrammar(lessonId: number, score: number) {
+    const earned = progressStore.getSnapshot().grammarScores[lessonId] ?? 0;
+    window.localStorage.setItem(grammarScoreKey(lessonId), String(Math.max(score, earned)));
+    window.localStorage.removeItem(ACTIVE_SESSION_KEY);
+    window.localStorage.removeItem(lessonSessionKey(lessonId));
+    publish();
+  },
+
   resetLesson(lessonId: number) {
+    window.localStorage.removeItem(grammarScoreKey(lessonId));
     window.localStorage.removeItem(lessonScoreKey(lessonId));
     window.localStorage.removeItem(ACTIVE_SESSION_KEY);
     window.localStorage.removeItem(lessonSessionKey(lessonId));
@@ -145,6 +167,9 @@ export const progressStore = {
   replaceAll(progress: Progress) {
     for (const [id, score] of Object.entries(progress.scores)) {
       window.localStorage.setItem(lessonScoreKey(id), String(score));
+    }
+    for (const [id, score] of Object.entries(progress.grammarScores ?? {})) {
+      window.localStorage.setItem(grammarScoreKey(id), String(score));
     }
     for (const [id, session] of Object.entries(progress.sessions)) {
       window.localStorage.setItem(lessonSessionKey(id), JSON.stringify(session));

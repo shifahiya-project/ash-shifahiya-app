@@ -9,6 +9,13 @@ export const PART_THRESHOLD = 150;
 export type LessonPart = {
   /** 0-based. */
   index: number;
+  /**
+   * "cards" runs the deck-then-practice pass over the lesson's own words;
+   * "grammar" teaches the rules behind them and drills those instead. A
+   * grammar part has no decks, and its question range indexes the grammar
+   * block rather than the lesson.
+   */
+  kind: "cards" | "grammar";
   /** Decks belonging to this part, as a half-open range. */
   deckStart: number;
   deckEnd: number;
@@ -20,11 +27,25 @@ export type LessonPart = {
 function wholeLesson(lesson: Lesson): LessonPart {
   return {
     index: 0,
+    kind: "cards",
     deckStart: 0,
     deckEnd: lesson.decks.length,
     questionStart: 0,
     questionEnd: lesson.questions.length,
   };
+}
+
+/** The grammar block always closes the lesson, as one more part. */
+function grammarPart(lesson: Lesson, index: number): LessonPart[] {
+  if (!lesson.grammar) return [];
+  return [{
+    index,
+    kind: "grammar",
+    deckStart: 0,
+    deckEnd: 0,
+    questionStart: 0,
+    questionEnd: lesson.grammar.questions.length,
+  }];
 }
 
 /**
@@ -35,7 +56,7 @@ function wholeLesson(lesson: Lesson): LessonPart {
  */
 export function lessonParts(lesson: Lesson, threshold = PART_THRESHOLD): LessonPart[] {
   if (lesson.questions.length <= threshold || lesson.decks.length < 2) {
-    return [wholeLesson(lesson)];
+    return [wholeLesson(lesson), ...grammarPart(lesson, 1)];
   }
 
   const cardsPerDeck = lesson.decks.map((deck) => deck.words.length * 2);
@@ -55,14 +76,16 @@ export function lessonParts(lesson: Lesson, threshold = PART_THRESHOLD): LessonP
 
   const questionCut = Math.round(lesson.questions.length / 2);
   return [
-    { index: 0, deckStart: 0, deckEnd: boundary, questionStart: 0, questionEnd: questionCut },
+    { index: 0, kind: "cards", deckStart: 0, deckEnd: boundary, questionStart: 0, questionEnd: questionCut },
     {
       index: 1,
+      kind: "cards",
       deckStart: boundary,
       deckEnd: lesson.decks.length,
       questionStart: questionCut,
       questionEnd: lesson.questions.length,
     },
+    ...grammarPart(lesson, 2),
   ];
 }
 

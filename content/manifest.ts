@@ -12,8 +12,10 @@ export type LessonSummary = {
   description: string;
   tags: string[];
   questionCount: number;
-  /** 2 for a lesson long enough to be taught in halves, otherwise 1. */
+  /** Cards parts plus the grammar part, when the lesson has one. */
   partCount: number;
+  /** 0 when the lesson has no grammar block yet. */
+  grammarQuestionCount: number;
 };
 
 export const lessonSummaries: LessonSummary[] = [
@@ -24,7 +26,8 @@ export const lessonSummaries: LessonSummary[] = [
     description: "14 форм · 2 круга повторения · 28 заданий",
     tags: ["Местоимения", "Число", "Первые фразы"],
     questionCount: 28,
-    partCount: 1,
+    partCount: 2,
+    grammarQuestionCount: 8,
   },
   {
     id: 2,
@@ -34,6 +37,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Женский род", "Согласование", "Перевод"],
     questionCount: 28,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 3,
@@ -43,6 +47,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Указательные слова", "Люди", "Род и число"],
     questionCount: 28,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 4,
@@ -52,6 +57,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Люди", "Возраст", "Занятия и качества"],
     questionCount: 56,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 5,
@@ -61,6 +67,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Качества", "Здоровье", "Множественное число"],
     questionCount: 40,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 6,
@@ -70,6 +77,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Друзья и соседи", "Притяжание", "Окончания"],
     questionCount: 52,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 7,
@@ -79,6 +87,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Семья", "Родственники", "Имена и притяжание"],
     questionCount: 56,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 8,
@@ -88,6 +97,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Занятия людей", "Качества", "Несогласованное определение"],
     questionCount: 56,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 9,
@@ -97,6 +107,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Учителя", "Качества", "Согласованное определение"],
     questionCount: 60,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 10,
@@ -106,6 +117,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Профессии", "Ремёсла", "Притяжательные формы"],
     questionCount: 64,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 11,
@@ -115,6 +127,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Внешность", "Женский род", "Множественное число"],
     questionCount: 72,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 12,
@@ -124,6 +137,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Отрицание", "Формы لَيْسَ", "Род и число"],
     questionCount: 40,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 13,
@@ -133,6 +147,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Качества", "Одна форма для двух родов", "Каждый и некоторые"],
     questionCount: 56,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 14,
@@ -142,6 +157,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Качества", "Родственники", "Ломаное множественное число"],
     questionCount: 64,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 15,
@@ -151,6 +167,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Правители", "Семейное положение", "Союзы"],
     questionCount: 48,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 16,
@@ -160,6 +177,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Город и дом", "Неодушевлённое множество", "Согласование"],
     questionCount: 44,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 17,
@@ -169,6 +187,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Городские места", "Форма предметов", "Вопрос и ответ"],
     questionCount: 52,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 18,
@@ -178,6 +197,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Книги и письменные принадлежности", "Есть и нет", "Вопросы о принадлежности"],
     questionCount: 68,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 19,
@@ -187,6 +207,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Материалы и предметы", "Качества предметов", "Имя единичности"],
     questionCount: 54,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 20,
@@ -196,6 +217,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Части дерева", "Цвета", "Имя единичности", "Конструкции с غير"],
     questionCount: 96,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 21,
@@ -205,6 +227,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Прошедшее время", "Спряжение глагола", "Объектные местоимения", "Винительный падеж"],
     questionCount: 92,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 22,
@@ -214,6 +237,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Новые глаголы", "Пища и имущество", "Что-то и ничего", "Страдательный залог"],
     questionCount: 60,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 23,
@@ -223,6 +247,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Предлоги", "Местоименные суффиксы", "Движение и место", "Сравнение"],
     questionCount: 100,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 24,
@@ -232,6 +257,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Действия", "Время урока", "Пять намазов", "До и после"],
     questionCount: 52,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 25,
@@ -241,6 +267,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Время", "Дни недели", "Части суток", "Праздник и пятница"],
     questionCount: 54,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 26,
@@ -250,6 +277,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Вопросительные слова", "Обстоятельства места", "Частица أَ", "Вопрос и ответ"],
     questionCount: 62,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 27,
@@ -259,6 +287,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Год, месяц и неделя", "Периоды времени", "Связки событий", "Исламский календарь"],
     questionCount: 72,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 28,
@@ -268,6 +297,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Знание и понимание", "Слух и речь", "Одежда и напитки", "Чувства и действия"],
     questionCount: 48,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 29,
@@ -277,6 +307,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Изменение состояния", "Работа и дело", "Газеты и языки", "Оценка качества"],
     questionCount: 60,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 30,
@@ -286,6 +317,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Относительные местоимения", "Действия", "Вопросы и значения", "Самостоятельность"],
     questionCount: 64,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 31,
@@ -295,6 +327,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Настоящее-будущее время", "Спряжение", "Отрицание и будущее", "Пассивный залог"],
     questionCount: 74,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 32,
@@ -304,6 +337,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Модель يَمْدَحُ", "Модель يَعْرِفُ", "Модель يُبْصِرُ", "Чтение и действия"],
     questionCount: 108,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 33,
@@ -313,6 +347,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Приказ", "Запрет", "Обращение", "Спряжение"],
     questionCount: 228,
     partCount: 2,
+    grammarQuestionCount: 0,
   },
   {
     id: 34,
@@ -322,6 +357,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Перевод", "Приказ и запрет", "Обращение", "Практические фразы"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 35,
@@ -331,6 +367,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["فَاعِلٌ", "مَفْعُولٌ", "فَعَّالٌ", "Состояние действия"],
     questionCount: 130,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 36,
@@ -340,6 +377,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Причастия", "Состояние действия", "Актив и пассив", "Отрицание"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 37,
@@ -349,6 +387,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Сравнение", "Превосходная степень", "أَفْعَلُ", "Качества"],
     questionCount: 96,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 38,
@@ -358,6 +397,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Масдар", "Название действия", "Глагол и имя", "Причина и обязанность"],
     questionCount: 112,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 39,
@@ -367,6 +407,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Абстрактные качества", "Противоположности", "Искусственный масдар", "Нрав"],
     questionCount: 128,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 40,
@@ -376,6 +417,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Причина", "Признак", "Качества человека", "Практика масдаров"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 41,
@@ -385,6 +427,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Вода", "Осадки", "Сосуды", "Физические свойства"],
     questionCount: 64,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 42,
@@ -394,6 +437,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Водоёмы", "Берег и мост", "Горы и долины", "Плавание"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 43,
@@ -403,6 +447,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Одежда", "Части одежды", "Качество ткани", "Уход за одеждой"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 44,
@@ -412,6 +457,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Одежда", "Обувь", "Ткань", "Ремёсла", "Изготовление и ремонт"],
     questionCount: 168,
     partCount: 2,
+    grammarQuestionCount: 0,
   },
   {
     id: 45,
@@ -421,6 +467,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Религия", "Убеждение", "Цвета", "Имена", "Глаголы веры"],
     questionCount: 170,
     partCount: 2,
+    grammarQuestionCount: 0,
   },
   {
     id: 46,
@@ -430,6 +477,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Вероубеждение", "Пророки", "Вечность", "Глаголы творения"],
     questionCount: 154,
     partCount: 2,
+    grammarQuestionCount: 0,
   },
   {
     id: 47,
@@ -439,6 +487,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Частица أَنْ", "Пустые глаголы", "Масдары", "Терпение", "Справедливость"],
     questionCount: 224,
     partCount: 2,
+    grammarQuestionCount: 0,
   },
   {
     id: 48,
@@ -448,6 +497,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Диалог", "Приветствие", "Частицы", "Пустые глаголы", "Отрицание لَمْ"],
     questionCount: 190,
     partCount: 2,
+    grammarQuestionCount: 0,
   },
   {
     id: 49,
@@ -457,6 +507,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Частицы", "نِعْمَ и بِئْسَ", "Качества", "Верность", "Глаголы"],
     questionCount: 160,
     partCount: 2,
+    grammarQuestionCount: 0,
   },
   {
     id: 50,
@@ -466,6 +517,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Хадисы", "Знание", "Труд", "Нравственность", "Завершение части I"],
     questionCount: 144,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 51,
@@ -475,6 +527,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Тело", "Голова", "Лицо", "Множественное число", "Жизнь"],
     questionCount: 132,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 52,
@@ -484,6 +537,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Тело", "Руки", "Ноги", "Пальцы", "Омовение"],
     questionCount: 126,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 53,
@@ -493,6 +547,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Органы", "Кровь", "Здоровье", "Раны", "Глаголы движения"],
     questionCount: 154,
     partCount: 2,
+    grammarQuestionCount: 0,
   },
   {
     id: 54,
@@ -502,6 +557,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Животные", "Скот", "Масть", "Польза", "Собирательные имена"],
     questionCount: 174,
     partCount: 2,
+    grammarQuestionCount: 0,
   },
   {
     id: 55,
@@ -511,6 +567,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Хищники", "Дикие звери", "Гады", "Домашний и дикий", "Глаголы"],
     questionCount: 142,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 56,
@@ -520,6 +577,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Птицы", "Домашняя птица", "Насекомые", "Единичное имя", "Мёд"],
     questionCount: 136,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 57,
@@ -529,6 +587,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Растения", "Фрукты", "Овощи", "Вкус и запах", "Единичное имя"],
     questionCount: 144,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 58,
@@ -538,6 +597,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Зерно", "Мельница", "Огонь", "Земледелие", "Глаголы труда"],
     questionCount: 130,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 59,
@@ -547,6 +607,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Дом", "Убранство", "Утварь", "Ткани", "Постройка"],
     questionCount: 174,
     partCount: 2,
+    grammarQuestionCount: 0,
   },
   {
     id: 60,
@@ -556,6 +617,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Небо", "Земля", "Погода", "Стороны света", "Времена года"],
     questionCount: 142,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 61,
@@ -565,6 +627,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Металлы", "Минералы", "Материалы", "Ремёсла"],
     questionCount: 136,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 62,
@@ -574,6 +637,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Государство", "Армия", "Оружие", "Движение"],
     questionCount: 138,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 63,
@@ -583,6 +647,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Еда", "Напитки", "Посуда", "Гости"],
     questionCount: 132,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 64,
@@ -592,6 +657,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Числительные", "Род", "Согласование", "Счёт"],
     questionCount: 88,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 65,
@@ -601,6 +667,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Числительные", "Вопросы", "Количество", "Практика"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 66,
@@ -610,6 +677,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Числительные", "Десятки", "Сотни", "Тысячи"],
     questionCount: 96,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 67,
@@ -619,6 +687,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Числительные", "Даты", "Меры", "Дроби"],
     questionCount: 90,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 68,
@@ -628,6 +697,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Двойственное число", "Согласование", "Местоимения", "Практика"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 69,
@@ -637,6 +707,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Местоимения", "Возвратность", "Повеление", "Двойственное число"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 70,
@@ -646,6 +717,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Частицы", "Отрицание", "Именное предложение", "Местоимения"],
     questionCount: 90,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 71,
@@ -655,6 +727,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Нисба", "Происхождение", "Прилагательные", "Согласование"],
     questionCount: 84,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 72,
@@ -664,6 +737,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Словообразование", "Место", "Время", "Производные"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 73,
@@ -673,6 +747,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Место", "Время", "Словообразование", "Практика"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 74,
@@ -682,6 +757,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Сослагательное", "Частицы", "Глагол", "Цель"],
     questionCount: 80,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 75,
@@ -691,6 +767,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Намерение", "Возможность", "Условие", "Спряжение"],
     questionCount: 72,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 76,
@@ -700,6 +777,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Породы глагола", "Масдар", "Причастия", "Страдательный залог"],
     questionCount: 98,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 77,
@@ -709,6 +787,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Породы глагола", "Речь", "Чувства", "Поведение"],
     questionCount: 84,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 78,
@@ -718,6 +797,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Побуждение", "Избегание", "Наставление", "Знание"],
     questionCount: 82,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 79,
@@ -727,6 +807,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Удвоенные глаголы", "Спряжение", "Причастия", "Практика"],
     questionCount: 74,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 80,
@@ -736,6 +817,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Слабые глаголы", "Спряжение", "Масдар", "Причастия"],
     questionCount: 92,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 81,
@@ -745,6 +827,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Практика", "Глаголы", "Выражения", "Перевод"],
     questionCount: 72,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 82,
@@ -754,6 +837,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Слабые глаголы", "Спряжение", "Причастия", "Масдар"],
     questionCount: 92,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 83,
@@ -763,6 +847,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Породы глагола", "Слабые глаголы", "Лексика", "Практика"],
     questionCount: 84,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 84,
@@ -772,6 +857,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Практика", "Выражения", "Религиозная лексика", "Перевод"],
     questionCount: 72,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 85,
@@ -781,6 +867,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Полые глаголы", "Спряжение", "Залог", "Повелительное наклонение"],
     questionCount: 96,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 86,
@@ -790,6 +877,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Полые глаголы", "Лексика", "Породы глагола", "Словообразование"],
     questionCount: 106,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 87,
@@ -799,6 +887,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Практика", "Полые глаголы", "Речь", "Перевод"],
     questionCount: 76,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 88,
@@ -808,6 +897,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Практика", "Породы глагола", "Местоимения", "Выражения"],
     questionCount: 66,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 89,
@@ -817,6 +907,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Недостаточные глаголы", "Спряжение", "Породы глагола", "Словообразование"],
     questionCount: 100,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 90,
@@ -826,6 +917,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Практика", "Недостаточные глаголы", "Выражения", "Перевод"],
     questionCount: 82,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 91,
@@ -835,6 +927,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Практика", "Недостаточные глаголы", "Масдары", "Перевод"],
     questionCount: 66,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 92,
@@ -844,6 +937,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Практика", "Намерение", "Религиозная лексика", "Перевод"],
     questionCount: 68,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 93,
@@ -853,6 +947,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Частицы", "Связки", "Усиление", "Синтаксис"],
     questionCount: 84,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 94,
@@ -862,6 +957,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Словообразование", "Лексика", "Породы глагола", "Масдары"],
     questionCount: 82,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 95,
@@ -871,6 +967,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Практика", "Связующие слова", "Нравственность", "Перевод"],
     questionCount: 66,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 96,
@@ -880,6 +977,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Лексика", "Родство", "Науки", "Убеждение"],
     questionCount: 66,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 97,
@@ -889,6 +987,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Изречения", "Нравственность", "Знание", "Понимание текста"],
     questionCount: 64,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 98,
@@ -898,6 +997,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Изречения", "Жизнь", "Дружба", "Понимание текста"],
     questionCount: 62,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 99,
@@ -907,6 +1007,7 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Рассказы", "Чтение", "Диалог", "Понимание текста"],
     questionCount: 40,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
   {
     id: 100,
@@ -916,5 +1017,6 @@ export const lessonSummaries: LessonSummary[] = [
     tags: ["Рассказы", "Итоговый урок", "Чтение", "Понимание текста"],
     questionCount: 72,
     partCount: 1,
+    grammarQuestionCount: 0,
   },
 ];
