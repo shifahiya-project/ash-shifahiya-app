@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { unlockedLessonIds } from "../app/lesson-access.ts";
+import { isLessonComplete, unlockedLessonIds } from "../app/lesson-access.ts";
 
 const summaries = Array.from({ length: 10 }, (_, index) => ({ id: index + 1 }));
 
-const nothing = { scores: {}, sessions: {}, cards: {} };
+const nothing = { scores: {}, grammarScores: {}, sessions: {}, cards: {} };
 
 function session(lessonId) {
   return {
@@ -77,4 +77,24 @@ test("ids need not run in a single unbroken sequence", () => {
   const sparse = [{ id: 1 }, { id: 5 }, { id: 9 }];
   const open = unlockedLessonIds(sparse, { ...nothing, scores: { 1: 10 } });
   assert.deepEqual([...open].sort((a, b) => a - b), [1, 5]);
+});
+
+// Grammar is part of the lesson, not an extra: the next lesson builds on it.
+test("a lesson that teaches grammar is not finished until that block is done", () => {
+  const teaching = [{ id: 1, grammarQuestionCount: 8 }, { id: 2 }, { id: 3 }];
+  const cardsOnly = { ...nothing, scores: { 1: 26 } };
+  assert.ok(!isLessonComplete(teaching[0], cardsOnly));
+  assert.ok(!unlockedLessonIds(teaching, cardsOnly).has(2));
+
+  const done = { ...nothing, scores: { 1: 26 }, grammarScores: { 1: 8 } };
+  assert.ok(isLessonComplete(teaching[0], done));
+  assert.ok(unlockedLessonIds(teaching, done).has(2));
+});
+
+test("a grammar block added later never closes a lesson the learner reached", () => {
+  const teaching = [{ id: 1, grammarQuestionCount: 8 }, { id: 2 }, { id: 3 }, { id: 4 }];
+  // Someone who finished the first three lessons before lesson one had grammar.
+  const before = { ...nothing, scores: { 1: 26, 2: 26, 3: 26 } };
+  const open = unlockedLessonIds(teaching, before);
+  for (const id of [1, 2, 3, 4]) assert.ok(open.has(id), `lesson ${id} should stay open`);
 });

@@ -6,7 +6,7 @@ import { loadLessons } from "../content/lessons";
 import { plural } from "../content/questions";
 import type { Lesson } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
-import { unlockedLessonIds } from "./lesson-access";
+import { isLessonComplete, unlockedLessonIds } from "./lesson-access";
 import { lessonParts } from "../content/lesson-parts";
 import {
   EMPTY_STATS,
@@ -179,7 +179,7 @@ function shuffle<T>(items: T[]) {
 }
 
 export default function Home() {
-  const [view, setView] = useState<"home" | "learn" | "practice" | "review" | "result">("home");
+  const [view, setView] = useState<"home" | "learn" | "practice" | "grammar" | "review" | "result">("home");
   const [lessonId, setLessonId] = useState(1);
   const [partIndex, setPartIndex] = useState(0);
   const [deckIndex, setDeckIndex] = useState(0);
@@ -187,8 +187,10 @@ export default function Home() {
   const [cardIndex, setCardIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [questionIndex, setQuestionIndex] = useState(0);
+  const [ruleIndex, setRuleIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
+  const [grammarScore, setGrammarScore] = useState(0);
   const [mistakes, setMistakes] = useState<string[]>([]);
   const [reviewQueue, setReviewQueue] = useState<ReviewCard[]>([]);
   const [reviewIndex, setReviewIndex] = useState(0);
@@ -203,6 +205,7 @@ export default function Home() {
     progressStore.getServerSnapshot,
   );
   const savedScores = stored.scores;
+  const savedGrammarScores = stored.grammarScores;
   const savedSessions = stored.sessions;
   const cardProgress = stored.cards;
   const learningStats = stored.stats;
@@ -215,7 +218,11 @@ export default function Home() {
   const deck = lesson?.decks[deckIndex];
   const words = deck?.words ?? [];
   const currentWord = words[cardIndex];
-  const currentQuestion = lesson?.questions[questionIndex];
+  // The grammar part drills its own authored questions, not the lesson's.
+  const grammarPart = part?.kind === "grammar";
+  const activeQuestions = (grammarPart ? lesson?.grammar?.questions : lesson?.questions) ?? [];
+  const currentQuestion = activeQuestions[questionIndex];
+  const currentRule = lesson?.grammar?.rules[ruleIndex];
   const currentReviewCard = reviewQueue[reviewIndex];
 
   const mergeLessons = useCallback((loaded: Lesson[]) => {
@@ -313,11 +320,13 @@ export default function Home() {
     await openLessonsById([session.lessonId]);
     setLessonId(session.lessonId);
     setPartIndex(session.partIndex ?? 0);
+    setRuleIndex(session.ruleIndex ?? 0);
     setDeckIndex(session.deckIndex);
     setRound(session.round);
     setCardIndex(session.cardIndex);
     setQuestionIndex(session.questionIndex);
     setScore(session.score);
+    setGrammarScore(session.grammarScore ?? 0);
     setMistakes(session.mistakes);
     setSelected(null);
     setRevealed(false);
@@ -355,23 +364,25 @@ export default function Home() {
   }, [wantedLessonIds, mergeLessons]);
 
   useEffect(() => {
-    if (view !== "learn" && view !== "practice") return;
+    if (view !== "learn" && view !== "practice" && view !== "grammar") return;
     progressStore.saveSession({
       view,
       lessonId,
       partIndex,
+      ruleIndex,
       deckIndex,
       round,
       cardIndex,
       questionIndex,
       score,
+      grammarScore,
       mistakes,
       updatedAt: Date.now(),
     });
-  }, [view, lessonId, partIndex, deckIndex, round, cardIndex, questionIndex, score, mistakes]);
+  }, [view, lessonId, partIndex, ruleIndex, deckIndex, round, cardIndex, questionIndex, score, grammarScore, mistakes]);
 
   useEffect(() => {
-    if (!["learn", "practice", "review"].includes(view)) return;
+    if (!["learn", "practice", "grammar", "review"].includes(view)) return;
     const recordActivity = (seconds: number) => {
       if (document.visibilityState !== "visible") return;
       progressStore.updateStats((items) => ({
@@ -387,9 +398,14 @@ export default function Home() {
     return () => window.clearInterval(timer);
   }, [view]);
 
+  const grammarRules = lesson?.grammar?.rules ?? [];
   const progress = !lesson || !part
     ? 0
-    : view === "practice"
+    : grammarPart
+      // Reading the rules and drilling them are one run through the block.
+      ? ((view === "grammar" ? ruleIndex : grammarRules.length + questionIndex + (selected ? 1 : 0)) /
+          (grammarRules.length + part.questionEnd)) * 100
+      : view === "practice"
       ? ((questionIndex - part.questionStart + (selected ? 1 : 0)) /
           (part.questionEnd - part.questionStart)) * 100
       : cardPhaseProgress(
@@ -413,15 +429,39 @@ export default function Home() {
     await openLessonsById([id]);
     setLessonId(id);
     setPartIndex(0);
+    setRuleIndex(0);
     setDeckIndex(0);
     setRound(1);
     setCardIndex(0);
     setQuestionIndex(0);
     setScore(0);
+    setGrammarScore(0);
     setMistakes([]);
     setSelected(null);
     setRevealed(false);
     setView("learn");
+  }
+
+  /**
+   * Opens the grammar block on its own. A learner who finished the lesson
+   * before it had one has no parked session to resume, and should not have to
+   * redo the cards to reach the rules.
+   */
+  async function startGrammar(id: number) {
+    if (!unlockedLessons.has(id)) return;
+    const [loaded] = await loadLessons([id]);
+    if (!loaded?.grammar) return;
+    mergeLessons([loaded]);
+    const loadedParts = lessonParts(loaded);
+    setLessonId(id);
+    setPartIndex(loadedParts.length - 1);
+    setRuleIndex(0);
+    setQuestionIndex(0);
+    setGrammarScore(0);
+    setMistakes([]);
+    setSelected(null);
+    setRevealed(false);
+    setView("grammar");
   }
 
   function rateLearningCard(remembered: boolean) {
@@ -497,6 +537,7 @@ export default function Home() {
       version: 1,
       exportedAt: new Date().toISOString(),
       scores: savedScores,
+      grammarScores: savedGrammarScores,
       sessions: savedSessions,
       cards: cardProgress,
       stats: learningStats,
@@ -518,10 +559,12 @@ export default function Home() {
       const payload = JSON.parse(await file.text());
       if (payload.format !== "shifahiya-progress" || payload.version !== 1) throw new Error("Invalid backup");
       const scores = payload.scores ?? {};
+      // Backups written before the grammar block simply have none of it.
+      const grammarScores = payload.grammarScores ?? {};
       const sessions = payload.sessions ?? {};
       const cards = payload.cards ?? {};
       const stats = { ...EMPTY_STATS, ...(payload.stats ?? {}) };
-      progressStore.replaceAll({ scores, sessions, cards, stats });
+      progressStore.replaceAll({ scores, grammarScores, sessions, cards, stats });
       setBackupMessage("Прогресс восстановлен.");
     } catch {
       setBackupMessage("Не удалось прочитать файл прогресса.");
@@ -551,6 +594,10 @@ export default function Home() {
     if (selected || !lesson || !currentQuestion) return;
     setSelected(option);
     if (option === currentQuestion.answer) {
+      if (grammarPart) {
+        setGrammarScore((value) => value + 1);
+        return;
+      }
       setScore((value) => value + 1);
       const isPhrase = currentQuestion.prompt.trim().split(/\s+/).length > 1 ||
         currentQuestion.answer.trim().split(/\s+/).length > 1;
@@ -574,24 +621,36 @@ export default function Home() {
       return;
     }
 
+    if (part.kind === "grammar") {
+      progressStore.finishGrammar(lesson.id, grammarScore);
+      setView("result");
+      return;
+    }
+
     const following = parts[partIndex + 1];
+    // The lesson itself is done once the last cards part is answered. A grammar
+    // block after it is a part of the same lesson but keeps its own result, so
+    // adding one to a finished lesson never rewrites what was earned.
+    if (!following || following.kind === "grammar") {
+      progressStore.finishLesson(lesson.id, score);
+    }
     if (following) {
       // Leaving from the result screen must not lose the part just finished, so
       // the next part is parked as a resumable session right away.
       progressStore.saveSession({
-        view: "learn",
+        view: following.kind === "grammar" ? "grammar" : "learn",
         lessonId: lesson.id,
         partIndex: following.index,
+        ruleIndex: 0,
         deckIndex: following.deckStart,
         round: 1,
         cardIndex: 0,
         questionIndex: following.questionStart,
         score,
-        mistakes,
+        grammarScore: 0,
+        mistakes: following.kind === "grammar" ? [] : mistakes,
         updatedAt: Date.now(),
       });
-    } else {
-      progressStore.finishLesson(lesson.id, score);
     }
     setView("result");
   }
@@ -600,13 +659,32 @@ export default function Home() {
     const following = parts[index];
     if (!following) return;
     setPartIndex(index);
+    setSelected(null);
+    setRevealed(false);
+    if (following.kind === "grammar") {
+      setRuleIndex(0);
+      setQuestionIndex(0);
+      setGrammarScore(0);
+      setMistakes([]);
+      setView("grammar");
+      return;
+    }
     setDeckIndex(following.deckStart);
     setRound(1);
     setCardIndex(0);
     setQuestionIndex(following.questionStart);
-    setSelected(null);
-    setRevealed(false);
     setView("learn");
+  }
+
+  /** Walks the rules, then hands over to the questions that drill them. */
+  function nextRule() {
+    if (ruleIndex < grammarRules.length - 1) {
+      setRuleIndex((value) => value + 1);
+      return;
+    }
+    setQuestionIndex(0);
+    setSelected(null);
+    setView("practice");
   }
 
   function resetLesson() {
@@ -629,15 +707,19 @@ export default function Home() {
         <div className="lesson-progress" aria-label="Прогресс урока">
           <button className="close" onClick={() => setView("home")} aria-label="Закрыть урок">×</button>
           {parts.length > 1 && view !== "review" && (
-            <span className="part-badge">Часть {partIndex + 1} из {parts.length}</span>
+            <span className="part-badge">
+              {grammarPart ? "Грамматика" : `Часть ${partIndex + 1} из ${parts.length}`}
+            </span>
           )}
           <div className="track"><span style={{ width: `${Math.min(progress, 100)}%` }} /></div>
           <span className="counter">
             {view === "learn"
               ? `${cardIndex + 1}/${words.length}`
-              : view === "review"
-                ? `${Math.min(reviewIndex + 1, reviewQueue.length)}/${reviewQueue.length}`
-                : `${questionIndex - (part?.questionStart ?? 0) + 1}/${(part?.questionEnd ?? 0) - (part?.questionStart ?? 0)}`}
+              : view === "grammar"
+                ? `Правило ${ruleIndex + 1}/${grammarRules.length}`
+                : view === "review"
+                  ? `${Math.min(reviewIndex + 1, reviewQueue.length)}/${reviewQueue.length}`
+                  : `${questionIndex - (part?.questionStart ?? 0) + 1}/${(part?.questionEnd ?? 0) - (part?.questionStart ?? 0)}`}
           </span>
         </div>
       )}
@@ -745,7 +827,9 @@ export default function Home() {
             {lessonSummaries.map((item, index) => {
               const saved = savedScores[item.id];
               const unfinished = savedSessions[item.id];
-              const completed = saved !== undefined;
+              const completed = isLessonComplete(item, stored);
+              // The words are done but the grammar block still owes an answer.
+              const grammarLeft = saved !== undefined && !completed;
               const locked = !unlockedLessons.has(item.id);
               const opensAfter = lessonSummaries[index - 1];
               return (
@@ -760,6 +844,13 @@ export default function Home() {
                   {locked ? (
                     <button className="locked" disabled title={`Откроется после урока ${opensAfter?.id}`}>
                       Закрыто <span>🔒</span>
+                    </button>
+                  ) : grammarLeft ? (
+                    <button
+                      className="repeat"
+                      onClick={() => (unfinished ? startLesson(item.id) : startGrammar(item.id))}
+                    >
+                      Грамматика <span>→</span>
                     </button>
                   ) : completed ? (
                     <div className="lesson-actions">
@@ -776,7 +867,14 @@ export default function Home() {
                       {unfinished ? "Продолжить" : "Начать урок"} <span>→</span>
                     </button>
                   )}
-                  {completed && <div className="card-score">✓ {saved}/{item.questionCount}</div>}
+                  {completed && (
+                    <div className="card-score">
+                      ✓ {saved}/{item.questionCount}
+                      {item.grammarQuestionCount > 0 &&
+                        ` · грамматика ${savedGrammarScores[item.id]}/${item.grammarQuestionCount}`}
+                    </div>
+                  )}
+                  {grammarLeft && <div className="card-lock">Осталась грамматика</div>}
                   {locked && opensAfter && <div className="card-lock">Сначала урок {opensAfter.id}</div>}
                 </div>
               );
@@ -820,6 +918,45 @@ export default function Home() {
             )}
           </div>
           <button className="text-button" onClick={() => speak(currentWord.arabic)}>Прослушать ещё раз</button>
+        </section>
+      )}
+
+      {view === "grammar" && lesson?.grammar && currentRule && (
+        <section className="study-view grammar-view">
+          <div className="stage-label"><span>{currentRule.kind === "nahw" ? "ن" : "ص"}</span>
+            {currentRule.kind === "nahw" ? "Нахв · строение предложения" : "Сарф · строение слова"}
+          </div>
+          <div className="repeat-badge active">{lesson.grammar.title}</div>
+          <p className="instruction">{ruleIndex === 0 ? lesson.grammar.intro : "Прочитайте правило и разберите примеры"}</p>
+          <article className="rule-card">
+            <header>
+              <h2>{currentRule.title}</h2>
+              {currentRule.term && <span className="rule-term" lang="ar" dir="rtl">{currentRule.term}</span>}
+              {currentRule.pattern && <span className="rule-pattern" lang="ar" dir="rtl">{currentRule.pattern}</span>}
+            </header>
+            <p className="rule-text">{currentRule.explanation}</p>
+            <ul className="rule-examples">
+              {currentRule.examples.map((example) => (
+                <li key={example.arabic}>
+                  <b lang="ar" dir="rtl">{example.arabic}</b>
+                  <span>{example.russian}</span>
+                  {example.note && <small lang="ar" dir="rtl">{example.note}</small>}
+                  <button className="mini-inline-sound" onClick={() => speak(example.arabic)} aria-label="Прослушать">◖))</button>
+                </li>
+              ))}
+            </ul>
+          </article>
+          <div className="study-actions">
+            {ruleIndex > 0 && (
+              <button className="secondary" onClick={() => setRuleIndex((value) => value - 1)}>Назад</button>
+            )}
+            <button
+              className={`primary ${ruleIndex > 0 ? "" : "wide"}`}
+              onClick={nextRule}
+            >
+              {ruleIndex < grammarRules.length - 1 ? "Дальше" : "К заданиям"} <span>→</span>
+            </button>
+          </div>
         </section>
       )}
 
@@ -868,10 +1005,18 @@ export default function Home() {
 
       {view === "practice" && lesson && currentQuestion && (
         <section className="practice-view">
-          <div className="stage-label"><span>3</span>Закрепляем в заданиях</div>
-          <div className="repeat-badge active">Слова возвращаются в обе стороны перевода</div>
-          <p className="instruction">{questionIndex === lesson.questions.length - 1 ? "Найдите и исправьте ошибку" : "Выберите правильный ответ"}</p>
-          {parts.length > 1 && <div className="repeat-badge">Задания части {partIndex + 1} из {parts.length}</div>}
+          <div className="stage-label"><span>{grammarPart ? "ن" : "3"}</span>{grammarPart ? "Проверяем правило" : "Закрепляем в заданиях"}</div>
+          <div className="repeat-badge active">
+            {grammarPart ? lesson.grammar?.title : "Слова возвращаются в обе стороны перевода"}
+          </div>
+          <p className="instruction">
+            {grammarPart
+              ? "Опирайтесь на правило, а не на память о переводе"
+              : questionIndex === lesson.questions.length - 1
+                ? "Найдите и исправьте ошибку"
+                : "Выберите правильный ответ"}
+          </p>
+          {parts.length > 1 && !grammarPart && <div className="repeat-badge">Задания части {partIndex + 1} из {parts.length}</div>}
           <div className="prompt-card">
             <span>{currentQuestion.promptLang === "ar" ? "Арабский" : "Русский"}</span>
             <strong className={currentQuestion.promptLang === "ar" ? "arabic-prompt" : ""} dir={currentQuestion.promptLang === "ar" ? "rtl" : "ltr"}>{currentQuestion.prompt}</strong>
@@ -882,7 +1027,9 @@ export default function Home() {
               const state = selected ? option === currentQuestion.answer ? "correct" : option === selected ? "wrong" : "dimmed" : "";
               return (
                 <button key={option} className={state} onClick={() => answer(option)} disabled={!!selected}>
-                  <span dir={/[\u0600-\u06FF]/.test(option) ? "rtl" : "ltr"}>{option}</span>
+                  {/* An option that mixes the two scripts is a Russian phrase with
+                      Arabic inside it, so it stays left-to-right. */}
+                  <span dir={/[\u0400-\u04FF]/.test(option) || !/[\u0600-\u06FF]/.test(option) ? "ltr" : "rtl"}>{option}</span>
                   {state === "correct" && <b>✓</b>}{state === "wrong" && <b>×</b>}
                 </button>
               );
@@ -897,27 +1044,60 @@ export default function Home() {
         </section>
       )}
 
-      {view === "result" && lesson && part && (() => {
+      {view === "result" && lesson && part && part.kind === "grammar" && (() => {
+        const answered = part.questionEnd;
+        const strong = grammarScore >= Math.ceil(answered * 0.75);
+        return (
+          <section className="result-view">
+            <div className="result-mark">✓</div>
+            <div className="eyebrow">Урок {lesson.id} · грамматика пройдена</div>
+            <h1>{strong ? "Правило усвоено!" : "Правило стоит перечитать"}</h1>
+            <p>
+              {strong
+                ? "Теперь за формами урока стоит понятное правило — следующие уроки будут опираться на него."
+                : "Разбор можно открыть ещё раз: правила остаются на месте, а задания к ним повторяются."}
+            </p>
+            <div className="result-grid">
+              <div><strong>{grammarScore}/{answered}</strong><span>верных ответов</span></div>
+              <div><strong>{Math.round((grammarScore / answered) * 100)}%</strong><span>точность</span></div>
+              <div><strong>{grammarRules.length}</strong><span>разобрано правил</span></div>
+            </div>
+            <div className="result-actions">
+              <button className="secondary" onClick={() => startPart(part.index)}>Пройти ещё раз</button>
+              {nextLesson
+                ? <button className="primary" onClick={() => startLesson(nextLesson.id)}>Перейти к уроку {nextLesson.id} <span>→</span></button>
+                : <button className="primary" onClick={() => setView("home")}>Вернуться к курсу <span>→</span></button>}
+            </div>
+          </section>
+        );
+      })()}
+
+      {view === "result" && lesson && part && part.kind === "cards" && (() => {
         // A part's result counts everything answered in the lesson so far, so the
         // halves add up instead of restarting the score.
         const answered = part.questionEnd;
         const remaining = parts[partIndex + 1];
+        const grammarNext = remaining?.kind === "grammar";
         const strong = score >= Math.ceil(answered * 0.75);
         return (
           <section className="result-view">
             <div className="result-mark">✓</div>
             <div className="eyebrow">
-              {remaining
-                ? `Урок ${lesson.id} · часть ${partIndex + 1} из ${parts.length} пройдена`
-                : `Урок ${lesson.id} завершён`}
+              {grammarNext
+                ? `Урок ${lesson.id} · слова пройдены`
+                : remaining
+                  ? `Урок ${lesson.id} · часть ${partIndex + 1} из ${parts.length} пройдена`
+                  : `Урок ${lesson.id} завершён`}
             </div>
             <h1>{strong ? "Материал закреплён!" : "Хороший результат"}</h1>
             <p>
-              {remaining
-                ? "Вторая часть вводит остальные формы урока. Можно продолжить сейчас или вернуться позже — место сохранено."
-                : strong
-                  ? "Вы дважды повторили формы и применили их в предложениях. Завтра они вернутся в коротком повторении."
-                  : "Ошибочные формы стоит пройти ещё раз — повторение займёт всего несколько минут."}
+              {grammarNext
+                ? "Осталась грамматика урока: правило, по которому построены эти формы, и задания к нему. Урок засчитывается вместе с ней."
+                : remaining
+                  ? "Вторая часть вводит остальные формы урока. Можно продолжить сейчас или вернуться позже — место сохранено."
+                  : strong
+                    ? "Вы дважды повторили формы и применили их в предложениях. Завтра они вернутся в коротком повторении."
+                    : "Ошибочные формы стоит пройти ещё раз — повторение займёт всего несколько минут."}
             </p>
             <div className="result-grid">
               <div><strong>{score}/{answered}</strong><span>верных ответов</span></div>
@@ -930,7 +1110,7 @@ export default function Home() {
                 <>
                   <button className="secondary" onClick={() => setView("home")}>Вернуться позже</button>
                   <button className="primary" onClick={() => startPart(remaining.index)}>
-                    Часть {remaining.index + 1} <span>→</span>
+                    {grammarNext ? "Грамматика" : `Часть ${remaining.index + 1}`} <span>→</span>
                   </button>
                 </>
               ) : (

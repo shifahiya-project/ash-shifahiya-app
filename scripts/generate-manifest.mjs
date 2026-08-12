@@ -23,6 +23,7 @@ const summaries = await Promise.all(
       tags: lesson.tags,
       questionCount: lesson.questions.length,
       partCount: partCount(lesson),
+      grammarQuestionCount: lesson.grammar?.questions.length ?? 0,
     };
   }),
 );
@@ -38,6 +39,7 @@ const entries = summaries
       `    tags: [${summary.tags.map((tag) => JSON.stringify(tag)).join(", ")}],\n` +
       `    questionCount: ${summary.questionCount},\n` +
       `    partCount: ${summary.partCount},\n` +
+      `    grammarQuestionCount: ${summary.grammarQuestionCount},\n` +
       `  },`,
   )
   .join("\n");
@@ -56,8 +58,10 @@ export type LessonSummary = {
   description: string;
   tags: string[];
   questionCount: number;
-  /** 2 for a lesson long enough to be taught in halves, otherwise 1. */
+  /** Cards parts plus the grammar part, when the lesson has one. */
   partCount: number;
+  /** 0 when the lesson has no grammar block yet. */
+  grammarQuestionCount: number;
 };
 
 export const lessonSummaries: LessonSummary[] = [

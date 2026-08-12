@@ -64,9 +64,13 @@ test("the cut falls on the deck boundary nearest the middle", () => {
   assert.equal(parts[1].deckEnd, 3);
 });
 
+// The invariants below are about the cards pass. A grammar part carries no
+// decks and indexes its own questions, so it is looked at separately.
+const cardsParts = (lesson) => lessonParts(lesson).filter((part) => part.kind === "cards");
+
 test("parts cover every deck and every question exactly once", () => {
   for (const lesson of lessons) {
-    const parts = lessonParts(lesson);
+    const parts = cardsParts(lesson);
     assert.equal(parts[0].deckStart, 0, `lesson ${lesson.id}`);
     assert.equal(parts[0].questionStart, 0, `lesson ${lesson.id}`);
     assert.equal(parts.at(-1).deckEnd, lesson.decks.length, `lesson ${lesson.id}`);
@@ -80,7 +84,7 @@ test("parts cover every deck and every question exactly once", () => {
 
 test("no part is empty and none exceeds the threshold on its own", () => {
   for (const lesson of lessons) {
-    for (const part of lessonParts(lesson)) {
+    for (const part of cardsParts(lesson)) {
       assert.ok(part.deckEnd > part.deckStart, `lesson ${lesson.id}: empty deck range`);
       assert.ok(part.questionEnd > part.questionStart, `lesson ${lesson.id}: empty question range`);
       assert.ok(
@@ -93,14 +97,21 @@ test("no part is empty and none exceeds the threshold on its own", () => {
 
 test("the closing correction question stays in the last part", () => {
   for (const lesson of lessons) {
-    const parts = lessonParts(lesson);
-    assert.equal(parts.at(-1).questionEnd, lesson.questions.length, `lesson ${lesson.id}`);
+    assert.equal(cardsParts(lesson).at(-1).questionEnd, lesson.questions.length, `lesson ${lesson.id}`);
   }
 });
 
 test("every lesson over the threshold is split, and no other is", () => {
   for (const lesson of lessons) {
     const expected = lesson.questions.length > PART_THRESHOLD && lesson.decks.length >= 2 ? 2 : 1;
-    assert.equal(lessonParts(lesson).length, expected, `lesson ${lesson.id}`);
+    assert.equal(cardsParts(lesson).length, expected, `lesson ${lesson.id}`);
+  }
+});
+
+test("the grammar block adds one part on top of the cards", () => {
+  for (const lesson of lessons) {
+    const parts = lessonParts(lesson);
+    assert.equal(parts.length, cardsParts(lesson).length + (lesson.grammar ? 1 : 0), `lesson ${lesson.id}`);
+    parts.forEach((part, index) => assert.equal(part.index, index, `lesson ${lesson.id}: index`));
   }
 });

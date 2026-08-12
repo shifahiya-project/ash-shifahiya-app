@@ -90,6 +90,7 @@ function mergeStats(mine: LearningStats, theirs: LearningStats): LearningStats {
 export function mergeProgress(mine: Progress, theirs: Progress): Progress {
   return {
     scores: mergeScores(mine.scores, theirs.scores),
+    grammarScores: mergeScores(mine.grammarScores, theirs.grammarScores),
     sessions: mergeSessions(mine.sessions, theirs.sessions),
     cards: mergeCards(mine.cards, theirs.cards),
     stats: mergeStats(mine.stats, theirs.stats),
@@ -100,6 +101,7 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
 export function normalizeProgress(value: Partial<Progress> | null | undefined): Progress {
   return {
     scores: value?.scores ?? {},
+    grammarScores: value?.grammarScores ?? {},
     sessions: value?.sessions ?? {},
     cards: value?.cards ?? {},
     stats: {

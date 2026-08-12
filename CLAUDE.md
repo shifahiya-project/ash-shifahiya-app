@@ -85,15 +85,48 @@ type Question = {
   prompt: string; promptLang: "ar" | "ru";
   answer: string; options: string[]; explanation: string;
 };
+type GrammarRule = {
+  kind: "nahw" | "sarf";
+  title: string; term?: string; pattern?: string; explanation: string;
+  examples: { arabic: string; russian: string; note?: string }[];
+};
+type GrammarBlock = {
+  title: string; intro: string;
+  rules: GrammarRule[]; questions: Question[];
+};
 type Lesson = {
   id: number; arabicTitle: string; title: string; description: string;
   tags: string[];
   decks: { title: string; words: Word[] }[];
   questions: Question[];
+  grammar?: GrammarBlock;
 };
 ```
 
 Сейчас: 100 уроков, ~4540 словоформ, ~1075 авторских вопросов.
+
+### Грамматический блок (нахв и сарф)
+
+Урок может нести разбор правил, по которым построены его формы. Блок —
+**последняя часть урока**: сначала карточки и задания, потом теория и практика
+к ней. `lessonParts` добавляет часть с `kind: "grammar"`; у неё нет колод, а
+`questionStart/questionEnd` индексируют `grammar.questions`, а не `questions`.
+Урок с одной частью получает часть 2, урок с двумя — часть 3.
+
+- **Практика — обычный `Question`.** Движок заданий, счёт и сохранение сессии
+  работают без изменений; новый экран нужен только для правила.
+- **Блок обязателен.** `isLessonComplete` в `app/lesson-access.ts` требует и счёт
+  урока, и счёт грамматики, поэтому следующий урок ждёт разбора. Правило
+  «пройденное не отнимаем» действует и здесь: блок, добавленный к давно
+  пройденному уроку, не закрывает ни его, ни то, что ученик уже открыл.
+- **Счёт хранится отдельно** — `shifahiya-grammar-{id}`, не подмешивается к
+  счёту урока. Иначе у всех, кто прошёл урок до появления блока, результат
+  выглядел бы просевшим («26/28» превратилось бы в «26/56»).
+- **Лексика — только пройденная.** `tests/grammar-block.test.mjs` проверяет это
+  машинно: весь арабский в блоке урока N должен встречаться в колодах уроков
+  1..N по согласному скелету (огласовки снимаются, приставочный `و` отделяется).
+  Исключение — грамматические термины, они перечислены в тесте поимённо.
+- Экран правила — `view: "grammar"`, разметка `.rule-card` в `app/globals.css`.
 
 ### Как добавить урок
 
@@ -225,7 +258,8 @@ git reset sources/     # чтобы не утащить PDF в коммит ра
   использует для любого внешнего источника. Копировать localStorage в
   `useState` на маунте не нужно и нельзя — правило `set-state-in-effect`
   на это ругается. Ключи:
-  `shifahiya-lesson-{id}` (счёт), `shifahiya-session-{id}` и
+  `shifahiya-lesson-{id}` (счёт), `shifahiya-grammar-{id}` (счёт грамматики),
+  `shifahiya-session-{id}` и
   `shifahiya-active-session` (незавершённая сессия), `shifahiya-card-progress-v1`,
   `shifahiya-learning-stats-v1`. Плюс ручной экспорт/импорт JSON
   (`format: "shifahiya-progress", version: 1`) — при изменении формата поднимать

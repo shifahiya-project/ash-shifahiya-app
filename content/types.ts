@@ -8,6 +8,37 @@ export type Question = {
   explanation: string;
 };
 
+/**
+ * Which of the two classical disciplines a rule belongs to: نحو is how words
+ * combine into a sentence, صرف is how a word itself is built from a root.
+ */
+export type GrammarKind = "nahw" | "sarf";
+
+export type GrammarRule = {
+  kind: GrammarKind;
+  /** Russian heading, e.g. «Предложение без глагола». */
+  title: string;
+  /** The Arabic term the rule names, shown beside the heading. */
+  term?: string;
+  /** The صرف pattern under discussion, e.g. فَعَّال. */
+  pattern?: string;
+  explanation: string;
+  /** Illustrations, drawn from words the learner has already met. */
+  examples: { arabic: string; russian: string; note?: string }[];
+};
+
+/**
+ * The grammar half of a lesson: the rules behind the forms the learner has just
+ * drilled, followed by practice on them. It is taught as the lesson's last
+ * part, and its questions are authored — the generator never touches them.
+ */
+export type GrammarBlock = {
+  title: string;
+  intro: string;
+  rules: GrammarRule[];
+  questions: Question[];
+};
+
 export type Lesson = {
   id: number;
   arabicTitle: string;
@@ -16,4 +47,5 @@ export type Lesson = {
   tags: string[];
   decks: { title: string; words: Word[] }[];
   questions: Question[];
+  grammar?: GrammarBlock;
 };

@@ -248,7 +248,7 @@ h1 em { color: var(--green); font-weight: inherit; }
 
 .lesson-actions { display: grid; gap: 8px; }
 
-.lesson-actions .done, .lesson-actions .repeat, .lesson-card .locked, .mastered {
+.lesson-actions .done, .lesson-card .repeat, .lesson-card .locked, .mastered {
   border: 0;
   border-radius: 10px;
   padding: 13px 18px;
@@ -266,14 +266,14 @@ h1 em { color: var(--green); font-weight: inherit; }
 .lesson-actions .done { cursor: default; }
 .mastered:hover { background: #d8e4f8; transform: translateY(-1px); }
 
-.lesson-actions .repeat {
+.lesson-card .repeat {
   background: var(--blue);
   color: white;
   box-shadow: 0 8px 20px rgba(47,98,196,.2);
 }
-.lesson-actions .repeat:hover { background: var(--blue-dark); transform: translateY(-1px); }
+.lesson-card .repeat:hover { background: var(--blue-dark); transform: translateY(-1px); }
 
-.lesson-actions .done span, .lesson-actions .repeat span,
+.lesson-actions .done span, .lesson-card .repeat span,
 .lesson-card .locked span, .mastered span { margin-left: 10px; }
 
 .lesson-card .locked {
@@ -486,6 +486,63 @@ h1 em { color: var(--green); font-weight: inherit; }
 .review-arabic-answer { display: flex; align-items: center; gap: 12px; font: 500 43px/1.4 "Traditional Arabic", "Noto Naskh Arabic", serif; }
 .mini-inline-sound { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 50%; background: var(--paper); color: var(--green); cursor: pointer; }
 .hidden-translation { color: #aaa99f; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+
+/* The grammar block reads rather than drills, so its card is a page of text
+   with the examples set apart, not a single word on a stage. */
+.grammar-view .stage-label span { background: var(--blue); font: 600 13px "Traditional Arabic", serif; }
+.grammar-view .repeat-badge.active { border-color: rgba(47,98,196,.22); background: var(--blue-soft); color: var(--blue); }
+
+.rule-card {
+  padding: 30px 32px 26px;
+  border-radius: 24px;
+  background: rgba(255,255,255,.9);
+  border: 1px solid rgba(47,98,196,.24);
+  box-shadow: 0 22px 55px rgba(24,60,51,.08);
+  text-align: left;
+}
+
+.rule-card header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.rule-card h2 { margin: 0; font: 500 25px Georgia, serif; }
+.rule-term, .rule-pattern {
+  padding: 4px 11px;
+  border-radius: 99px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font: 20px/1.6 "Traditional Arabic", "Noto Naskh Arabic", serif;
+}
+.rule-pattern { background: var(--mint); color: var(--green); }
+
+.rule-text { margin: 18px 0 22px; color: var(--ink); font-size: 15px; line-height: 1.8; }
+
+.rule-examples { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.rule-examples li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.rule-examples b { font: 500 30px/1.5 "Traditional Arabic", "Noto Naskh Arabic", serif; color: var(--ink); }
+.rule-examples span { color: var(--ink-soft); font-size: 14px; }
+.rule-examples small {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 12px;
+}
+.rule-examples .mini-inline-sound { flex: none; }
 .study-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
 .study-actions.three { grid-template-columns: repeat(3, 1fr); }
 .study-actions .wide { grid-column: 1 / -1; }
@@ -584,7 +641,7 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .lesson-card { grid-template-columns: 58px 1fr; gap: 16px; padding: 20px; }
   .lesson-number { width: 56px; height: 56px; font-size: 22px; }
   .lesson-copy h2 { font-size: 21px; }
-  .lesson-card .primary, .lesson-card .locked, .lesson-actions { grid-column: 1 / -1; width: 100%; }
+  .lesson-card .primary, .lesson-card .locked, .lesson-card .repeat, .lesson-actions { grid-column: 1 / -1; width: 100%; }
   .lesson-actions { grid-template-columns: 1fr 1fr; }
   .card-lock { top: 10px; right: 10px; }
   /* Three across is too tight on a phone: the rating pair keeps the row and
@@ -608,6 +665,11 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .lesson-progress, .study-view, .practice-view { width: calc(100% - 28px); }
   .part-badge { padding: 3px 8px; font-size: 9px; }
   .word-card { min-height: 310px; padding-left: 18px; padding-right: 18px; }
+  .rule-card { padding: 22px 18px 20px; }
+  .rule-card h2 { font-size: 21px; }
+  .rule-examples li { gap: 8px; }
+  .rule-examples b { font-size: 26px; }
+  .rule-examples small { margin-left: 0; }
   .arabic-word { font-size: 70px; }
   .feedback { align-items: stretch; flex-direction: column; }
   .feedback .primary { width: 100%; }
