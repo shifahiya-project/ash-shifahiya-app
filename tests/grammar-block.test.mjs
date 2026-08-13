@@ -44,6 +44,8 @@ const GRAMMAR_TERMS = new Set(
     "مبتدأ", "خبر", "رفع", "جر", "و", "جملة", "اسمية", "فعلية",
     "معرفة", "نكرة", "إضافة", "مضاف", "إليه", "نعت", "وزن",
     "نصب", "وحدة", "ليس", "حرف",
+    // The vowel marks, named as marks.
+    "فتحة", "كسرة", "ضمة",
     // The article named as itself, as in «приставка الـ».
     "ال",
   ].map(skeleton),
@@ -96,6 +98,13 @@ test("a grammar block uses only words the learner has already met", () => {
   for (const lesson of lessons) {
     for (const deck of lesson.decks) {
       for (const word of deck.words) for (const part of arabicWords(word.arabic)) seen.add(part);
+    }
+    // The lesson's own sentences are met just as surely as its cards, and they
+    // are where a feminine or definite form of a card word first appears.
+    for (const question of lesson.questions) {
+      for (const source of [question.prompt, question.answer, ...question.options]) {
+        for (const word of arabicWords(source)) seen.add(word);
+      }
     }
 
     if (!lesson.grammar) continue;
