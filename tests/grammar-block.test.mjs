@@ -20,6 +20,9 @@ async function loadLessons() {
 }
 
 const lessons = await loadLessons();
+// Models keep their names once introduced, so patterns accumulate the way
+// vocabulary does rather than resetting at every lesson.
+const namedPatterns = new Set();
 const withGrammar = lessons.filter((lesson) => lesson.grammar);
 
 /** Strips the vowel marks, leaving the consonant skeleton a root shows through. */
@@ -37,7 +40,15 @@ function arabicWords(text) {
  * here on purpose: the exception has to stay small and reviewable.
  */
 const GRAMMAR_TERMS = new Set(
-  ["مبتدأ", "خبر", "رفع", "و", "جملة", "اسمية", "فعلية"].map(skeleton),
+  [
+    "مبتدأ", "خبر", "رفع", "جر", "و", "جملة", "اسمية", "فعلية",
+    "معرفة", "نكرة", "إضافة", "مضاف", "إليه", "نعت", "وزن",
+    "نصب", "وحدة", "ليس", "حرف",
+    // The vowel marks, named as marks.
+    "فتحة", "كسرة", "ضمة", "نسبة",
+    // The article named as itself, as in «приставка الـ».
+    "ال",
+  ].map(skeleton),
 );
 
 test("the grammar block is taught as the lesson's last part", () => {
@@ -88,12 +99,28 @@ test("a grammar block uses only words the learner has already met", () => {
     for (const deck of lesson.decks) {
       for (const word of deck.words) for (const part of arabicWords(word.arabic)) seen.add(part);
     }
+    // The lesson's own sentences are met just as surely as its cards, and they
+    // are where a feminine or definite form of a card word first appears.
+    for (const question of lesson.questions) {
+      for (const source of [question.prompt, question.answer, ...question.options]) {
+        for (const word of arabicWords(source)) seen.add(word);
+      }
+    }
 
     if (!lesson.grammar) continue;
 
-    const used = new Set();
+    // A declared pattern is a model being named, so the rule may repeat it in
+    // its own prose without that counting as vocabulary.
     for (const rule of lesson.grammar.rules) {
-      for (const source of [rule.term ?? "", rule.pattern ?? "", rule.explanation]) {
+      for (const word of arabicWords(rule.pattern ?? "")) namedPatterns.add(word);
+    }
+
+    const used = new Set();
+    for (const source of [lesson.grammar.title, lesson.grammar.intro]) {
+      for (const word of arabicWords(source)) used.add(word);
+    }
+    for (const rule of lesson.grammar.rules) {
+      for (const source of [rule.term ?? "", rule.title, rule.explanation]) {
         for (const word of arabicWords(source)) used.add(word);
       }
       for (const example of rule.examples) {
@@ -107,13 +134,50 @@ test("a grammar block uses only words the learner has already met", () => {
       }
     }
 
-    // The conjunction و is a word of its own, written joined to the next one.
+    // Both و and الـ are written joined to the next word without being part of
+    // it, and a bare letter is a letter being named, not vocabulary.
+    const base = (word) => {
+      const withoutConjunction = word.startsWith("و") ? word.slice(1) : word;
+      return withoutConjunction.startsWith("ال") ? withoutConjunction.slice(2) : withoutConjunction;
+    };
     const known = (word) =>
-      seen.has(word) ||
-      GRAMMAR_TERMS.has(word) ||
-      (word.startsWith("و") && (seen.has(word.slice(1)) || GRAMMAR_TERMS.has(word.slice(1))));
+      word.length === 1 ||
+      [word, base(word)].some((form) => seen.has(form) || GRAMMAR_TERMS.has(form) || namedPatterns.has(form));
 
     const unknown = [...used].filter((word) => !known(word));
     assert.deepEqual(unknown, [], `lesson ${lesson.id} reaches for words it has not taught`);
+  }
+});
+
+// A word that mixes the two scripts is always a typo: a Cyrillic ф standing in
+// for ف looks right on screen until the letter has to be read.
+test("no word mixes Arabic and Cyrillic letters", () => {
+  for (const lesson of withGrammar) {
+    const { title, intro, rules, questions } = lesson.grammar;
+    const sources = [
+      title,
+      intro,
+      ...rules.flatMap((rule) => [
+        rule.title,
+        rule.term ?? "",
+        rule.pattern ?? "",
+        rule.explanation,
+        ...rule.examples.flatMap((example) => [example.arabic, example.russian, example.note ?? ""]),
+      ]),
+      ...questions.flatMap((question) => [
+        question.prompt,
+        question.answer,
+        question.explanation,
+        ...question.options,
+      ]),
+    ];
+    for (const source of sources) {
+      for (const word of source.match(/[\p{L}\u0600-\u06FF]+/gu) ?? []) {
+        assert.ok(
+          !(/[\u0600-\u06FF]/.test(word) && /[\u0400-\u04FF]/.test(word)),
+          `lesson ${lesson.id}: «${word}» mixes scripts inside one word`,
+        );
+      }
+    }
   }
 });
