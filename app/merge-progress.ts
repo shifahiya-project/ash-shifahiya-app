@@ -1,6 +1,6 @@
 // Types only: this module stays pure so the tests can import it directly,
 // without pulling in the browser-bound store it describes.
-import type { CardProgress, LearningStats, Progress, SavedSession } from "./progress-store";
+import type { CardProgress, LearningStats, Progress, ReadingProgress, SavedSession } from "./progress-store";
 
 // Two devices hold two independent histories, and neither is "the" truth: the
 // phone may know about yesterday's review while the laptop knows about today's
@@ -69,6 +69,30 @@ function mergeSessions(mine: Record<number, SavedSession>, theirs: Record<number
   return merged;
 }
 
+/**
+ * A text read on either device is read. The later reading knows the real box,
+ * and a tie falls through to the box and the number of readings behind it, so
+ * the winner does not depend on which side was passed first.
+ */
+function laterReading(mine: ReadingProgress, theirs: ReadingProgress) {
+  const rank = (item: ReadingProgress) => [item.lastRead, item.box, item.reads];
+  const [mineRank, theirsRank] = [rank(mine), rank(theirs)];
+  for (let i = 0; i < mineRank.length; i += 1) {
+    if (mineRank[i] !== theirsRank[i]) return mineRank[i] > theirsRank[i] ? mine : theirs;
+  }
+  return mine;
+}
+
+function mergeReadings(mine: Record<number, ReadingProgress>, theirs: Record<number, ReadingProgress>) {
+  const merged: Record<number, ReadingProgress> = { ...mine };
+  for (const [id, reading] of Object.entries(theirs)) {
+    const key = Number(id);
+    const existing = merged[key];
+    merged[key] = existing ? laterReading(existing, reading) : reading;
+  }
+  return merged;
+}
+
 function mergeStats(mine: LearningStats, theirs: LearningStats): LearningStats {
   return {
     // A day spent studying on either device is a day studied.
@@ -93,6 +117,7 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
     grammarScores: mergeScores(mine.grammarScores, theirs.grammarScores),
     sessions: mergeSessions(mine.sessions, theirs.sessions),
     cards: mergeCards(mine.cards, theirs.cards),
+    readings: mergeReadings(mine.readings ?? {}, theirs.readings ?? {}),
     stats: mergeStats(mine.stats, theirs.stats),
   };
 }
@@ -104,6 +129,7 @@ export function normalizeProgress(value: Partial<Progress> | null | undefined): 
     grammarScores: value?.grammarScores ?? {},
     sessions: value?.sessions ?? {},
     cards: value?.cards ?? {},
+    readings: value?.readings ?? {},
     stats: {
       activeDates: [],
       totalSeconds: 0,

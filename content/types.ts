@@ -45,6 +45,31 @@ export type GrammarBlock = {
   questions: Question[];
 };
 
+/**
+ * Reading practice: a text the learner reads whole, tapping a sentence when it
+ * does not come together. Its words are deliberately outside the course
+ * vocabulary — nothing here becomes a card or a distractor.
+ */
+export type ReadingSentence = { arabic: string; russian: string };
+
+export type ReadingText = { title: string; sentences: ReadingSentence[] };
+
+export type ReadingSection = {
+  id: number;
+  /** The lesson this text is offered from. */
+  lessonId: number;
+  /** The book the text is taken from, shown to the learner. */
+  source: string;
+  texts: ReadingText[];
+};
+
+export type ReadingSummary = {
+  id: number;
+  lessonId: number;
+  textCount: number;
+  sentenceCount: number;
+};
+
 export type Lesson = {
   id: number;
   arabicTitle: string;

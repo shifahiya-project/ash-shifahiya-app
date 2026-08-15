@@ -492,6 +492,97 @@ h1 em { color: var(--green); font-weight: inherit; }
 .grammar-view .stage-label span { background: var(--blue); font: 600 13px "Traditional Arabic", serif; }
 .grammar-view .repeat-badge.active { border-color: rgba(47,98,196,.22); background: var(--blue-soft); color: var(--blue); }
 
+/* Reading is not a drill: the page is a column of sentences the learner works
+   through at their own pace, and the translation stays out of the way until it
+   is asked for. */
+.reading-view { text-align: right; }
+.reading-view .stage-label { font-size: 11px; }
+.reading-view .stage-label span { background: var(--gold); font-size: 12px; }
+.reading-view .instruction { text-align: center; }
+
+.reading-text {
+  margin: 22px 0;
+  padding: 20px 22px 12px;
+  background: rgba(255,255,255,.72);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  text-align: right;
+}
+
+.reading-text h3 {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--green);
+  font: 600 15px Georgia, serif;
+  text-align: center;
+}
+
+.reading-line { padding: 6px 0; border-bottom: 1px dashed rgba(222,219,209,.85); }
+.reading-line:last-child { border-bottom: 0; }
+.reading-row { display: flex; align-items: center; gap: 10px; flex-direction: row-reverse; }
+
+.reading-arabic {
+  flex: 1;
+  padding: 8px 4px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 400 clamp(26px, 5.4vw, 34px)/1.95 "Traditional Arabic", "Noto Naskh Arabic", serif;
+  text-align: right;
+  cursor: pointer;
+}
+
+.reading-arabic:hover { color: var(--green); }
+.reading-line.is-open .reading-arabic { color: var(--green-dark); }
+
+.reading-sound {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--green);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.reading-sound:hover { border-color: var(--green); }
+
+.reading-russian {
+  margin: 2px 0 8px;
+  padding: 10px 14px;
+  background: var(--mint);
+  border-radius: 12px;
+  color: var(--ink);
+  font: 400 16px/1.6 Georgia, serif;
+  text-align: left;
+  direction: ltr;
+}
+
+.reading-note { margin-top: 18px; color: var(--ink-soft); font-size: 12px; text-align: center; }
+
+/* The text a lesson carries, offered from its card without competing with the
+   button that starts the lesson itself. */
+.reading-link {
+  margin-top: 10px;
+  padding: 5px 11px;
+  border: 1px dashed var(--gold);
+  border-radius: 99px;
+  background: rgba(245,238,224,.5);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reading-link:hover { border-style: solid; color: var(--ink); }
+.reading-link.is-due { border-style: solid; background: var(--cream); color: var(--gold); }
+
+.daily-review.reading-due .daily-icon { color: var(--gold); }
+.daily-review.reading-due strong { color: var(--gold); }
+
 /* A block that fell short of the pass mark is not a failure to dwell on, but
    it must not look like the green tick either. */
 .result-mark.is-short {
@@ -685,6 +776,8 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .part-badge { padding: 3px 8px; font-size: 9px; }
   .word-card { min-height: 310px; padding-left: 18px; padding-right: 18px; }
   .rule-card { padding: 22px 18px 20px; }
+  .reading-text { padding: 16px 14px 8px; }
+  .reading-arabic { font-size: 26px; line-height: 1.9; }
   .rule-card h2 { font-size: 21px; }
   .rule-examples li { gap: 8px; }
   .rule-examples b { font-size: 26px; }

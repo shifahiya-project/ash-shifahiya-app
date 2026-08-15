@@ -26,6 +26,17 @@ export type CardProgress = {
   wrong: number;
 };
 
+/**
+ * A reading text the learner has been through. Kept apart from the word cards:
+ * its vocabulary is not part of the course, so it never enters the boxes.
+ */
+export type ReadingProgress = {
+  box: number;
+  nextReview: string;
+  lastRead: string;
+  reads: number;
+};
+
 export type LearningStats = {
   activeDates: string[];
   totalSeconds: number;
@@ -39,10 +50,13 @@ export type Progress = {
   grammarScores: Record<number, number>;
   sessions: Record<number, SavedSession>;
   cards: Record<string, CardProgress>;
+  /** Keyed by the lesson the text is offered from. */
+  readings: Record<number, ReadingProgress>;
   stats: LearningStats;
 };
 
 export const CARD_PROGRESS_KEY = "shifahiya-card-progress-v1";
+export const READING_PROGRESS_KEY = "shifahiya-reading-v1";
 export const LEARNING_STATS_KEY = "shifahiya-learning-stats-v1";
 export const ACTIVE_SESSION_KEY = "shifahiya-active-session";
 export const lessonScoreKey = (id: number | string) => `shifahiya-lesson-${id}`;
@@ -50,7 +64,7 @@ export const grammarScoreKey = (id: number | string) => `shifahiya-grammar-${id}
 export const lessonSessionKey = (id: number | string) => `shifahiya-session-${id}`;
 
 export const EMPTY_STATS: LearningStats = { activeDates: [], totalSeconds: 0, masteredPhrases: [] };
-const EMPTY: Progress = { scores: {}, grammarScores: {}, sessions: {}, cards: {}, stats: EMPTY_STATS };
+const EMPTY: Progress = { scores: {}, grammarScores: {}, sessions: {}, cards: {}, readings: {}, stats: EMPTY_STATS };
 
 // The learner's progress lives in localStorage, which React reads through
 // useSyncExternalStore rather than by copying into state on mount: the server
@@ -95,6 +109,7 @@ function readProgress(): Progress {
     grammarScores,
     sessions,
     cards: read<Record<string, CardProgress>>(CARD_PROGRESS_KEY, {}),
+    readings: read<Record<number, ReadingProgress>>(READING_PROGRESS_KEY, {}),
     stats: { ...EMPTY_STATS, ...read<Partial<LearningStats>>(LEARNING_STATS_KEY, {}) },
   };
 }
@@ -158,6 +173,12 @@ export const progressStore = {
     publish();
   },
 
+  updateReadings(updater: (readings: Record<number, ReadingProgress>) => Record<number, ReadingProgress>) {
+    const next = updater(progressStore.getSnapshot().readings);
+    window.localStorage.setItem(READING_PROGRESS_KEY, JSON.stringify(next));
+    publish();
+  },
+
   updateStats(updater: (stats: LearningStats) => LearningStats) {
     const next = updater(progressStore.getSnapshot().stats);
     window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(next));
@@ -175,6 +196,7 @@ export const progressStore = {
       window.localStorage.setItem(lessonSessionKey(id), JSON.stringify(session));
     }
     window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(progress.cards));
+    window.localStorage.setItem(READING_PROGRESS_KEY, JSON.stringify(progress.readings ?? {}));
     window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(progress.stats));
     publish();
   },
