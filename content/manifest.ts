@@ -986,8 +986,8 @@ export const lessonSummaries: LessonSummary[] = [
     description: "32 формы · 2 круга повторения · 64 задания",
     tags: ["Изречения", "Нравственность", "Знание", "Понимание текста"],
     questionCount: 64,
-    partCount: 1,
-    grammarQuestionCount: 0,
+    partCount: 2,
+    grammarQuestionCount: 8,
   },
   {
     id: 98,
