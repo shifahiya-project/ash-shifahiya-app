@@ -492,6 +492,15 @@ h1 em { color: var(--green); font-weight: inherit; }
 .grammar-view .stage-label span { background: var(--blue); font: 600 13px "Traditional Arabic", serif; }
 .grammar-view .repeat-badge.active { border-color: rgba(47,98,196,.22); background: var(--blue-soft); color: var(--blue); }
 
+/* A block that fell short of the pass mark is not a failure to dwell on, but
+   it must not look like the green tick either. */
+.result-mark.is-short {
+  background: var(--cream);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  box-shadow: none;
+}
+
 .rule-card {
   padding: 30px 32px 26px;
   border-radius: 24px;

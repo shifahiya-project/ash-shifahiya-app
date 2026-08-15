@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isLessonComplete, unlockedLessonIds } from "../app/lesson-access.ts";
+import {
+  grammarPassMark,
+  isGrammarPassed,
+  isLessonComplete,
+  unlockedLessonIds,
+} from "../app/lesson-access.ts";
 
 const summaries = Array.from({ length: 10 }, (_, index) => ({ id: index + 1 }));
 
@@ -89,6 +94,37 @@ test("a lesson that teaches grammar is not finished until that block is done", (
   const done = { ...nothing, scores: { 1: 26 }, grammarScores: { 1: 8 } };
   assert.ok(isLessonComplete(teaching[0], done));
   assert.ok(unlockedLessonIds(teaching, done).has(2));
+});
+
+// Walking through the block is not the same as understanding the rule.
+test("the grammar block needs three quarters right to count", () => {
+  assert.equal(grammarPassMark(8), 6);
+  assert.equal(grammarPassMark(6), 5);
+  assert.equal(grammarPassMark(4), 3);
+
+  const teaching = [{ id: 1, grammarQuestionCount: 8 }, { id: 2 }, { id: 3 }];
+  const weak = { ...nothing, scores: { 1: 26 }, grammarScores: { 1: 5 } };
+  assert.ok(!isGrammarPassed(teaching[0], weak));
+  assert.ok(!isLessonComplete(teaching[0], weak));
+  assert.ok(!unlockedLessonIds(teaching, weak).has(2));
+
+  const exact = { ...nothing, scores: { 1: 26 }, grammarScores: { 1: 6 } };
+  assert.ok(isGrammarPassed(teaching[0], exact));
+  assert.ok(unlockedLessonIds(teaching, exact).has(2));
+});
+
+test("a lesson without a grammar block is unaffected by the pass mark", () => {
+  const plain = [{ id: 1 }, { id: 2 }];
+  const done = { ...nothing, scores: { 1: 26 } };
+  assert.ok(isGrammarPassed(plain[0], done));
+  assert.ok(isLessonComplete(plain[0], done));
+});
+
+test("a weak attempt still never closes a lesson the learner reached", () => {
+  const teaching = [{ id: 1, grammarQuestionCount: 8 }, { id: 2 }, { id: 3 }, { id: 4 }];
+  const before = { ...nothing, scores: { 1: 26, 2: 26, 3: 26 }, grammarScores: { 1: 2 } };
+  const open = unlockedLessonIds(teaching, before);
+  for (const id of [1, 2, 3, 4]) assert.ok(open.has(id), `lesson ${id} should stay open`);
 });
 
 test("a grammar block added later never closes a lesson the learner reached", () => {

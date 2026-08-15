@@ -33,14 +33,31 @@ function touchedLessonIds(progress: AccessProgress) {
 }
 
 /**
+ * Three quarters of the grammar block has to be right for it to count. The
+ * cards can be walked through, but a rule half understood is worse than no
+ * rule: the next lesson will build on it either way.
+ */
+export const GRAMMAR_PASS_RATIO = 0.75;
+
+/** How many of the block's questions must be answered correctly. */
+export function grammarPassMark(questionCount: number) {
+  return Math.ceil(questionCount * GRAMMAR_PASS_RATIO);
+}
+
+export function isGrammarPassed(summary: AccessSummary, progress: AccessProgress) {
+  if (!summary.grammarQuestionCount) return true;
+  const score = progress.grammarScores[summary.id];
+  return score !== undefined && score >= grammarPassMark(summary.grammarQuestionCount);
+}
+
+/**
  * A lesson counts as finished when its cards and questions are done and, where
- * the lesson teaches grammar, that block is done too. Grammar is not optional:
- * the rules are what the next lesson builds on.
+ * the lesson teaches grammar, that block is passed too. Grammar is not
+ * optional: the rules are what the next lesson builds on.
  */
 export function isLessonComplete(summary: AccessSummary, progress: AccessProgress) {
   if (progress.scores[summary.id] === undefined) return false;
-  if (!summary.grammarQuestionCount) return true;
-  return progress.grammarScores[summary.id] !== undefined;
+  return isGrammarPassed(summary, progress);
 }
 
 /**
