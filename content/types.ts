@@ -20,6 +20,12 @@ export type GrammarRule = {
   title: string;
   /** The Arabic term the rule names, shown beside the heading. */
   term?: string;
+  /**
+   * How that term sounds, in Cyrillic. A learner who has only ever seen
+   * «подлежащее» cannot ask about مُبْتَدَأ or recognise it when a teacher says
+   * it aloud, so the term is taught as a word from the start.
+   */
+  termSound?: string;
   /** The صرف pattern under discussion, e.g. فَعَّال. */
   pattern?: string;
   explanation: string;

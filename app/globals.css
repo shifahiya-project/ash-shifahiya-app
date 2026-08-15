@@ -519,6 +519,16 @@ h1 em { color: var(--green); font-weight: inherit; }
 }
 .rule-pattern { background: var(--mint); color: var(--green); }
 
+/* How the term sounds, so it can be said aloud and asked about by name. */
+.rule-sound {
+  padding: 4px 10px;
+  border: 1px dashed rgba(47,98,196,.4);
+  border-radius: 99px;
+  color: var(--blue);
+  font-size: 13px;
+  font-style: italic;
+}
+
 .rule-text { margin: 18px 0 22px; color: var(--ink); font-size: 15px; line-height: 1.8; }
 
 .rule-examples { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
