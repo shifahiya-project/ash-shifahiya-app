@@ -43,7 +43,7 @@ const GRAMMAR_TERMS = new Set(
   [
     "مبتدأ", "خبر", "رفع", "جر", "و", "جملة", "اسمية", "فعلية",
     "معرفة", "نكرة", "إضافة", "مضاف", "إليه", "نعت", "وزن",
-    "نصب", "وحدة", "ليس", "حرف",
+    "نصب", "وحدة", "ليس", "حرف", "فعل", "مفعول", "به",
     // The vowel marks, named as marks.
     "فتحة", "كسرة", "ضمة", "نسبة", "أخواتها",
     // The article named as itself, as in «приставка الـ».
@@ -178,6 +178,21 @@ test("no word mixes Arabic and Cyrillic letters", () => {
           `lesson ${lesson.id}: «${word}» mixes scripts inside one word`,
         );
       }
+    }
+  }
+});
+
+// A term the learner cannot pronounce is a term they cannot ask about, so the
+// Arabic name and the way it sounds travel together.
+test("every named term carries its sound", () => {
+  for (const lesson of withGrammar) {
+    for (const rule of lesson.grammar.rules) {
+      if (!rule.term) continue;
+      assert.ok(rule.termSound, `lesson ${lesson.id}: «${rule.title}» names a term without its sound`);
+      assert.ok(
+        /^[\u0400-\u04FF\s-]+$/.test(rule.termSound),
+        `lesson ${lesson.id}: the sound «${rule.termSound}» should be written in Cyrillic`,
+      );
     }
   }
 });

@@ -936,6 +936,7 @@ export default function Home() {
             <header>
               <h2>{currentRule.title}</h2>
               {currentRule.term && <span className="rule-term" lang="ar" dir="rtl">{currentRule.term}</span>}
+              {currentRule.termSound && <span className="rule-sound">{currentRule.termSound}</span>}
               {currentRule.pattern && <span className="rule-pattern" lang="ar" dir="rtl">{currentRule.pattern}</span>}
             </header>
             <p className="rule-text">{currentRule.explanation}</p>
