@@ -986,8 +986,8 @@ export const lessonSummaries: LessonSummary[] = [
     description: "32 формы · 2 круга повторения · 64 задания",
     tags: ["Изречения", "Нравственность", "Знание", "Понимание текста"],
     questionCount: 64,
-    partCount: 1,
-    grammarQuestionCount: 0,
+    partCount: 2,
+    grammarQuestionCount: 8,
   },
   {
     id: 98,
@@ -996,8 +996,8 @@ export const lessonSummaries: LessonSummary[] = [
     description: "31 форма · 2 круга повторения · 62 задания",
     tags: ["Изречения", "Жизнь", "Дружба", "Понимание текста"],
     questionCount: 62,
-    partCount: 1,
-    grammarQuestionCount: 0,
+    partCount: 2,
+    grammarQuestionCount: 8,
   },
   {
     id: 99,
@@ -1006,8 +1006,8 @@ export const lessonSummaries: LessonSummary[] = [
     description: "20 форм · 2 круга повторения · 40 заданий",
     tags: ["Рассказы", "Чтение", "Диалог", "Понимание текста"],
     questionCount: 40,
-    partCount: 1,
-    grammarQuestionCount: 0,
+    partCount: 2,
+    grammarQuestionCount: 8,
   },
   {
     id: 100,
@@ -1016,7 +1016,7 @@ export const lessonSummaries: LessonSummary[] = [
     description: "36 форм · 2 круга повторения · 72 задания",
     tags: ["Рассказы", "Итоговый урок", "Чтение", "Понимание текста"],
     questionCount: 72,
-    partCount: 1,
-    grammarQuestionCount: 0,
+    partCount: 2,
+    grammarQuestionCount: 8,
   },
 ];
