@@ -6,7 +6,7 @@ import { loadLessons } from "../content/lessons";
 import { plural } from "../content/questions";
 import type { Lesson } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
-import { isLessonComplete, unlockedLessonIds } from "./lesson-access";
+import { grammarPassMark, isLessonComplete, unlockedLessonIds } from "./lesson-access";
 import { lessonParts } from "../content/lesson-parts";
 import {
   EMPTY_STATS,
@@ -878,7 +878,13 @@ export default function Home() {
                         ` · грамматика ${savedGrammarScores[item.id]}/${item.grammarQuestionCount}`}
                     </div>
                   )}
-                  {grammarLeft && <div className="card-lock">Осталась грамматика</div>}
+                  {grammarLeft && (
+                    <div className="card-lock">
+                      {savedGrammarScores[item.id] === undefined
+                        ? "Осталась грамматика"
+                        : `Грамматика ${savedGrammarScores[item.id]}/${item.grammarQuestionCount} · нужно ${grammarPassMark(item.grammarQuestionCount)}`}
+                    </div>
+                  )}
                   {locked && opensAfter && <div className="card-lock">Сначала урок {opensAfter.id}</div>}
                 </div>
               );
@@ -1050,27 +1056,39 @@ export default function Home() {
 
       {view === "result" && lesson && part && part.kind === "grammar" && (() => {
         const answered = part.questionEnd;
-        const strong = grammarScore >= Math.ceil(answered * 0.75);
+        const needed = grammarPassMark(answered);
+        const passed = grammarScore >= needed;
         return (
           <section className="result-view">
-            <div className="result-mark">✓</div>
-            <div className="eyebrow">Урок {lesson.id} · грамматика пройдена</div>
-            <h1>{strong ? "Правило усвоено!" : "Правило стоит перечитать"}</h1>
+            <div className={`result-mark ${passed ? "" : "is-short"}`}>{passed ? "✓" : "↻"}</div>
+            <div className="eyebrow">
+              {passed ? `Урок ${lesson.id} · грамматика пройдена` : `Урок ${lesson.id} · грамматика не сдана`}
+            </div>
+            <h1>{passed ? "Правило усвоено!" : "Правило стоит перечитать"}</h1>
             <p>
-              {strong
+              {passed
                 ? "Теперь за формами урока стоит понятное правило — следующие уроки будут опираться на него."
-                : "Разбор можно открыть ещё раз: правила остаются на месте, а задания к ним повторяются."}
+                : `Чтобы блок засчитался, нужно ответить верно хотя бы на ${plural(needed, "задание", "задания", "заданий")} из ${answered}. Правила остаются на месте — откройте разбор ещё раз.`}
             </p>
             <div className="result-grid">
               <div><strong>{grammarScore}/{answered}</strong><span>верных ответов</span></div>
               <div><strong>{Math.round((grammarScore / answered) * 100)}%</strong><span>точность</span></div>
-              <div><strong>{grammarRules.length}</strong><span>разобрано правил</span></div>
+              <div><strong>{passed ? grammarRules.length : needed}</strong><span>{passed ? "разобрано правил" : "нужно верных"}</span></div>
             </div>
             <div className="result-actions">
-              <button className="secondary" onClick={() => startPart(part.index)}>Пройти ещё раз</button>
-              {nextLesson
-                ? <button className="primary" onClick={() => startLesson(nextLesson.id)}>Перейти к уроку {nextLesson.id} <span>→</span></button>
-                : <button className="primary" onClick={() => setView("home")}>Вернуться к курсу <span>→</span></button>}
+              {passed ? (
+                <>
+                  <button className="secondary" onClick={() => startPart(part.index)}>Пройти ещё раз</button>
+                  {nextLesson
+                    ? <button className="primary" onClick={() => startLesson(nextLesson.id)}>Перейти к уроку {nextLesson.id} <span>→</span></button>
+                    : <button className="primary" onClick={() => setView("home")}>Вернуться к курсу <span>→</span></button>}
+                </>
+              ) : (
+                <>
+                  <button className="secondary" onClick={() => setView("home")}>Вернуться позже</button>
+                  <button className="primary" onClick={() => startPart(part.index)}>Разобрать заново <span>→</span></button>
+                </>
+              )}
             </div>
           </section>
         );
