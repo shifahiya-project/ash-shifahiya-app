@@ -45,7 +45,7 @@ const GRAMMAR_TERMS = new Set(
     "معرفة", "نكرة", "إضافة", "مضاف", "إليه", "نعت", "وزن",
     "نصب", "وحدة", "ليس", "حرف",
     // The vowel marks, named as marks.
-    "فتحة", "كسرة", "ضمة", "نسبة",
+    "فتحة", "كسرة", "ضمة", "نسبة", "أخواتها",
     // The article named as itself, as in «приставка الـ».
     "ال",
   ].map(skeleton),
