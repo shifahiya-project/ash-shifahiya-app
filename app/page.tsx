@@ -2,9 +2,11 @@
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { lessonSummaries } from "../content/manifest";
+import { READING_SOURCE, readingByLesson } from "../content/reading-manifest";
 import { loadLessons } from "../content/lessons";
+import { loadReading } from "../content/reading";
 import { plural } from "../content/questions";
-import type { Lesson } from "../content/types";
+import type { Lesson, ReadingSection } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
 import { grammarPassMark, isLessonComplete, unlockedLessonIds } from "./lesson-access";
 import { lessonParts } from "../content/lesson-parts";
@@ -14,6 +16,7 @@ import {
   type CardProgress,
   type SavedSession,
 } from "./progress-store";
+import { dueReadingIds, nextReadingProgress } from "./reading-review";
 import { signInWithGoogle, signOut, startSync, syncStore } from "./sync";
 
 type ReviewCard = {
@@ -179,7 +182,7 @@ function shuffle<T>(items: T[]) {
 }
 
 export default function Home() {
-  const [view, setView] = useState<"home" | "learn" | "practice" | "grammar" | "review" | "result">("home");
+  const [view, setView] = useState<"home" | "learn" | "practice" | "grammar" | "reading" | "review" | "result">("home");
   const [lessonId, setLessonId] = useState(1);
   const [partIndex, setPartIndex] = useState(0);
   const [deckIndex, setDeckIndex] = useState(0);
@@ -197,6 +200,8 @@ export default function Home() {
   const [reviewRevealed, setReviewRevealed] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
   const [openLessons, setOpenLessons] = useState<Record<number, Lesson>>({});
+  const [reading, setReading] = useState<ReadingSection | null>(null);
+  const [openLines, setOpenLines] = useState<string[]>([]);
   const importInput = useRef<HTMLInputElement>(null);
 
   const stored = useSyncExternalStore(
@@ -254,6 +259,10 @@ export default function Home() {
       return progressItem && progressItem.nextReview <= today;
     });
   }, [reviewCatalog, cardProgress]);
+  const savedReadings = stored.readings;
+  // The texts are read on their own schedule, so today's reading is counted
+  // apart from the cards and shown as its own line on the home screen.
+  const dueReadings = useMemo(() => dueReadingIds(savedReadings, localDate()), [savedReadings]);
   const learnedCards = useMemo(
     () => Object.values(cardProgress).filter((item) => item.box > 0).length,
     [cardProgress],
@@ -382,7 +391,7 @@ export default function Home() {
   }, [view, lessonId, partIndex, ruleIndex, deckIndex, round, cardIndex, questionIndex, score, grammarScore, mistakes]);
 
   useEffect(() => {
-    if (!["learn", "practice", "grammar", "review"].includes(view)) return;
+    if (!["learn", "practice", "grammar", "reading", "review"].includes(view)) return;
     const recordActivity = (seconds: number) => {
       if (document.visibilityState !== "visible") return;
       progressStore.updateStats((items) => ({
@@ -489,6 +498,30 @@ export default function Home() {
     nextCard();
   }
 
+  /**
+   * Opens the text a lesson carries. Nothing is scored here: the learner reads,
+   * taps a sentence when it does not come together, and says when they are
+   * through — that is what puts the text on the repeat schedule.
+   */
+  async function startReading(id: number) {
+    const summary = readingByLesson.get(id);
+    if (!summary || !unlockedLessons.has(id)) return;
+    setReading(await loadReading(id, summary.id));
+    setLessonId(id);
+    setOpenLines([]);
+    setView("reading");
+  }
+
+  function finishReading() {
+    if (!reading) return;
+    progressStore.updateReadings((items) => ({
+      ...items,
+      [reading.lessonId]: nextReadingProgress(items[reading.lessonId]),
+    }));
+    setView("home");
+    setBackupMessage("Текст прочитан — вернётся на повторение.");
+  }
+
   function startDailyReview() {
     if (!dueCards.length) {
       setBackupMessage("На сегодня всё повторено.");
@@ -547,6 +580,7 @@ export default function Home() {
       grammarScores: savedGrammarScores,
       sessions: savedSessions,
       cards: cardProgress,
+      readings: savedReadings,
       stats: learningStats,
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
@@ -570,8 +604,10 @@ export default function Home() {
       const grammarScores = payload.grammarScores ?? {};
       const sessions = payload.sessions ?? {};
       const cards = payload.cards ?? {};
+      // Backups written before the reading texts simply have none of them.
+      const readings = payload.readings ?? {};
       const stats = { ...EMPTY_STATS, ...(payload.stats ?? {}) };
-      progressStore.replaceAll({ scores, grammarScores, sessions, cards, stats });
+      progressStore.replaceAll({ scores, grammarScores, sessions, cards, readings, stats });
       setBackupMessage("Прогресс восстановлен.");
     } catch {
       setBackupMessage("Не удалось прочитать файл прогресса.");
@@ -713,14 +749,19 @@ export default function Home() {
       {view !== "home" && view !== "result" && (
         <div className="lesson-progress" aria-label="Прогресс урока">
           <button className="close" onClick={() => setView("home")} aria-label="Закрыть урок">×</button>
-          {parts.length > 1 && view !== "review" && (
+          {parts.length > 1 && view !== "review" && view !== "reading" && (
             <span className="part-badge">
               {grammarPart ? "Грамматика" : `Часть ${partIndex + 1} из ${parts.length}`}
             </span>
           )}
+          {view === "reading" && <span className="part-badge">Чтение</span>}
+          {view !== "reading" && (
           <div className="track"><span style={{ width: `${Math.min(progress, 100)}%` }} /></div>
+          )}
           <span className="counter">
-            {view === "learn"
+            {view === "reading"
+              ? `${plural(reading?.texts.length ?? 0, "текст", "текста", "текстов")}`
+              : view === "learn"
               ? `${cardIndex + 1}/${words.length}`
               : view === "grammar"
                 ? `Правило ${ruleIndex + 1}/${grammarRules.length}`
@@ -748,6 +789,21 @@ export default function Home() {
               {dueCards.length ? "Повторить сейчас" : "Готово ✓"}
             </button>
           </div>
+
+          {dueReadings.length > 0 && (
+            <div className="daily-review reading-due">
+              <div>
+                <span className="daily-icon">◫</span>
+                <div>
+                  <strong>{plural(dueReadings.length, "текст", "текста", "текстов")} на повторное чтение</strong>
+                  <small>{READING_SOURCE} · перевод открывается по нажатию</small>
+                </div>
+              </div>
+              <button className="primary" onClick={() => startReading(dueReadings[0])}>
+                Читать <span>→</span>
+              </button>
+            </div>
+          )}
 
           {recommendedLesson && (
             <button
@@ -847,6 +903,16 @@ export default function Home() {
                     <h2>{item.title}</h2>
                     <p>{item.description}{item.partCount > 1 ? ` · в ${item.partCount} части` : ""}</p>
                     <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+                    {readingByLesson.has(item.id) && !locked && (() => {
+                      const read = savedReadings[item.id];
+                      const due = read && read.nextReview <= localDate();
+                      return (
+                        <button className={`reading-link ${due ? "is-due" : ""}`} onClick={() => startReading(item.id)}>
+                          ◫ Чтение
+                          {read ? (due ? " · сегодня повтор" : ` · следующее чтение ${read.nextReview}`) : ""}
+                        </button>
+                      );
+                    })()}
                   </div>
                   {locked ? (
                     <button className="locked" disabled title={`Откроется после урока ${opensAfter?.id}`}>
@@ -898,7 +964,7 @@ export default function Home() {
         </section>
       )}
 
-      {!lesson && view !== "home" && view !== "review" && (
+      {!lesson && view !== "home" && view !== "review" && view !== "reading" && (
         <section className="study-view">
           <p className="instruction">Загружаем урок…</p>
         </section>
@@ -968,6 +1034,49 @@ export default function Home() {
               {ruleIndex < grammarRules.length - 1 ? "Дальше" : "К заданиям"} <span>→</span>
             </button>
           </div>
+        </section>
+      )}
+
+      {view === "reading" && reading && (
+        <section className="study-view reading-view">
+          <div className="stage-label"><span>◫</span>Чтение · {reading.source}</div>
+          <p className="instruction">
+            Читайте вслух целиком. Если предложение не сложилось — нажмите на него, и появится перевод.
+          </p>
+          {reading.texts.map((text, textIndex) => (
+            <article className="reading-text" key={text.title}>
+              <h3>{text.title}</h3>
+              {text.sentences.map((line, lineIndex) => {
+                const id = `${textIndex}-${lineIndex}`;
+                const open = openLines.includes(id);
+                return (
+                  <div className={`reading-line ${open ? "is-open" : ""}`} key={id}>
+                    <div className="reading-row">
+                      <button
+                        className="reading-arabic"
+                        lang="ar"
+                        dir="rtl"
+                        onClick={() => setOpenLines((items) =>
+                          open ? items.filter((value) => value !== id) : [...items, id])}
+                        aria-expanded={open}
+                      >
+                        {line.arabic}
+                      </button>
+                      <button className="reading-sound" onClick={() => speak(line.arabic)} aria-label="Прослушать предложение">◖))</button>
+                    </div>
+                    {open && <p className="reading-russian">{line.russian}</p>}
+                  </div>
+                );
+              })}
+            </article>
+          ))}
+          <div className="study-actions">
+            <button className="secondary" onClick={() => setView("home")}>Вернуться позже</button>
+            <button className="primary" onClick={finishReading}>Прочитал <span>✓</span></button>
+          </div>
+          <p className="reading-note">
+            Слова этих текстов не попадают в карточки — это чтение, а не новый список для заучивания.
+          </p>
         </section>
       )}
 

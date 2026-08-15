@@ -58,6 +58,7 @@ app/globals.css     вся вёрстка вручную (~520 строк), мо
 app/layout.tsx      lang="ru", метаданные
 app/progress-store.ts   прогресс в localStorage через useSyncExternalStore
 app/lesson-progress.ts  доля пройденных карточек урока (чистая функция)
+app/reading-review.ts   расписание повторного чтения (чистый модуль)
 app/merge-progress.ts   слияние прогресса двух устройств (чистая функция)
 app/sync.ts         вход и синхронизация через Supabase (необязательная)
 app/supabase-config.ts  URL и anon-ключ проекта; пустые — синхронизация выключена
@@ -66,12 +67,15 @@ content/            lesson-01..100.ts, types.ts — учебные данные
 content/questions.ts    генерация вопросов и подбор дистракторов (чистый модуль)
 content/manifest.ts     сгенерированные метаданные всех уроков (для главной)
 content/lessons.ts      ленивая загрузка урока по id через import.meta.glob
-scripts/            generate-manifest.mjs, build-static.mjs
+content/reading/        section-01..25.ts — тексты для чтения (не словарь курса)
+content/reading-manifest.ts  какой урок несёт какой текст (сгенерировано)
+content/reading.ts      ленивая загрузка текста по уроку
+scripts/            generate-manifest.mjs, build-static.mjs, import-reading.mjs
 supabase/schema.sql таблица прогресса и политики RLS (применяется вручную)
 worker/index.ts     точка входа Worker: /_vinext/image + vinext handler
 build/              vite-плагин, копирующий .openai/ в dist/
 tests/              rendered-html (SSR), questions, lesson-parts, lesson-progress,
-                    merge-progress
+                    merge-progress, grammar-block, reading
 public/favicon.svg  знак ش, нарисованный путями (шрифты не нужны)
 ```
 
@@ -143,6 +147,33 @@ type Lesson = {
   значение слова, иъраб — его роль. Поэтому лексика там сходится сама: весь
   арабский взят из колод того же урока.
 - Экран правила — `view: "grammar"`, разметка `.rule-card` в `app/globals.css`.
+
+### Тексты для чтения
+
+Отдельный слой поверх курса: связные тексты по методу Франка из книги
+«Мабдауль кыраат» — арабское предложение, по нажатию открывается русский
+перевод. Это чтение, а не заучивание.
+
+- **Лексика текстов в курс не входит.** Ни карточек, ни дистракторов, ни
+  влияния на счёт и на открытие следующего урока. Условие, при котором чтение
+  вообще добавляли: оно расширяет, что ученик может прочесть, а не то, что
+  курс с него спрашивает.
+- **Один текст на урок, уроки 35–96.** Хозяина выбирает не рука, а правило в
+  `scripts/import-reading.mjs`: урок из этого промежутка, не разбитый на части
+  и без грамматического блока (и то и другое уже даёт вторую часть), из таких —
+  с наименьшим числом заданий. Сейчас это 25 уроков: 36, 40, 41, 42, 52, 65,
+  66, 67, 69, 73, 75, 77, 78, 81, 82, 83, 84, 86, 87, 88, 90, 91, 92, 95, 96.
+- **Своё расписание повторения** — `READING_INTERVALS = [2, 4, 7, 15, 31]` дней
+  в `app/reading-review.ts`, ключ `shifahiya-reading-v1`. Коробки Лейтнера тут
+  не подходят: текст не забывается за день и не вспоминается наполовину.
+  Повторное чтение интервал только удлиняет, на последнем шаге держит.
+- **Импорт данных**: `node scripts/import-reading.mjs <файл.json>` разбирает
+  выгрузку переводчика (плоский список пар `ar`/`ru` с полем `lesson`) в
+  `content/reading/section-NN.ts` и пересобирает `content/reading-manifest.ts`.
+  Пары, за которые источник не отвечает, перечислены в скрипте в `SKIPPED`
+  поимённо — сейчас там одна (`s9-027`: вместо перевода латинская подпись).
+- Экран — `view: "reading"`, разметка `.reading-view` в `app/globals.css`.
+  Чанк текста грузится при открытии, в стартовую разметку не попадает.
 
 ### Как добавить урок
 
@@ -277,7 +308,7 @@ git reset sources/     # чтобы не утащить PDF в коммит ра
   `shifahiya-lesson-{id}` (счёт), `shifahiya-grammar-{id}` (счёт грамматики),
   `shifahiya-session-{id}` и
   `shifahiya-active-session` (незавершённая сессия), `shifahiya-card-progress-v1`,
-  `shifahiya-learning-stats-v1`. Плюс ручной экспорт/импорт JSON
+  `shifahiya-reading-v1` (расписание чтения), `shifahiya-learning-stats-v1`. Плюс ручной экспорт/импорт JSON
   (`format: "shifahiya-progress", version: 1`) — при изменении формата поднимать
   `version` и суффикс `-vN` в ключах.
 - **Синхронизация между устройствами — Supabase, необязательная.**
