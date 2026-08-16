@@ -91,3 +91,32 @@ export function unlockedLessonIds(
   });
   return open;
 }
+
+/**
+ * The pass mark of an exam is three quarters of the paper and one answer more:
+ * exactly three quarters is the line, and a line is passed by clearing it.
+ */
+export const EXAM_PASS_RATIO = 0.75;
+
+export function examPassMark(questionCount: number) {
+  return Math.ceil(questionCount * EXAM_PASS_RATIO) + 1;
+}
+
+export function isExamPassed(exam: { questionCount: number }, best: number | undefined) {
+  return best !== undefined && best >= examPassMark(exam.questionCount);
+}
+
+/**
+ * An exam opens once every lesson behind it is finished, grammar blocks
+ * included. It is a checkpoint, not a gate: writing a weak paper takes nothing
+ * away and closes nothing.
+ */
+export function examReadiness(
+  exam: { afterLesson: number },
+  summaries: AccessSummary[],
+  progress: AccessProgress,
+) {
+  const lessons = summaries.filter((summary) => summary.id <= exam.afterLesson);
+  const done = lessons.filter((summary) => isLessonComplete(summary, progress)).length;
+  return { done, total: lessons.length, open: done === lessons.length };
+}

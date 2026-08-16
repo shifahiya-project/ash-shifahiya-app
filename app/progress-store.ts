@@ -37,6 +37,29 @@ export type ReadingProgress = {
   reads: number;
 };
 
+/**
+ * What an exam leaves behind: the best paper the learner has written and how
+ * many they have written. A weak attempt never lowers a stored result, and no
+ * attempt closes anything — the exam checks the course, it does not gate it.
+ */
+export type ExamResult = {
+  best: number;
+  attempts: number;
+  /** ISO date of the first paper that cleared the mark. */
+  passedAt?: string;
+};
+
+/** A paper in progress: a hundred answers are too many to lose to a closed tab. */
+export type ExamSession = {
+  examId: string;
+  /** The order the questions are asked in, drawn once when the paper starts. */
+  order: number[];
+  index: number;
+  score: number;
+  mistakes: string[];
+  updatedAt?: number;
+};
+
 export type LearningStats = {
   activeDates: string[];
   totalSeconds: number;
@@ -52,11 +75,15 @@ export type Progress = {
   cards: Record<string, CardProgress>;
   /** Keyed by the lesson the text is offered from. */
   readings: Record<number, ReadingProgress>;
+  exams: Record<string, ExamResult>;
+  examSession: ExamSession | null;
   stats: LearningStats;
 };
 
 export const CARD_PROGRESS_KEY = "shifahiya-card-progress-v1";
 export const READING_PROGRESS_KEY = "shifahiya-reading-v1";
+export const EXAM_RESULTS_KEY = "shifahiya-exams-v1";
+export const EXAM_SESSION_KEY = "shifahiya-exam-session";
 export const LEARNING_STATS_KEY = "shifahiya-learning-stats-v1";
 export const ACTIVE_SESSION_KEY = "shifahiya-active-session";
 export const lessonScoreKey = (id: number | string) => `shifahiya-lesson-${id}`;
@@ -64,7 +91,16 @@ export const grammarScoreKey = (id: number | string) => `shifahiya-grammar-${id}
 export const lessonSessionKey = (id: number | string) => `shifahiya-session-${id}`;
 
 export const EMPTY_STATS: LearningStats = { activeDates: [], totalSeconds: 0, masteredPhrases: [] };
-const EMPTY: Progress = { scores: {}, grammarScores: {}, sessions: {}, cards: {}, readings: {}, stats: EMPTY_STATS };
+const EMPTY: Progress = {
+  scores: {},
+  grammarScores: {},
+  sessions: {},
+  cards: {},
+  readings: {},
+  exams: {},
+  examSession: null,
+  stats: EMPTY_STATS,
+};
 
 // The learner's progress lives in localStorage, which React reads through
 // useSyncExternalStore rather than by copying into state on mount: the server
@@ -110,6 +146,8 @@ function readProgress(): Progress {
     sessions,
     cards: read<Record<string, CardProgress>>(CARD_PROGRESS_KEY, {}),
     readings: read<Record<number, ReadingProgress>>(READING_PROGRESS_KEY, {}),
+    exams: read<Record<string, ExamResult>>(EXAM_RESULTS_KEY, {}),
+    examSession: read<ExamSession | null>(EXAM_SESSION_KEY, null),
     stats: { ...EMPTY_STATS, ...read<Partial<LearningStats>>(LEARNING_STATS_KEY, {}) },
   };
 }
@@ -179,6 +217,32 @@ export const progressStore = {
     publish();
   },
 
+  /** Stamps the save itself, so a render never has to read the clock. */
+  saveExamSession(session: Omit<ExamSession, "updatedAt">) {
+    const stamped: ExamSession = { ...session, updatedAt: Date.now() };
+    window.localStorage.setItem(EXAM_SESSION_KEY, JSON.stringify(stamped));
+    publish();
+  },
+
+  dropExamSession() {
+    window.localStorage.removeItem(EXAM_SESSION_KEY);
+    publish();
+  },
+
+  /** Like the lesson score: another attempt can only raise the stored result. */
+  finishExam(examId: string, score: number, passed: boolean) {
+    const stored = progressStore.getSnapshot().exams[examId];
+    const result: ExamResult = {
+      best: Math.max(score, stored?.best ?? 0),
+      attempts: (stored?.attempts ?? 0) + 1,
+      passedAt: stored?.passedAt ?? (passed ? new Date().toISOString().slice(0, 10) : undefined),
+    };
+    const exams = { ...progressStore.getSnapshot().exams, [examId]: result };
+    window.localStorage.setItem(EXAM_RESULTS_KEY, JSON.stringify(exams));
+    window.localStorage.removeItem(EXAM_SESSION_KEY);
+    publish();
+  },
+
   updateStats(updater: (stats: LearningStats) => LearningStats) {
     const next = updater(progressStore.getSnapshot().stats);
     window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(next));
@@ -197,6 +261,7 @@ export const progressStore = {
     }
     window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(progress.cards));
     window.localStorage.setItem(READING_PROGRESS_KEY, JSON.stringify(progress.readings ?? {}));
+    window.localStorage.setItem(EXAM_RESULTS_KEY, JSON.stringify(progress.exams ?? {}));
     window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(progress.stats));
     publish();
   },

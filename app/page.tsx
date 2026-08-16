@@ -5,10 +5,18 @@ import { lessonSummaries } from "../content/manifest";
 import { READING_SOURCE, readingByLesson } from "../content/reading-manifest";
 import { loadLessons } from "../content/lessons";
 import { loadReading } from "../content/reading";
+import { examSummaries, loadExam } from "../content/exams";
 import { plural } from "../content/questions";
-import type { Lesson, ReadingSection } from "../content/types";
+import type { Exam, Lesson, ReadingSection } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
-import { grammarPassMark, isLessonComplete, unlockedLessonIds } from "./lesson-access";
+import {
+  examPassMark,
+  examReadiness,
+  grammarPassMark,
+  isExamPassed,
+  isLessonComplete,
+  unlockedLessonIds,
+} from "./lesson-access";
 import { lessonParts } from "../content/lesson-parts";
 import {
   EMPTY_STATS,
@@ -182,7 +190,9 @@ function shuffle<T>(items: T[]) {
 }
 
 export default function Home() {
-  const [view, setView] = useState<"home" | "learn" | "practice" | "grammar" | "reading" | "review" | "result">("home");
+  const [view, setView] = useState<
+    "home" | "learn" | "practice" | "grammar" | "reading" | "review" | "exam" | "exam-result"
+  >("home");
   const [lessonId, setLessonId] = useState(1);
   const [partIndex, setPartIndex] = useState(0);
   const [deckIndex, setDeckIndex] = useState(0);
@@ -202,6 +212,11 @@ export default function Home() {
   const [openLessons, setOpenLessons] = useState<Record<number, Lesson>>({});
   const [reading, setReading] = useState<ReadingSection | null>(null);
   const [openLines, setOpenLines] = useState<string[]>([]);
+  const [exam, setExam] = useState<Exam | null>(null);
+  const [examOrder, setExamOrder] = useState<number[]>([]);
+  const [examIndex, setExamIndex] = useState(0);
+  const [examScore, setExamScore] = useState(0);
+  const [examMistakes, setExamMistakes] = useState<string[]>([]);
   const importInput = useRef<HTMLInputElement>(null);
 
   const stored = useSyncExternalStore(
@@ -260,6 +275,9 @@ export default function Home() {
     });
   }, [reviewCatalog, cardProgress]);
   const savedReadings = stored.readings;
+  const savedExams = stored.exams;
+  const examSession = stored.examSession;
+  const examQuestion = exam?.questions[examOrder[examIndex]];
   // The texts are read on their own schedule, so today's reading is counted
   // apart from the cards and shown as its own line on the home screen.
   const dueReadings = useMemo(() => dueReadingIds(savedReadings, localDate()), [savedReadings]);
@@ -391,7 +409,7 @@ export default function Home() {
   }, [view, lessonId, partIndex, ruleIndex, deckIndex, round, cardIndex, questionIndex, score, grammarScore, mistakes]);
 
   useEffect(() => {
-    if (!["learn", "practice", "grammar", "reading", "review"].includes(view)) return;
+    if (!["learn", "practice", "grammar", "reading", "review", "exam"].includes(view)) return;
     const recordActivity = (seconds: number) => {
       if (document.visibilityState !== "visible") return;
       progressStore.updateStats((items) => ({
@@ -408,7 +426,9 @@ export default function Home() {
   }, [view]);
 
   const grammarRules = lesson?.grammar?.rules ?? [];
-  const progress = !lesson || !part
+  const progress = view === "exam"
+    ? (examIndex / Math.max(examOrder.length, 1)) * 100
+    : !lesson || !part
     ? 0
     : grammarPart
       // Reading the rules and drilling them are one run through the block.
@@ -427,6 +447,7 @@ export default function Home() {
 
   // Re-shuffles whenever the question changes, which is the only thing it reads.
   const options = useMemo(() => shuffle(currentQuestion?.options ?? []), [currentQuestion]);
+  const examOptions = useMemo(() => shuffle(examQuestion?.options ?? []), [examQuestion]);
 
   async function startLesson(id: number) {
     if (!unlockedLessons.has(id)) return;
@@ -520,6 +541,48 @@ export default function Home() {
     }));
     setView("home");
     setBackupMessage("Текст прочитан — вернётся на повторение.");
+  }
+
+  /**
+   * Опens the paper. An exam is a checkpoint, not a gate: it may be written
+   * again, and a weaker attempt never lowers what is already stored.
+   */
+  async function startExam(id: Exam["id"]) {
+    const summary = examSummaries.find((item) => item.id === id);
+    if (!summary || !examReadiness(summary, lessonSummaries, stored).open) return;
+    const paper = await loadExam(id);
+    const parked = examSession?.examId === id ? examSession : null;
+    setExam(paper);
+    setExamOrder(parked?.order ?? shuffle(paper.questions.map((_, index) => index)));
+    setExamIndex(parked?.index ?? 0);
+    setExamScore(parked?.score ?? 0);
+    setExamMistakes(parked?.mistakes ?? []);
+    setSelected(null);
+    setView("exam");
+  }
+
+  /**
+   * An exam does not teach while it is being written: the answer is taken and
+   * the next question comes up. What was missed is shown at the end.
+   */
+  function answerExam(option: string) {
+    if (!exam || !examQuestion) return;
+    const right = option === examQuestion.answer;
+    const score = examScore + (right ? 1 : 0);
+    const mistakes = right ? examMistakes : [...examMistakes, examQuestion.prompt];
+    const next = examIndex + 1;
+    setExamScore(score);
+    setExamMistakes(mistakes);
+
+    if (next < examOrder.length) {
+      setExamIndex(next);
+      progressStore.saveExamSession({ examId: exam.id, order: examOrder, index: next, score, mistakes });
+      return;
+    }
+
+    progressStore.finishExam(exam.id, score, score >= examPassMark(exam.questions.length));
+    setExamIndex(next);
+    setView("exam-result");
   }
 
   function startDailyReview() {
@@ -746,7 +809,7 @@ export default function Home() {
         <div className="streak" title="Текущая серия занятий"><span>✦</span> {studyStreaks.current} дн.</div>
       </header>
 
-      {view !== "home" && view !== "result" && (
+      {!["home", "result", "exam-result"].includes(view) && (
         <div className="lesson-progress" aria-label="Прогресс урока">
           <button className="close" onClick={() => setView("home")} aria-label="Закрыть урок">×</button>
           {parts.length > 1 && view !== "review" && view !== "reading" && (
@@ -755,11 +818,14 @@ export default function Home() {
             </span>
           )}
           {view === "reading" && <span className="part-badge">Чтение</span>}
+          {view === "exam" && <span className="part-badge">Экзамен</span>}
           {view !== "reading" && (
           <div className="track"><span style={{ width: `${Math.min(progress, 100)}%` }} /></div>
           )}
           <span className="counter">
-            {view === "reading"
+            {view === "exam"
+              ? `${Math.min(examIndex + 1, examOrder.length)}/${examOrder.length}`
+              : view === "reading"
               ? `${plural(reading?.texts.length ?? 0, "текст", "текста", "текстов")}`
               : view === "learn"
               ? `${cardIndex + 1}/${words.length}`
@@ -887,7 +953,7 @@ export default function Home() {
           </div>
 
           <div className="lesson-list">
-            {lessonSummaries.map((item, index) => {
+            {lessonSummaries.flatMap((item, index) => {
               const saved = savedScores[item.id];
               const unfinished = savedSessions[item.id];
               const completed = isLessonComplete(item, stored);
@@ -895,7 +961,7 @@ export default function Home() {
               const grammarLeft = saved !== undefined && !completed;
               const locked = !unlockedLessons.has(item.id);
               const opensAfter = lessonSummaries[index - 1];
-              return (
+              const card = (
                 <div className={`lesson-card ${completed ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={item.id}>
                   <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
                   <div className="lesson-copy">
@@ -954,6 +1020,47 @@ export default function Home() {
                   {locked && opensAfter && <div className="card-lock">Сначала урок {opensAfter.id}</div>}
                 </div>
               );
+
+              const paper = examSummaries.find((summary) => summary.afterLesson === item.id);
+              if (!paper) return [card];
+
+              const ready = examReadiness(paper, lessonSummaries, stored);
+              const result = savedExams[paper.id];
+              const passed = isExamPassed(paper, result?.best);
+              const parked = examSession?.examId === paper.id ? examSession : null;
+              return [
+                card,
+                <div
+                  className={`lesson-card exam-card ${passed ? "is-done" : ""} ${ready.open ? "" : "is-locked"}`}
+                  key={`exam-${paper.id}`}
+                >
+                  <div className="lesson-number">✦</div>
+                  <div className="lesson-copy">
+                    <div className="lesson-label">Экзамен · после урока {paper.afterLesson}</div>
+                    <h2>{paper.title}</h2>
+                    <p>
+                      {plural(paper.questionCount, "вопрос", "вопроса", "вопросов")} · грамматики{" "}
+                      {paper.grammarCount} · проходной балл {examPassMark(paper.questionCount)}
+                    </p>
+                    <div className="chips"><span>Лексика</span><span>Грамматика</span></div>
+                  </div>
+                  {ready.open ? (
+                    <button className={passed ? "repeat" : "primary"} onClick={() => startExam(paper.id)}>
+                      {parked ? "Продолжить" : passed || result ? "Пересдать" : "Начать"} <span>→</span>
+                    </button>
+                  ) : (
+                    <button className="locked" disabled>Закрыто <span>🔒</span></button>
+                  )}
+                  {result && (
+                    <div className="card-score">
+                      {passed ? "✓" : "•"} {result.best}/{paper.questionCount}
+                    </div>
+                  )}
+                  {!ready.open && (
+                    <div className="card-lock">Пройдено {ready.done} из {ready.total} уроков</div>
+                  )}
+                </div>,
+              ];
             })}
           </div>
 
@@ -964,7 +1071,7 @@ export default function Home() {
         </section>
       )}
 
-      {!lesson && view !== "home" && view !== "review" && view !== "reading" && (
+      {!lesson && !["home", "review", "reading", "exam", "exam-result"].includes(view) && (
         <section className="study-view">
           <p className="instruction">Загружаем урок…</p>
         </section>
@@ -1079,6 +1186,74 @@ export default function Home() {
           </p>
         </section>
       )}
+
+      {view === "exam" && exam && examQuestion && (
+        <section className="practice-view exam-view">
+          <div className="stage-label"><span>✦</span>{exam.title}</div>
+          <div className="repeat-badge active">
+            {examQuestion.area === "grammar" ? "Грамматика" : "Лексика"} · вопрос {examIndex + 1} из {examOrder.length}
+          </div>
+          <p className="instruction">Ответы не разбираются по ходу — разбор будет в конце.</p>
+          <div className="prompt-card">
+            <span>{examQuestion.promptLang === "ar" ? "Арабский" : "Русский"}</span>
+            <strong
+              className={examQuestion.promptLang === "ar" ? "arabic-prompt" : ""}
+              dir={examQuestion.promptLang === "ar" ? "rtl" : "ltr"}
+            >
+              {examQuestion.prompt}
+            </strong>
+            {examQuestion.promptLang === "ar" && (
+              <button className="mini-sound" onClick={() => speak(examQuestion.prompt)} aria-label="Прослушать">◖))</button>
+            )}
+          </div>
+          <div className="options">
+            {examOptions.map((option) => (
+              <button key={option} onClick={() => answerExam(option)}>
+                <span dir={/[\u0400-\u04FF]/.test(option) || !/[\u0600-\u06FF]/.test(option) ? "ltr" : "rtl"}>{option}</span>
+              </button>
+            ))}
+          </div>
+          <p className="exam-note">Работа сохраняется после каждого ответа — можно закрыть и вернуться.</p>
+        </section>
+      )}
+
+      {view === "exam-result" && exam && (() => {
+        const total = exam.questions.length;
+        const mark = examPassMark(total);
+        const passed = examScore >= mark;
+        const missed = exam.questions.filter((question) => examMistakes.includes(question.prompt));
+        return (
+          <section className="study-view result-view">
+            <div className={`result-mark ${passed ? "" : "is-short"}`}>{passed ? "✓" : "•"}</div>
+            <h2>{passed ? "Экзамен сдан" : "Экзамен не сдан"}</h2>
+            <p className="result-score">{examScore} из {total}</p>
+            <p className="instruction">
+              {passed
+                ? `Проходной балл — ${mark}. Результат сохранён.`
+                : `Нужно ${mark} верных. Пересдать можно сколько угодно раз, прежний результат не пропадёт.`}
+            </p>
+            {missed.length > 0 && (
+              <div className="mistake-list">
+                <strong>{plural(missed.length, "ошибка", "ошибки", "ошибок")}</strong>
+                <ul>
+                  {missed.slice(0, 20).map((question) => (
+                    <li key={question.prompt}>
+                      <span dir="auto">{question.prompt}</span>
+                      <b dir="auto">{question.answer}</b>
+                      <small>{question.explanation}</small>
+                    </li>
+                  ))}
+                </ul>
+                {missed.length > 20 && <small>…и ещё {missed.length - 20}</small>}
+              </div>
+            )}
+            <div className="study-actions">
+              <button className="secondary" onClick={() => setView("home")}>Вернуться к курсу</button>
+              <button className="primary" onClick={() => startExam(exam.id)}>Пересдать <span>→</span></button>
+            </div>
+          </section>
+        );
+      })()}
 
       {view === "review" && currentReviewCard && (
         <section className="study-view">

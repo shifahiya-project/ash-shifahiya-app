@@ -1,6 +1,14 @@
 // Types only: this module stays pure so the tests can import it directly,
 // without pulling in the browser-bound store it describes.
-import type { CardProgress, LearningStats, Progress, ReadingProgress, SavedSession } from "./progress-store";
+import type {
+  CardProgress,
+  ExamResult,
+  ExamSession,
+  LearningStats,
+  Progress,
+  ReadingProgress,
+  SavedSession,
+} from "./progress-store";
 
 // Two devices hold two independent histories, and neither is "the" truth: the
 // phone may know about yesterday's review while the laptop knows about today's
@@ -93,6 +101,41 @@ function mergeReadings(mine: Record<number, ReadingProgress>, theirs: Record<num
   return merged;
 }
 
+/**
+ * Two devices can hold two papers of the same exam. The better result stands,
+ * the attempts are the larger count rather than the sum — the same paper synced
+ * twice must not read as two — and a pass, once earned, keeps its date.
+ */
+function mergeExams(mine: Record<string, ExamResult>, theirs: Record<string, ExamResult>) {
+  const merged: Record<string, ExamResult> = { ...mine };
+  for (const [id, result] of Object.entries(theirs)) {
+    const existing = merged[id];
+    if (!existing) {
+      merged[id] = result;
+      continue;
+    }
+    const passed = [existing.passedAt, result.passedAt].filter(Boolean).sort();
+    merged[id] = {
+      best: Math.max(existing.best, result.best),
+      attempts: Math.max(existing.attempts, result.attempts),
+      ...(passed[0] ? { passedAt: passed[0] } : {}),
+    };
+  }
+  return merged;
+}
+
+/** An unfinished paper is a position, like an unfinished lesson: the later save wins. */
+function laterExamSession(mine: ExamSession | null, theirs: ExamSession | null) {
+  if (!mine) return theirs ?? null;
+  if (!theirs) return mine;
+  const rank = (session: ExamSession) => [session.updatedAt ?? 0, session.index];
+  const [mineRank, theirsRank] = [rank(mine), rank(theirs)];
+  for (let i = 0; i < mineRank.length; i += 1) {
+    if (mineRank[i] !== theirsRank[i]) return mineRank[i] > theirsRank[i] ? mine : theirs;
+  }
+  return mine;
+}
+
 function mergeStats(mine: LearningStats, theirs: LearningStats): LearningStats {
   return {
     // A day spent studying on either device is a day studied.
@@ -118,6 +161,8 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
     sessions: mergeSessions(mine.sessions, theirs.sessions),
     cards: mergeCards(mine.cards, theirs.cards),
     readings: mergeReadings(mine.readings ?? {}, theirs.readings ?? {}),
+    exams: mergeExams(mine.exams ?? {}, theirs.exams ?? {}),
+    examSession: laterExamSession(mine.examSession ?? null, theirs.examSession ?? null),
     stats: mergeStats(mine.stats, theirs.stats),
   };
 }
@@ -130,6 +175,8 @@ export function normalizeProgress(value: Partial<Progress> | null | undefined): 
     sessions: value?.sessions ?? {},
     cards: value?.cards ?? {},
     readings: value?.readings ?? {},
+    exams: value?.exams ?? {},
+    examSession: value?.examSession ?? null,
     stats: {
       activeDates: [],
       totalSeconds: 0,
