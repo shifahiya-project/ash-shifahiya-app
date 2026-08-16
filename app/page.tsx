@@ -180,6 +180,16 @@ function speak(text: string) {
   window.speechSynthesis.speak(utterance);
 }
 
+/**
+ * Which way a question prompt is laid out. A prompt that carries Russian text —
+ * «Исправьте: …» before an Arabic sentence — must run left to right even though
+ * it asks about Arabic: laid out right to left, the Russian half and its colon
+ * jump to the wrong side and cut into the sentence.
+ */
+function promptDirection(text: string, lang: "ar" | "ru") {
+  return lang === "ar" && !/[\u0400-\u04FF]/.test(text) ? "rtl" : "ltr";
+}
+
 function shuffle<T>(items: T[]) {
   const result = [...items];
   for (let index = result.length - 1; index > 0; index -= 1) {
@@ -1198,7 +1208,7 @@ export default function Home() {
             <span>{examQuestion.promptLang === "ar" ? "Арабский" : "Русский"}</span>
             <strong
               className={examQuestion.promptLang === "ar" ? "arabic-prompt" : ""}
-              dir={examQuestion.promptLang === "ar" ? "rtl" : "ltr"}
+              dir={promptDirection(examQuestion.prompt, examQuestion.promptLang)}
             >
               {examQuestion.prompt}
             </strong>
@@ -1314,7 +1324,7 @@ export default function Home() {
           {parts.length > 1 && !grammarPart && <div className="repeat-badge">Задания части {partIndex + 1} из {parts.length}</div>}
           <div className="prompt-card">
             <span>{currentQuestion.promptLang === "ar" ? "Арабский" : "Русский"}</span>
-            <strong className={currentQuestion.promptLang === "ar" ? "arabic-prompt" : ""} dir={currentQuestion.promptLang === "ar" ? "rtl" : "ltr"}>{currentQuestion.prompt}</strong>
+            <strong className={currentQuestion.promptLang === "ar" ? "arabic-prompt" : ""} dir={promptDirection(currentQuestion.prompt, currentQuestion.promptLang)}>{currentQuestion.prompt}</strong>
             {currentQuestion.promptLang === "ar" && <button className="mini-sound" onClick={() => speak(currentQuestion.prompt)} aria-label="Прослушать">◖))</button>}
           </div>
           <div className="options">

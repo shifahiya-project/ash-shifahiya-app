@@ -66,7 +66,7 @@ export const lessonThirtyThree: Lesson = {
       ],
     },
     {
-      title: "Модель أُبْصِرْ: приказ",
+      title: "Модель اُبْصُرْ: приказ",
       words: [
         { arabic: "اُكْتُبْ", russian: "пиши!" }, { arabic: "خُذْ", russian: "возьми!" },
         { arabic: "كُلْ", russian: "ешь!" }, { arabic: "اُسْكُنْ", russian: "живи / поселись!" },
@@ -79,7 +79,7 @@ export const lessonThirtyThree: Lesson = {
       ],
     },
     {
-      title: "Модель أُبْصِرْ: запрет",
+      title: "Модель اُبْصُرْ: запрет",
       words: [
         { arabic: "لَا تَكْتُبْ", russian: "не пиши!" }, { arabic: "لَا تَأْخُذْ", russian: "не бери!" },
         { arabic: "لَا تَأْكُلْ", russian: "не ешь!" }, { arabic: "لَا تَسْكُنْ", russian: "не живи!" },
