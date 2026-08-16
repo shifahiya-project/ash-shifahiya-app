@@ -492,6 +492,40 @@ h1 em { color: var(--green); font-weight: inherit; }
 .grammar-view .stage-label span { background: var(--blue); font: 600 13px "Traditional Arabic", serif; }
 .grammar-view .repeat-badge.active { border-color: rgba(47,98,196,.22); background: var(--blue-soft); color: var(--blue); }
 
+/* An exam is written, not taught: no feedback between questions, and the card
+   says so plainly. The paper itself reuses the practice layout. */
+.exam-view .stage-label span { background: var(--gold); }
+.exam-view .repeat-badge.active { border-color: rgba(197,154,85,.3); background: var(--cream); color: var(--gold); }
+.exam-note { margin-top: 18px; color: var(--ink-soft); font-size: 12px; text-align: center; }
+
+.exam-card { border-color: rgba(197,154,85,.35); background: linear-gradient(180deg, rgba(245,238,224,.55) 0%, rgba(255,255,255,.85) 60%); }
+.exam-card .lesson-number { border-color: var(--gold); color: var(--gold); font-size: 22px; }
+.exam-card .lesson-label { color: var(--gold); }
+
+.result-score { font: 500 34px Georgia, serif; color: var(--ink); }
+
+/* The mistakes are the only teaching the exam does, so they are readable
+   rather than dense: what was asked, what was right, and why. */
+.mistake-list {
+  margin: 26px auto 8px;
+  max-width: 620px;
+  text-align: left;
+}
+
+.mistake-list > strong { display: block; margin-bottom: 10px; color: var(--ink-soft); font-size: 13px; }
+.mistake-list ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+
+.mistake-list li {
+  padding: 12px 14px;
+  background: rgba(255,255,255,.72);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.mistake-list li span { display: block; font-size: 17px; }
+.mistake-list li b { display: block; margin-top: 4px; color: var(--green); font-size: 17px; }
+.mistake-list li small { display: block; margin-top: 6px; color: var(--ink-soft); font-size: 13px; }
+
 /* Reading is not a drill: the page is a column of sentences the learner works
    through at their own pace, and the translation stays out of the way until it
    is asked for. */

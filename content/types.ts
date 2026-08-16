@@ -46,6 +46,31 @@ export type GrammarBlock = {
 };
 
 /**
+ * An exam question carries which half of the course it checks, so the paper can
+ * hold its shape: the bulk is vocabulary, and grammar keeps to its share.
+ */
+export type ExamArea = "vocab" | "grammar";
+
+export type ExamQuestion = Question & { area: ExamArea };
+
+export type Exam = {
+  id: "midterm" | "final";
+  title: string;
+  intro: string;
+  /** The last lesson the paper may draw on. */
+  afterLesson: number;
+  questions: ExamQuestion[];
+};
+
+export type ExamSummary = {
+  id: Exam["id"];
+  title: string;
+  afterLesson: number;
+  questionCount: number;
+  grammarCount: number;
+};
+
+/**
  * Reading practice: a text the learner reads whole, tapping a sentence when it
  * does not come together. Its words are deliberately outside the course
  * vocabulary — nothing here becomes a card or a distractor.
