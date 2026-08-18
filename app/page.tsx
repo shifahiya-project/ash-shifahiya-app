@@ -19,6 +19,13 @@ import {
 } from "./lesson-access";
 import { lessonParts } from "../content/lesson-parts";
 import {
+  GRAMMAR_ENABLED,
+  visibleExamQuestions,
+  visibleExamSummary,
+  visiblePartCount,
+  visibleParts,
+} from "./features.ts";
+import {
   EMPTY_STATS,
   progressStore,
   type CardProgress,
@@ -201,7 +208,7 @@ function shuffle<T>(items: T[]) {
 
 export default function Home() {
   const [view, setView] = useState<
-    "home" | "learn" | "practice" | "grammar" | "reading" | "review" | "exam" | "exam-result"
+    "home" | "learn" | "practice" | "grammar" | "reading" | "review" | "result" | "exam" | "exam-result"
   >("home");
   const [lessonId, setLessonId] = useState(1);
   const [partIndex, setPartIndex] = useState(0);
@@ -243,7 +250,7 @@ export default function Home() {
   const sync = useSyncExternalStore(syncStore.subscribe, syncStore.getSnapshot, syncStore.getServerSnapshot);
 
   const lesson = openLessons[lessonId];
-  const parts = useMemo(() => (lesson ? lessonParts(lesson) : []), [lesson]);
+  const parts = useMemo(() => (lesson ? visibleParts(lessonParts(lesson)) : []), [lesson]);
   const part = parts[partIndex] ?? parts[0];
   const deck = lesson?.decks[deckIndex];
   const words = deck?.words ?? [];
@@ -462,7 +469,7 @@ export default function Home() {
   async function startLesson(id: number) {
     if (!unlockedLessons.has(id)) return;
     const storedSession = savedSessions[id];
-    if (storedSession) {
+    if (storedSession && (GRAMMAR_ENABLED || storedSession.view !== "grammar")) {
       restoreSession(storedSession);
       return;
     }
@@ -560,8 +567,12 @@ export default function Home() {
   async function startExam(id: Exam["id"]) {
     const summary = examSummaries.find((item) => item.id === id);
     if (!summary || !examReadiness(summary, lessonSummaries, stored).open) return;
-    const paper = await loadExam(id);
-    const parked = examSession?.examId === id ? examSession : null;
+    const loaded = await loadExam(id);
+    const paper = { ...loaded, questions: visibleExamQuestions(loaded) };
+    // A paper parked before the shape changed indexes questions that are no
+    // longer served, so it is started again rather than resumed into nothing.
+    const saved = examSession?.examId === id ? examSession : null;
+    const parked = saved && saved.order.length === paper.questions.length ? saved : null;
     setExam(paper);
     setExamOrder(parked?.order ?? shuffle(paper.questions.map((_, index) => index)));
     setExamIndex(parked?.index ?? 0);
@@ -654,6 +665,7 @@ export default function Home() {
       sessions: savedSessions,
       cards: cardProgress,
       readings: savedReadings,
+      exams: savedExams,
       stats: learningStats,
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
@@ -680,7 +692,16 @@ export default function Home() {
       // Backups written before the reading texts simply have none of them.
       const readings = payload.readings ?? {};
       const stats = { ...EMPTY_STATS, ...(payload.stats ?? {}) };
-      progressStore.replaceAll({ scores, grammarScores, sessions, cards, readings, stats });
+      progressStore.replaceAll({
+        scores,
+        grammarScores,
+        sessions,
+        cards,
+        readings,
+        exams: payload.exams ?? {},
+        examSession: payload.examSession ?? null,
+        stats,
+      });
       setBackupMessage("Прогресс восстановлен.");
     } catch {
       setBackupMessage("Не удалось прочитать файл прогресса.");
@@ -977,7 +998,7 @@ export default function Home() {
                   <div className="lesson-copy">
                     <div className="lesson-label">Урок {item.id} · <span dir="rtl">{item.arabicTitle}</span></div>
                     <h2>{item.title}</h2>
-                    <p>{item.description}{item.partCount > 1 ? ` · в ${item.partCount} части` : ""}</p>
+                    <p>{item.description}{visiblePartCount(item) > 1 ? ` · в ${visiblePartCount(item)} части` : ""}</p>
                     <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
                     {readingByLesson.has(item.id) && !locked && (() => {
                       const read = savedReadings[item.id];
@@ -1016,7 +1037,7 @@ export default function Home() {
                   {completed && (
                     <div className="card-score">
                       ✓ {saved}/{item.questionCount}
-                      {item.grammarQuestionCount > 0 &&
+                      {GRAMMAR_ENABLED && item.grammarQuestionCount > 0 &&
                         ` · грамматика ${savedGrammarScores[item.id]}/${item.grammarQuestionCount}`}
                     </div>
                   )}
@@ -1031,13 +1052,19 @@ export default function Home() {
                 </div>
               );
 
-              const paper = examSummaries.find((summary) => summary.afterLesson === item.id);
-              if (!paper) return [card];
+              const declared = examSummaries.find((summary) => summary.afterLesson === item.id);
+              if (!declared) return [card];
+              // While grammar is hidden the paper is shorter, and its pass mark
+              // moves with it.
+              const paper = visibleExamSummary(declared);
 
               const ready = examReadiness(paper, lessonSummaries, stored);
               const result = savedExams[paper.id];
               const passed = isExamPassed(paper, result?.best);
-              const parked = examSession?.examId === paper.id ? examSession : null;
+              // A paper parked before grammar was hidden no longer fits the
+              // shorter one, so the card must not promise to continue it.
+              const written = examSession?.examId === paper.id ? examSession : null;
+              const parked = written && written.order.length === paper.questionCount ? written : null;
               return [
                 card,
                 <div
@@ -1049,10 +1076,14 @@ export default function Home() {
                     <div className="lesson-label">Экзамен · после урока {paper.afterLesson}</div>
                     <h2>{paper.title}</h2>
                     <p>
-                      {plural(paper.questionCount, "вопрос", "вопроса", "вопросов")} · грамматики{" "}
-                      {paper.grammarCount} · проходной балл {examPassMark(paper.questionCount)}
+                      {plural(paper.questionCount, "вопрос", "вопроса", "вопросов")}
+                      {paper.grammarCount > 0 ? ` · грамматики ${paper.grammarCount}` : ""} · проходной
+                      балл {examPassMark(paper.questionCount)}
                     </p>
-                    <div className="chips"><span>Лексика</span><span>Грамматика</span></div>
+                    <div className="chips">
+                      <span>Лексика</span>
+                      {paper.grammarCount > 0 && <span>Грамматика</span>}
+                    </div>
                   </div>
                   {ready.open ? (
                     <button className={passed ? "repeat" : "primary"} onClick={() => startExam(paper.id)}>

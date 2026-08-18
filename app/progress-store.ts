@@ -1,4 +1,5 @@
 import { lessonSummaries } from "../content/manifest";
+import { GRAMMAR_ENABLED } from "./features.ts";
 
 export type SavedSession = {
   view: "learn" | "practice" | "grammar";
@@ -138,6 +139,18 @@ function readProgress(): Progress {
   const active = read<SavedSession | null>(ACTIVE_SESSION_KEY, null);
   if (active && lessonSummaries.some((summary) => summary.id === active.lessonId)) {
     sessions[active.lessonId] = active;
+  }
+
+  // A learner who stopped inside a grammar block finished the lesson's own
+  // words and questions — the session carries that score. With the blocks
+  // hidden there is nowhere left to earn it, so it counts now. Storage is not
+  // rewritten: turning grammar back on restores the unfinished block as it was.
+  if (!GRAMMAR_ENABLED) {
+    for (const session of Object.values(sessions)) {
+      if (session.view === "grammar" && scores[session.lessonId] === undefined) {
+        scores[session.lessonId] = session.score;
+      }
+    }
   }
 
   return {
