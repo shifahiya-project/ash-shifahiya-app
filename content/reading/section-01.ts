@@ -3,7 +3,7 @@ import type { ReadingSection } from "../types";
 export const readingOne: ReadingSection = {
   id: 1,
   lessonId: 36,
-  source: "Мабдауль усуль. Часть 1",
+  source: "Мабдауль кыраат. Часть 1",
   texts: [
     {
       title: "Текст 1",
