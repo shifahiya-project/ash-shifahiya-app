@@ -85,15 +85,17 @@ test("ids need not run in a single unbroken sequence", () => {
 });
 
 // Grammar is part of the lesson, not an extra: the next lesson builds on it.
+// The rule as it stands when the blocks are shown; app/features.ts decides
+// whether they are, and tests/features.test.mjs covers the other position.
 test("a lesson that teaches grammar is not finished until that block is done", () => {
   const teaching = [{ id: 1, grammarQuestionCount: 8 }, { id: 2 }, { id: 3 }];
   const cardsOnly = { ...nothing, scores: { 1: 26 } };
-  assert.ok(!isLessonComplete(teaching[0], cardsOnly));
-  assert.ok(!unlockedLessonIds(teaching, cardsOnly).has(2));
+  assert.ok(!isLessonComplete(teaching[0], cardsOnly, true));
+  assert.ok(!unlockedLessonIds(teaching, cardsOnly, true).has(2));
 
   const done = { ...nothing, scores: { 1: 26 }, grammarScores: { 1: 8 } };
-  assert.ok(isLessonComplete(teaching[0], done));
-  assert.ok(unlockedLessonIds(teaching, done).has(2));
+  assert.ok(isLessonComplete(teaching[0], done, true));
+  assert.ok(unlockedLessonIds(teaching, done, true).has(2));
 });
 
 // Walking through the block is not the same as understanding the rule.
@@ -104,13 +106,13 @@ test("the grammar block needs three quarters right to count", () => {
 
   const teaching = [{ id: 1, grammarQuestionCount: 8 }, { id: 2 }, { id: 3 }];
   const weak = { ...nothing, scores: { 1: 26 }, grammarScores: { 1: 5 } };
-  assert.ok(!isGrammarPassed(teaching[0], weak));
-  assert.ok(!isLessonComplete(teaching[0], weak));
-  assert.ok(!unlockedLessonIds(teaching, weak).has(2));
+  assert.ok(!isGrammarPassed(teaching[0], weak, true));
+  assert.ok(!isLessonComplete(teaching[0], weak, true));
+  assert.ok(!unlockedLessonIds(teaching, weak, true).has(2));
 
   const exact = { ...nothing, scores: { 1: 26 }, grammarScores: { 1: 6 } };
-  assert.ok(isGrammarPassed(teaching[0], exact));
-  assert.ok(unlockedLessonIds(teaching, exact).has(2));
+  assert.ok(isGrammarPassed(teaching[0], exact, true));
+  assert.ok(unlockedLessonIds(teaching, exact, true).has(2));
 });
 
 test("a lesson without a grammar block is unaffected by the pass mark", () => {

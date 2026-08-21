@@ -1,6 +1,7 @@
 // Types only: this module stays pure so the tests can import it directly,
 // without pulling in the browser-bound store it describes.
 import type { CardProgress, SavedSession } from "./progress-store";
+import { GRAMMAR_ENABLED } from "./features.ts";
 
 /** The part of a learner's progress that decides which lessons are open. */
 export type AccessProgress = {
@@ -44,8 +45,14 @@ export function grammarPassMark(questionCount: number) {
   return Math.ceil(questionCount * GRAMMAR_PASS_RATIO);
 }
 
-export function isGrammarPassed(summary: AccessSummary, progress: AccessProgress) {
-  if (!summary.grammarQuestionCount) return true;
+export function isGrammarPassed(
+  summary: AccessSummary,
+  progress: AccessProgress,
+  enabled = GRAMMAR_ENABLED,
+) {
+  // While the blocks are hidden nobody can be held at one: the score stays in
+  // storage, but the lesson no longer waits on it.
+  if (!enabled || !summary.grammarQuestionCount) return true;
   const score = progress.grammarScores[summary.id];
   return score !== undefined && score >= grammarPassMark(summary.grammarQuestionCount);
 }
@@ -55,9 +62,13 @@ export function isGrammarPassed(summary: AccessSummary, progress: AccessProgress
  * the lesson teaches grammar, that block is passed too. Grammar is not
  * optional: the rules are what the next lesson builds on.
  */
-export function isLessonComplete(summary: AccessSummary, progress: AccessProgress) {
+export function isLessonComplete(
+  summary: AccessSummary,
+  progress: AccessProgress,
+  enabled = GRAMMAR_ENABLED,
+) {
   if (progress.scores[summary.id] === undefined) return false;
-  return isGrammarPassed(summary, progress);
+  return isGrammarPassed(summary, progress, enabled);
 }
 
 /**
@@ -75,6 +86,7 @@ export function isLessonComplete(summary: AccessSummary, progress: AccessProgres
 export function unlockedLessonIds(
   summaries: AccessSummary[],
   progress: AccessProgress,
+  enabled = GRAMMAR_ENABLED,
 ): Set<number> {
   const touched = touchedLessonIds(progress);
   let reached = -1;
@@ -85,7 +97,7 @@ export function unlockedLessonIds(
   const open = new Set<number>();
   summaries.forEach((summary, index) => {
     const previous = summaries[index - 1];
-    if (!previous || index <= reached || isLessonComplete(previous, progress)) {
+    if (!previous || index <= reached || isLessonComplete(previous, progress, enabled)) {
       open.add(summary.id);
     }
   });
@@ -115,8 +127,9 @@ export function examReadiness(
   exam: { afterLesson: number },
   summaries: AccessSummary[],
   progress: AccessProgress,
+  enabled = GRAMMAR_ENABLED,
 ) {
   const lessons = summaries.filter((summary) => summary.id <= exam.afterLesson);
-  const done = lessons.filter((summary) => isLessonComplete(summary, progress)).length;
+  const done = lessons.filter((summary) => isLessonComplete(summary, progress, enabled)).length;
   return { done, total: lessons.length, open: done === lessons.length };
 }

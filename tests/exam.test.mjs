@@ -218,8 +218,8 @@ test("an exam opens only when the lessons behind it are finished", () => {
     cards: {},
   });
 
-  assert.equal(examReadiness(midterm, lessonSummaries, complete(49)).open, false);
-  const ready = examReadiness(midterm, lessonSummaries, complete(50));
+  assert.equal(examReadiness(midterm, lessonSummaries, complete(49), true).open, false);
+  const ready = examReadiness(midterm, lessonSummaries, complete(50), true);
   assert.equal(ready.open, true);
   assert.equal(ready.total, 50);
   assert.equal(ready.done, 50);
@@ -228,5 +228,5 @@ test("an exam opens only when the lessons behind it are finished", () => {
   const withGrammarLeft = complete(50);
   const grammarLesson = lessonSummaries.find((s) => s.id <= 50 && s.grammarQuestionCount > 0);
   delete withGrammarLeft.grammarScores[grammarLesson.id];
-  assert.equal(examReadiness(midterm, lessonSummaries, withGrammarLeft).open, false);
+  assert.equal(examReadiness(midterm, lessonSummaries, withGrammarLeft, true).open, false);
 });
