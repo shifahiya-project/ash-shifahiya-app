@@ -492,6 +492,66 @@ h1 em { color: var(--green); font-weight: inherit; }
 .grammar-view .stage-label span { background: var(--blue); font: 600 13px "Traditional Arabic", serif; }
 .grammar-view .repeat-badge.active { border-color: rgba(47,98,196,.22); background: var(--blue-soft); color: var(--blue); }
 
+/* Two courses live on one screen, so the list says which one is open before
+   the cards do. */
+.course-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 5px;
+  background: rgba(255,255,255,.6);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+}
+
+.course-switch button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 99px;
+  background: none;
+  color: var(--ink-soft);
+  font: 600 13px/1.2 inherit;
+  cursor: pointer;
+}
+
+.course-switch button.is-active { background: var(--green); color: white; }
+.course-switch button:not(.is-active):hover { color: var(--ink); }
+
+.part2-gate {
+  padding: 18px 20px;
+  background: var(--cream);
+  border: 1px dashed var(--gold);
+  border-radius: 18px;
+}
+
+.part2-gate strong { display: block; margin-bottom: 6px; color: var(--ink); font: 500 17px Georgia, serif; }
+.part2-gate span { color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
+
+/* A second-course card shows the word above the sentence it was taken from. */
+.word-context {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--mint);
+  border-radius: 12px;
+  text-align: right;
+}
+
+.word-context span {
+  display: block;
+  font: 400 22px/1.9 "Traditional Arabic", "Noto Naskh Arabic", serif;
+  color: var(--ink);
+}
+
+.word-context small { display: block; margin-top: 6px; color: var(--ink-soft); font-size: 13px; text-align: left; }
+
+.reading-view .story-title {
+  margin: -6px 0 12px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  text-align: center;
+}
+
 /* An exam is written, not taught: no feedback between questions, and the card
    says so plainly. The paper itself reuses the practice layout. */
 .exam-view .stage-label span { background: var(--gold); }
