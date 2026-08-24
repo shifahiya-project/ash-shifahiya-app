@@ -19,6 +19,36 @@ const NUMBERS = [
 
 const numberName = (n) => NUMBERS[n - 1] ?? `Number${n}`;
 
+/**
+ * Corrections to the exports, each one confirmed against the text itself.
+ *
+ * A row the OCR mangled: the story's Arabic name was lost and the printed page
+ * number took its place, so the export marks the heading as an ordinary pair
+ * and the story goes on without a title. The Russian name survived, and it is
+ * enough to open the story; the Arabic one stays empty rather than invented.
+ */
+const TEXT_FIXES = {
+  "p2-s8-039": { type: "title", ar: "", ru: "Осёл и бык" },
+};
+
+/**
+ * A word whose example sentence does not contain it. جَوّ ("air") was given the
+ * sentence about الْجَوَاب ("the answer") — two different words that merely look
+ * alike. The replacement points at a sentence of the same lesson where the word
+ * really stands, and the Arabic is cut from that sentence rather than typed
+ * out, so its vowel marks are the text's own.
+ */
+const CONTEXT_FIXES = {
+  // The entry is keyed by the sentence the export attached to it, not by the
+  // word: an Arabic key typed by hand would differ from the file in its vowel
+  // marks and match nothing.
+  "p2-s3-037": {
+    sourceId: "p2-s3-038",
+    fromWord: "الذرات",
+    russian: "…из частиц, витающих в воздухе, — пыли и насекомых",
+  },
+};
+
 /** The glossary's own type names, kept as they come. */
 const KINDS = new Set(["verb", "noun", "masdar", "participle", "adj", "adverb", "expression"]);
 
@@ -29,14 +59,19 @@ function skeleton(text) {
 // Arabic writes several one-letter words joined to the next one, and hangs the
 // pronouns on the end, so a word in running text rarely looks like its
 // dictionary form. Both ends are peeled before comparing.
-const PREFIXES = ["وال", "فال", "بال", "كال", "لل", "ال", "و", "ف", "ب", "ك", "ل", "س", "ي", "ت", "ن", "أ", "م"];
+// The article is unmistakable, so it comes off even a two-letter word — الْجَوّ
+// is جَوّ. A single letter could belong to the word itself, so it only comes off
+// when three letters remain.
+const ARTICLES = ["وال", "فال", "بال", "كال", "لل", "ال"];
+const PREFIXES = [...ARTICLES, "و", "ف", "ب", "ك", "ل", "س", "ي", "ت", "ن", "أ", "م"];
 const SUFFIXES = ["هما", "كما", "هن", "هم", "كم", "كن", "نا", "ها", "ني", "ه", "ك", "ي", "ات", "ان", "ين", "ون", "ا", "ت", "ن"];
 
 function stems(word) {
   const bare = skeleton(word);
   const out = new Set([bare]);
   for (const prefix of PREFIXES) {
-    if (bare.startsWith(prefix) && bare.length - prefix.length >= 3) out.add(bare.slice(prefix.length));
+    const least = ARTICLES.includes(prefix) ? 2 : 3;
+    if (bare.startsWith(prefix) && bare.length - prefix.length >= least) out.add(bare.slice(prefix.length));
   }
   for (const form of [...out]) {
     for (const suffix of SUFFIXES) {
@@ -140,7 +175,8 @@ const book = text.title ?? glossary.title;
 const storiesByLesson = new Map();
 const dropped = [];
 let current = null;
-for (const item of text.items) {
+for (const raw of text.items) {
+  const item = TEXT_FIXES[raw.id] ? { ...raw, ...TEXT_FIXES[raw.id] } : raw;
   const lesson = item.lesson ?? current?.lesson;
   if (item.type === "title") {
     current = { lesson, arabicTitle: item.ar.trim(), title: item.ru.trim(), sentences: [] };
@@ -163,12 +199,38 @@ for (const item of text.items) {
   current.sentences.push({ arabic, russian: item.ru.trim() });
 }
 
+/**
+ * Replaces the example of a word the export mismatched. The Arabic is sliced
+ * out of the referenced sentence, so it cannot drift from the text; a fix that
+ * no longer matches stops the import instead of passing quietly.
+ */
+function applyContextFix(word, sentences) {
+  const fix = CONTEXT_FIXES[word.source_id];
+  if (!fix) return word;
+
+  const sentence = sentences.get(fix.sourceId);
+  if (!sentence) throw new Error(`context fix points at a missing sentence: ${fix.sourceId}`);
+
+  const tokens = sentence.ar.split(/\s+/);
+  const at = tokens.findIndex((token) => skeleton(token) === fix.fromWord);
+  if (at < 0) throw new Error(`context fix cannot find ${fix.fromWord} in ${fix.sourceId}`);
+
+  return {
+    ...word,
+    context_ar: tokens.slice(at).join(" ").trim(),
+    context_ru: fix.russian,
+  };
+}
+
+const byId = new Map(text.items.map((item) => [item.id, item]));
+
 let located = 0;
 let missing = 0;
 const lessons = glossary.lessons.map((entry) => {
   const id = entry.lesson;
   const stories = (storiesByLesson.get(id) ?? []).filter((story) => story.sentences.length);
-  const words = entry.entries.map((word) => {
+  const words = entry.entries.map((raw) => {
+    const word = applyContextFix(raw, byId);
     const contextForm = locate(word);
     if (contextForm) located += 1;
     else missing += 1;

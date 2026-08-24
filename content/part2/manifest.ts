@@ -91,9 +91,9 @@ export const part2Summaries: Part2Summary[] = [
     book: "Мабдауль кыраат. Часть 2",
     title: "Гусь и журавль",
     wordCount: 25,
-    storyCount: 2,
+    storyCount: 3,
     sentenceCount: 53,
-    storyTitles: ["Гусь и журавль", "Коза и волк"],
+    storyTitles: ["Гусь и журавль", "Осёл и бык", "Коза и волк"],
   },
   {
     id: 11,
