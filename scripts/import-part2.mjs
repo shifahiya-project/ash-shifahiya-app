@@ -210,17 +210,40 @@ function storyTitle(russian) {
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 
-// The text carries its stories as title rows between the pairs.
+// The text carries its stories as title rows between the pairs. Which word the
+// export uses for that row changed between books — «title» in Мабдауль кыраат,
+// «text_title» in Кыраа рашида — so both are read as the same thing.
+const isTitle = (item) => item.type === "title" || item.type === "text_title";
+
+// A long text can be printed in numbered parts, and the export marks them with
+// «(١) Часть 1» rows. They divide one story, they do not begin another, and
+// they carry no sentence of their own.
+const isSubheading = (item) => item.type === "subheading";
+
 const storiesByLesson = new Map();
 const dropped = [];
+let subheadings = 0;
 let current = null;
 for (const raw of text.items) {
   const item = TEXT_FIXES[raw.id] ? { ...raw, ...TEXT_FIXES[raw.id] } : raw;
   const lesson = item.lesson ?? current?.lesson;
-  if (item.type === "title") {
-    const continues = current?.lesson === lesson && sameStory(current.title, item.ru.trim());
-    if (continues) continue;
-    current = { lesson, arabicTitle: item.ar.trim(), title: storyTitle(item.ru), sentences: [] };
+  if (isSubheading(item)) {
+    subheadings += 1;
+    continue;
+  }
+  if (isTitle(item)) {
+    // The heading printed again after a break repeats the name of what is
+    // already being read. Inside one lesson that is the same story going on;
+    // across the boundary it is the lesson before that was reading it, so the
+    // rest of it is named as the continuation it is.
+    const repeats = current && sameStory(continued(current.title), continued(item.ru));
+    if (repeats && current.lesson === lesson) continue;
+    current = {
+      lesson,
+      arabicTitle: item.ar.trim(),
+      title: repeats ? `${continued(storyTitle(item.ru))} (продолжение)` : storyTitle(item.ru),
+      sentences: [],
+    };
     if (!storiesByLesson.has(lesson)) storiesByLesson.set(lesson, []);
     storiesByLesson.get(lesson).push(current);
     continue;
@@ -388,6 +411,7 @@ console.log(
 console.log(
   `вся вторая часть: ${course.length} уроков · ${count(course, words)} слов · ${count(course, sentences)} фраз`,
 );
+if (subheadings) console.log(`подзаголовков частей текста пропущено: ${subheadings}`);
 if (dropped.length) {
   console.log(`отброшено строк без арабского: ${dropped.length}`);
   for (const line of dropped) console.log(`  урок ${line.lesson}: ${JSON.stringify(line.arabic)} — ${line.russian}`);

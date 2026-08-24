@@ -126,6 +126,12 @@ test("a gap question hides the word and nothing else", () => {
         `урок ${lesson.id}: пропуск встал не на место`,
       );
       assert.ok(!question.prompt.includes(question.answer), `урок ${lesson.id}: ответ виден в вопросе`);
+      // Прочерк вместо всей фразы спрашивать не о чем.
+      assert.match(
+        question.prompt.replace(BLANK, " "),
+        /[ء-ي]/,
+        `урок ${lesson.id}: от фразы остался один пропуск`,
+      );
     }
   }
   assert.ok(gaps > lessons.length * 10, `заданий с пропуском всего ${gaps} — слишком мало`);
