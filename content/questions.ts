@@ -78,7 +78,7 @@ function confusability(answer: string, candidate: string) {
   return overlap - lengthGap * LENGTH_GAP_WEIGHT;
 }
 
-function hash(value: string) {
+export function hash(value: string) {
   let result = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
     result ^= value.charCodeAt(index);
@@ -91,7 +91,7 @@ function hash(value: string) {
  * Deterministic shuffle. The same answer always yields the same options, so
  * server and client agree and the generated set is reproducible in tests.
  */
-function seededShuffle<T>(items: T[], seed: number) {
+export function seededShuffle<T>(items: T[], seed: number) {
   const result = [...items];
   let state = seed || 1;
   for (let index = result.length - 1; index > 0; index -= 1) {

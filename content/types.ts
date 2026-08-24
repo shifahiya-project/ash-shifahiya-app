@@ -46,6 +46,64 @@ export type GrammarBlock = {
 };
 
 /**
+ * The second course is built the other way round from the first: it does not
+ * teach forms and then use them, it takes a text and gives the learner the
+ * words that text needs. A lesson is a set of new words — each carried by the
+ * sentence it will be met in — followed by the text itself.
+ */
+export type Part2WordKind =
+  | "verb"
+  | "noun"
+  | "masdar"
+  | "participle"
+  | "adj"
+  | "adverb"
+  | "expression";
+
+export type Part2Word = {
+  /** The dictionary form as the glossary gives it: مَكَثَ (يَمْكُثُ), مَخْزَنٌ (مَخَازِنُ). */
+  arabic: string;
+  russian: string;
+  kind: Part2WordKind;
+  /** The sentence from this lesson's own text where the word appears. */
+  contextArabic: string;
+  contextRussian: string;
+  /**
+   * The word as it stands inside that sentence — inflected, and often carrying
+   * a prefix or a pronoun. Present when it could be located; the exercise puts
+   * the blank exactly there, and falls back to translating the sentence when
+   * it is missing.
+   */
+  contextForm?: string;
+};
+
+/** One story of the lesson's text, under the title the book gives it. */
+export type Part2Story = {
+  arabicTitle: string;
+  title: string;
+  sentences: ReadingSentence[];
+};
+
+export type Part2Lesson = {
+  id: number;
+  /** Which book the lesson is taken from — the course runs through six. */
+  book: string;
+  title: string;
+  words: Part2Word[];
+  stories: Part2Story[];
+};
+
+export type Part2Summary = {
+  id: number;
+  book: string;
+  title: string;
+  wordCount: number;
+  storyCount: number;
+  sentenceCount: number;
+  storyTitles: string[];
+};
+
+/**
  * An exam question carries which half of the course it checks, so the paper can
  * hold its shape: the bulk is vocabulary, and grammar keeps to its share.
  */
