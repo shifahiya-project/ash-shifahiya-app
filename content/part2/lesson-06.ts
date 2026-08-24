@@ -58,7 +58,7 @@ export const part2LessonSix: Part2Lesson = {
       kind: "noun",
       contextArabic: "أَمَا عِنْدَكَ الْأَشْيَاءُ اللَّازِمَةُ لِلْمُحَافَظَةِ عَلَى النَّظَافَةِ؟",
       contextRussian: "Разве у тебя нет всего необходимого для чистоты?",
-      contextForm: "النَّظَافَةِ؟",
+      contextForm: "النَّظَافَةِ",
     },
     {
       arabic: "طَسْتٌ (طُسُوتٌ)",
@@ -89,7 +89,7 @@ export const part2LessonSix: Part2Lesson = {
       kind: "noun",
       contextArabic: "فَهُنَاكَ الطَّسْتُ وَالْمَاءُ وَالصَّابُونُ وَالْمِنْشَفَةُ وَالْمِشْطُ وَالْفُرْشَةُ.",
       contextRussian: "Вот таз, вода, мыло, полотенце, расчёска и щётка.",
-      contextForm: "وَالْفُرْشَةُ.",
+      contextForm: "وَالْفُرْشَةُ",
     },
     {
       arabic: "نَظَّفَ (يُنَظِّفُ)",
@@ -145,7 +145,7 @@ export const part2LessonSix: Part2Lesson = {
       kind: "noun",
       contextArabic: "فَلَا بُدَّ مِنْ عِقَابِكَ.",
       contextRussian: "Ты должен быть наказан.",
-      contextForm: "عِقَابِكَ.",
+      contextForm: "عِقَابِكَ",
     },
     {
       arabic: "شُبَّاكٌ (شَبَابِيكُ)",
@@ -176,7 +176,7 @@ export const part2LessonSix: Part2Lesson = {
       kind: "noun",
       contextArabic: "وَكَانَ كُلَّمَا شَقَّ مِنْهَا ذِرَاعًا أَدْخَلَ فِيهَا وَتِدًا.",
       contextRussian: "Каждый раз, когда он раскалывал дерево на расстояние вытянутой руки, он вставлял в него колышек.",
-      contextForm: "وَتِدًا.",
+      contextForm: "وَتِدًا",
     },
     {
       arabic: "أَعْجَبَ (يُعْجِبُ)",

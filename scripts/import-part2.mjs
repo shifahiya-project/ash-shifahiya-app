@@ -109,6 +109,13 @@ function dictionaryForms(entry) {
     .filter((form) => /[ء-ي]/.test(form));
 }
 
+/**
+ * The word as it will stand on the answer button: what the sentence carries
+ * around it — a comma, a full stop, a bracket — belongs to the sentence and
+ * stays there, in the text around the blank.
+ */
+const trimEdges = (token) => token.replace(/^[^ء-ي]+/, "").replace(/[^ء-يً-ْٰ]+$/, "");
+
 /** Finds the word inside its own context sentence, or returns null. */
 function locate(entry) {
   const tokens = (entry.context_ar ?? "").split(/\s+/).filter((token) => /[ء-ي]/.test(token));
@@ -120,12 +127,12 @@ function locate(entry) {
       for (const form of forms) {
         for (const a of tokenStems) {
           for (const b of form.stems) {
-            if (pass === "exact" && a === b) return token;
+            if (pass === "exact" && a === b) return trimEdges(token);
             if (pass === "prefix" && a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a))) {
-              return token;
+              return trimEdges(token);
             }
           }
-          if (pass === "root" && form.strong.length >= 3 && strong(a) === form.strong) return token;
+          if (pass === "root" && form.strong.length >= 3 && strong(a) === form.strong) return trimEdges(token);
         }
       }
     }
@@ -187,7 +194,11 @@ if (!glossaryPath || !textPath) {
 
 const glossary = JSON.parse(await readFile(glossaryPath, "utf8"));
 const text = JSON.parse(await readFile(textPath, "utf8"));
-const book = text.title ?? glossary.title;
+// The export titles the last two books by name and subtitle at once —
+// «Та‘лим аль-мута‘аллим»: обучение учащегося пути приобретения знания. Over
+// its lessons the list needs the name, so the quoted part is the book.
+const bookName = (title) => title.match(/^\s*«([^»]+)»/)?.[1].trim() ?? title.trim();
+const book = bookName(text.title ?? glossary.title);
 
 /**
  * A story printed across a page break carries its heading again on the next
@@ -210,28 +221,41 @@ function storyTitle(russian) {
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 
-// The text carries its stories as title rows between the pairs. Which word the
-// export uses for that row changed between books — «title» in Мабдауль кыраат,
-// «text_title» in Кыраа рашида — so both are read as the same thing.
-const isTitle = (item) => item.type === "title" || item.type === "text_title";
+// The text carries its stories as title rows between the pairs, and what the
+// export calls that row changed from book to book: «title» in Мабдауль кыраат,
+// «text_title» in Кыраа рашида, and in the last two books the name says which
+// level of the book it heads. All of them head a piece of text, so all of them
+// open a story.
+const TITLE_TYPES = new Set([
+  "title", "text_title", "book_title", "major_title", "section_title", "chapter_title",
+]);
 
-// A long text can be printed in numbered parts, and the export marks them with
-// «(١) Часть 1» rows. They divide one story, they do not begin another, and
-// they carry no sentence of their own.
-const isSubheading = (item) => item.type === "subheading";
+// Rows that mark the text without being part of it: «(١) Часть 1» divides one
+// story into printed parts, and a table of contents lists what comes later.
+// Neither carries a sentence of its own.
+const MARKUP_TYPES = new Set(["subheading", "toc_item"]);
+
+// Markdown quotation the export sometimes carries over from its source.
+const unquote = (text) => (text ?? "").replace(/^\s*>+\s*/, "").trim();
 
 const storiesByLesson = new Map();
 const dropped = [];
-let subheadings = 0;
+let markup = 0;
 let current = null;
 for (const raw of text.items) {
   const item = TEXT_FIXES[raw.id] ? { ...raw, ...TEXT_FIXES[raw.id] } : raw;
   const lesson = item.lesson ?? current?.lesson;
-  if (isSubheading(item)) {
-    subheadings += 1;
+  if (MARKUP_TYPES.has(item.type)) {
+    markup += 1;
     continue;
   }
-  if (isTitle(item)) {
+  // Every book so far named its rows differently. A name nobody taught this
+  // script stops the import: passed through, an unread heading would be read
+  // to the learner as a sentence of the story.
+  if (item.type !== "pair" && !TITLE_TYPES.has(item.type)) {
+    throw new Error(`неизвестный тип строки «${item.type}» (${item.id}) — научите импортёр, что это`);
+  }
+  if (TITLE_TYPES.has(item.type)) {
     // The heading printed again after a break repeats the name of what is
     // already being read. Inside one lesson that is the same story going on;
     // across the boundary it is the lesson before that was reading it, so the
@@ -240,8 +264,8 @@ for (const raw of text.items) {
     if (repeats && current.lesson === lesson) continue;
     current = {
       lesson,
-      arabicTitle: item.ar.trim(),
-      title: repeats ? `${continued(storyTitle(item.ru))} (продолжение)` : storyTitle(item.ru),
+      arabicTitle: unquote(item.ar),
+      title: repeats ? `${continued(storyTitle(unquote(item.ru)))} (продолжение)` : storyTitle(unquote(item.ru)),
       sentences: [],
     };
     if (!storiesByLesson.has(lesson)) storiesByLesson.set(lesson, []);
@@ -265,12 +289,12 @@ for (const raw of text.items) {
   }
   // Строка без единой арабской буквы — след разметки исходника (номер
   // страницы, потерявший заголовок, одинокая точка), а не предложение текста.
-  const arabic = item.ar.trim();
+  const arabic = unquote(item.ar);
   if (!/[ء-ي]/.test(arabic)) {
-    dropped.push({ lesson, arabic, russian: item.ru.trim() });
+    dropped.push({ lesson, arabic, russian: unquote(item.ru) });
     continue;
   }
-  current.sentences.push({ arabic, russian: item.ru.trim() });
+  current.sentences.push({ arabic, russian: unquote(item.ru) });
 }
 
 /**
@@ -344,8 +368,8 @@ const lessons = glossary.lessons.map((entry) => {
       arabic: word.arabic.trim(),
       russian: word.russian.trim(),
       kind: KINDS.has(word.type) ? word.type : "noun",
-      contextArabic: (word.context_ar ?? "").trim(),
-      contextRussian: (word.context_ru ?? "").trim(),
+      contextArabic: unquote(word.context_ar),
+      contextRussian: unquote(word.context_ru),
       ...(contextForm ? { contextForm } : {}),
     };
   });
@@ -411,7 +435,7 @@ console.log(
 console.log(
   `вся вторая часть: ${course.length} уроков · ${count(course, words)} слов · ${count(course, sentences)} фраз`,
 );
-if (subheadings) console.log(`подзаголовков частей текста пропущено: ${subheadings}`);
+if (markup) console.log(`строк разметки пропущено (подзаголовки частей, оглавление): ${markup}`);
 if (dropped.length) {
   console.log(`отброшено строк без арабского: ${dropped.length}`);
   for (const line of dropped) console.log(`  урок ${line.lesson}: ${JSON.stringify(line.arabic)} — ${line.russian}`);

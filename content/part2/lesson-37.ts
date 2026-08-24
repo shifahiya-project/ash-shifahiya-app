@@ -34,7 +34,7 @@ export const part2LessonThirtySeven: Part2Lesson = {
       kind: "masdar",
       contextArabic: "وَقَدْ رَضِيَ اللَّهُ عَنْهُ عَلَىٰ هُذِهِ الْأَمَانَةِ وَالْوَفَاءِ وَالْكَرَمِ.",
       contextRussian: "И Аллах был доволен им за эту честность, верность и щедрость.",
-      contextForm: "وَالْكَرَمِ.",
+      contextForm: "وَالْكَرَمِ",
     },
     {
       arabic: "اِبْتِغَاءٌ",

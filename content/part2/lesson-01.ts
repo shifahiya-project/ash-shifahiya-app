@@ -51,7 +51,7 @@ export const part2LessonOne: Part2Lesson = {
       kind: "noun",
       contextArabic: "دَقَّ الْجَرَسُ.",
       contextRussian: "Прозвенел звонок.",
-      contextForm: "الْجَرَسُ.",
+      contextForm: "الْجَرَسُ",
     },
     {
       arabic: "هُنَيْهَةٌ (هُنَيْهَاتٌ)",
@@ -75,7 +75,7 @@ export const part2LessonOne: Part2Lesson = {
       kind: "noun",
       contextArabic: "أَمْلَى عَلَيْهِ عِدَّةَ سُطُورٍ.",
       contextRussian: "Он продиктовал ему несколько строк.",
-      contextForm: "سُطُورٍ.",
+      contextForm: "سُطُورٍ",
     },
     {
       arabic: "اِنْتِهَاءٌ",
@@ -147,7 +147,7 @@ export const part2LessonOne: Part2Lesson = {
       kind: "adverb",
       contextArabic: "يَذْهَبُ إِلَيْهِ بَاكِرًا.",
       contextRussian: "Он приходит туда рано.",
-      contextForm: "بَاكِرًا.",
+      contextForm: "بَاكِرًا",
     },
     {
       arabic: "تَأَخَّرَ (يَتَأَخَّرُ)",
@@ -171,7 +171,7 @@ export const part2LessonOne: Part2Lesson = {
       kind: "noun",
       contextArabic: "تَرَى أَمَامَ الْمَقَاعِدِ لَوْحَ الطَّبَاشِيرِ.",
       contextRussian: "Перед партами ты видишь доску для мела.",
-      contextForm: "الطَّبَاشِيرِ.",
+      contextForm: "الطَّبَاشِيرِ",
     },
     {
       arabic: "تَقْوِيمٌ (تَقَاوِيمُ)",
@@ -187,7 +187,7 @@ export const part2LessonOne: Part2Lesson = {
       kind: "noun",
       contextArabic: "وَفِي الْجِدَارِ سَاعَةٌ وَتَقْوِيمٌ وَخَرَائِطُ.",
       contextRussian: "На стене часы, календарь и карты.",
-      contextForm: "وَخَرَائِطُ.",
+      contextForm: "وَخَرَائِطُ",
     },
     {
       arabic: "رَسْمٌ (رُسُومٌ)",
@@ -195,7 +195,7 @@ export const part2LessonOne: Part2Lesson = {
       kind: "noun",
       contextArabic: "وَخَرَائِطُ وَعِدَّةُ رُسُومٍ.",
       contextRussian: "Карты и несколько рисунков.",
-      contextForm: "رُسُومٍ.",
+      contextForm: "رُسُومٍ",
     },
     {
       arabic: "تَلَقَّى (يَتَلَقَّى)",
@@ -211,7 +211,7 @@ export const part2LessonOne: Part2Lesson = {
       kind: "noun",
       contextArabic: "دَرْسَ الْحِسَابِ.",
       contextRussian: "Урок арифметики.",
-      contextForm: "الْحِسَابِ.",
+      contextForm: "الْحِسَابِ",
     },
     {
       arabic: "رَغْبَةٌ (رَغَبَاتٌ)",
@@ -235,7 +235,7 @@ export const part2LessonOne: Part2Lesson = {
       kind: "noun",
       contextArabic: "وَعَدَ الْفَائِزَ بِجَائِزَةٍ.",
       contextRussian: "Он пообещал победителю награду.",
-      contextForm: "بِجَائِزَةٍ.",
+      contextForm: "بِجَائِزَةٍ",
     },
     {
       arabic: "اِمْتِحَانٌ (اِمْتِحَانَاتٌ)",
@@ -243,7 +243,7 @@ export const part2LessonOne: Part2Lesson = {
       kind: "noun",
       contextArabic: "عَيَّنَ يَوْمَ الاِمْتِحَانِ.",
       contextRussian: "Он назначил день экзамена.",
-      contextForm: "الاِمْتِحَانِ.",
+      contextForm: "الاِمْتِحَانِ",
     },
     {
       arabic: "عَيَّنَ (يُعَيِّنُ)",
@@ -259,7 +259,7 @@ export const part2LessonOne: Part2Lesson = {
       kind: "adverb",
       contextArabic: "لَمْ يُضَيِّعْ وَقْتَهُ سُدًى.",
       contextRussian: "Он не тратил своё время впустую.",
-      contextForm: "سُدًى.",
+      contextForm: "سُدًى",
     },
     {
       arabic: "ضَيَّعَ (يُضَيِّعُ)",

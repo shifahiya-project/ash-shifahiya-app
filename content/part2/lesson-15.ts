@@ -279,7 +279,7 @@ export const part2LessonFifteen: Part2Lesson = {
       kind: "noun",
       contextArabic: "وَكَانَ أَخِي فِي الْفَصْلِ الْأَوَّلِ وَأَنَا فِي الْفَصْلِ الْأَخِيرِ.",
       contextRussian: "Мой брат был в первом классе, а я — в последнем.",
-      contextForm: "الْأَخِيرِ.",
+      contextForm: "الْأَخِيرِ",
     },
     {
       arabic: "شَهَادَةٌ (شَهَادَاتٌ)",
@@ -334,7 +334,7 @@ export const part2LessonFifteen: Part2Lesson = {
       kind: "noun",
       contextArabic: "مِنَ الْمَرَضِ فَكَانَ لِهَذَا الْخَبَرِ وَقْعٌ شَدِيدٌ كَالصَّاعِقَةِ.",
       contextRussian: "болезни. Эта новость подействовала на нас как удар молнии.",
-      contextForm: "كَالصَّاعِقَةِ.",
+      contextForm: "كَالصَّاعِقَةِ",
     },
     {
       arabic: "عَدَلَ (يَعْدِلُ) بِـ",
