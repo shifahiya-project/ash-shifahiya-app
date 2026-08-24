@@ -59,7 +59,7 @@ export const part2LessonForty: Part2Lesson = {
       kind: "participle",
       contextArabic: "وَقَالَ رَسُوْلُ اللهِ ﷺ : «أَجْلِسُ كَمَا يَجْلِسُ الْعَبْدُ وَأَكُلُ كَمَا يَأْكُلُ الْعَبْدُ ، وَقَالَ : لَا أَكُلُ مُتَّكِئاً».",
       contextRussian: "Посланник Аллаха ﷺ сказал: «Я сижу, как сидит раб, и ем, как ест раб». И сказал: «Я не ем, облокотившись».",
-      contextForm: "مُتَّكِئاً».",
+      contextForm: "مُتَّكِئاً",
     },
     {
       arabic: "أَمَاطَ (يُمِيطُ)",
@@ -82,7 +82,7 @@ export const part2LessonForty: Part2Lesson = {
       kind: "noun",
       contextArabic: "وَأَمَرَنَا أَنْ نَسْلُتَ الْقَصْعَةَ.",
       contextRussian: "Он велел нам тщательно вычищать блюдо.",
-      contextForm: "الْقَصْعَةَ.",
+      contextForm: "الْقَصْعَةَ",
     },
     {
       arabic: "دِيبَاجٌ",

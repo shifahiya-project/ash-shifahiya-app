@@ -83,7 +83,7 @@ export const part2LessonFortyTwo: Part2Lesson = {
       kind: "verb",
       contextArabic: "فَاغْتَسَلَ وَلَبِسَ لِبَاسَهُ الْقَدِيمَ وَقَدْ تَشَقَّقَ.",
       contextRussian: "Он искупался и надел старую, уже порвавшуюся одежду.",
-      contextForm: "تَشَقَّقَ.",
+      contextForm: "تَشَقَّقَ",
     },
     {
       arabic: "غِبْطَةٌ",

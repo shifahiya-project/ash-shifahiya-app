@@ -11,7 +11,7 @@ export const part2LessonSeven: Part2Lesson = {
       kind: "noun",
       contextArabic: "وَفِي يَوْمٍ مِنَ الْأَيَّامِ كَتَبَ لَهُ الْمُعَلِّمُ هَذِهِ الْقَاعِدَةَ:\" أَكْرِمْ أَبَاكَ وَأُمَّكَ\" لِكَيْ يَكْتُبَ مِثْلَهَا فِي كُرَّاسِهِ.",
       contextRussian: "Однажды учитель написал ему такое правило: «Почитай отца и мать», чтобы он мог записать это в свою тетрадь.",
-      contextForm: "الْقَاعِدَةَ:\"",
+      contextForm: "الْقَاعِدَةَ",
     },
     {
       arabic: "ضَبَطَ (يَضْبِطُ)",
@@ -27,7 +27,7 @@ export const part2LessonSeven: Part2Lesson = {
       kind: "masdar",
       contextArabic: "فَرَفَعَ صَوْتَهُ بِالْبُكَاءِ.",
       contextRussian: "Он громко рыдал.",
-      contextForm: "بِالْبُكَاءِ.",
+      contextForm: "بِالْبُكَاءِ",
     },
     {
       arabic: "رَقَّ (يَرِقُّ)",
@@ -98,7 +98,7 @@ export const part2LessonSeven: Part2Lesson = {
       kind: "noun",
       contextArabic: "هَلْ أَحْضَرْتَ السَّلَّةَ الَّتِي تَضَعُ فِيهَا الزَّادَ؟",
       contextRussian: "«Ты принес корзинку, в которую клал еду?»",
-      contextForm: "الزَّادَ؟",
+      contextForm: "الزَّادَ",
     },
     {
       arabic: "عَاجِلٌ",
@@ -209,7 +209,7 @@ export const part2LessonSeven: Part2Lesson = {
       kind: "noun",
       contextArabic: "وَقَسَمَ الْجُبْنَ قِطْعَتَيْنِ كَبِيرَةً وَصَغِيرَةً وَجَعَلَ كُلَّ قِطْعَةٍ مِنْهُمَا فِي كِفَّةِ.",
       contextRussian: "Обезьяна принесла весы, разделила сыр на две части и положила по куску на каждую чашу весов.",
-      contextForm: "كِفَّةِ.",
+      contextForm: "كِفَّةِ",
     },
     {
       arabic: "رَجَحَ (يَرْجَحُ)",

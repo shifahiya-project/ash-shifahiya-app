@@ -107,7 +107,7 @@ export const part2LessonEleven: Part2Lesson = {
       kind: "noun",
       contextArabic: "فَقَالَ لَهَا الثَّوْرُ يَا هَذِهِ مَا شَعَرْتُ بِنُزُولِكِ حَتَّى يُرِيحَنِي فِرَاقُكِ.",
       contextRussian: "Бык ответил: «Я даже не заметил, как ты села на мой рог; с чего же твой уход должен принести мне облегчение?»",
-      contextForm: "فِرَاقُكِ.",
+      contextForm: "فِرَاقُكِ",
     },
     {
       arabic: "اِحْتِيَالٌ",
@@ -178,7 +178,7 @@ export const part2LessonEleven: Part2Lesson = {
       kind: "noun",
       contextArabic: "ثُمَّ نَادَاهُ رَفِيقُهُ مِنْ بَعِيدٍ أَيْنَ الْمُلْتَقَى؟",
       contextRussian: "Тогда его спутник позвал его издалека: «Где мы встретимся?»",
-      contextForm: "الْمُلْتَقَى؟",
+      contextForm: "الْمُلْتَقَى",
     },
     {
       arabic: "سَلَخَ (يَسْلَخُ)",

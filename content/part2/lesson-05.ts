@@ -35,7 +35,7 @@ export const part2LessonFive: Part2Lesson = {
       kind: "noun",
       contextArabic: "وَأَنَا كُلَّ يَوْمٍ اكْتُبُ الْإِمْلَاءَ وَالْحِسَابَ فِي الْكُرَّاسِ.",
       contextRussian: "И каждый день я записываю диктант и вычисления в тетрадь.",
-      contextForm: "الْكُرَّاسِ.",
+      contextForm: "الْكُرَّاسِ",
     },
     {
       arabic: "غَلِطَ (يَغْلَطُ)",
@@ -75,7 +75,7 @@ export const part2LessonFive: Part2Lesson = {
       kind: "noun",
       contextArabic: "هَذَا الرَّسْمُ جَمِيلٌ وَلَكِنْ يَلْزَمُكَ أَنْ تُنَظِّفَ هَذِهِ الْخُطُوطَ بِالْمِمْسَحَةِ.",
       contextRussian: "Этот рисунок прекрасен, но тебе нужно стереть эти линии ластиком.",
-      contextForm: "بِالْمِمْسَحَةِ.",
+      contextForm: "بِالْمِمْسَحَةِ",
     },
     {
       arabic: "مُشَاهَدَةٌ",

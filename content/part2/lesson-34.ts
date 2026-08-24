@@ -27,7 +27,7 @@ export const part2LessonThirtyFour: Part2Lesson = {
       kind: "verb",
       contextArabic: "هَذَا يَجْرِي وَذَلِكَ يَلُفُ الْفِرَاشَ وَهَذَا يُنَادِي وَذَلِكَ يُجِيبُ.",
       contextRussian: "Один бегал, другой сворачивал постель, один звал, другой отвечал.",
-      contextForm: "يُجِيبُ.",
+      contextForm: "يُجِيبُ",
     },
     {
       arabic: "اِسْتَعْجَلَ (يَسْتَعْجِلُ)",
@@ -35,7 +35,7 @@ export const part2LessonThirtyFour: Part2Lesson = {
       kind: "verb",
       contextArabic: "وَالْعَمُّ يَغْضَبُ وَيَسْتَعْجِلُ.",
       contextRussian: "Дядя сердился и торопил.",
-      contextForm: "وَيَسْتَعْجِلُ.",
+      contextForm: "وَيَسْتَعْجِلُ",
     },
     {
       arabic: "تَذْكِرَةٌ (تَذَاكِرُ)",

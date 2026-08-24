@@ -19,7 +19,7 @@ export const part2LessonThirtyOne: Part2Lesson = {
       kind: "noun",
       contextArabic: "فَأَتَوَضَّأُ وَأَصَلِّي مَعَ الْجَمَاعَةِ.",
       contextRussian: "Я совершаю омовение и молюсь вместе с общиной.",
-      contextForm: "الْجَمَاعَةِ.",
+      contextForm: "الْجَمَاعَةِ",
     },
     {
       arabic: "أَفْطَرَ (يُفْطِرُ)",

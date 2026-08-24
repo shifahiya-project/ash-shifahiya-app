@@ -11,7 +11,7 @@ export const part2LessonEight: Part2Lesson = {
       kind: "noun",
       contextArabic: "فَلَمَّا رَأَى الْغُرَابَ أَرَادَ أَنْ يَأْخُذَ قِطْعَةَ اللَّحْمِ مِنْهُ بِالْحِيلَةِ.",
       contextRussian: "Увидев ворона, лиса решила хитростью отнять у него кусок мяса.",
-      contextForm: "بِالْحِيلَةِ.",
+      contextForm: "بِالْحِيلَةِ",
     },
     {
       arabic: "مَعْشَرٌ (مَعَاشِرُ)",
@@ -129,7 +129,7 @@ export const part2LessonEight: Part2Lesson = {
       kind: "noun",
       contextArabic: "فَقَالَ لَهَا وَالِدُهَا أَرَأَيْتِ أَنَّ إِمْسَاكَكِ الْفَحْمَ قَدْ أَثَرَ فِي يَدَيْكِ وَثِيَابِكِ كَذَلِكَ قَرِينُ السُّوءِ تُؤَثَّرُ مُخَالَطَتُهُ فِي الطَّبَاعِ.",
       contextRussian: "Тогда мать сказала: «Я ведь велела тебе выбросить уголёк, который ты держала».",
-      contextForm: "الطَّبَاعِ.",
+      contextForm: "الطَّبَاعِ",
     },
     {
       arabic: "تِلْغُرَافٌ (تِلْغُرَافَاتٌ)",
@@ -153,7 +153,7 @@ export const part2LessonEight: Part2Lesson = {
       kind: "noun",
       contextArabic: "الْمَحَطَّةِ؟",
       contextRussian: "станцию?",
-      contextForm: "الْمَحَطَّةِ؟",
+      contextForm: "الْمَحَطَّةِ",
     },
     {
       arabic: "مِلِّيمٌ (مَلَالِيمُ)",

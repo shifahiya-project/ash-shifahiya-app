@@ -153,7 +153,7 @@ export const part2LessonSixteen: Part2Lesson = {
       kind: "noun",
       contextArabic: "فَخَرَجْتُ مِنَ الْحُجْرَةِ وَدُمُوعِي تَنْحَدِرُ إِلَى وَجْنَتَيَّ.",
       contextRussian: "Я вышел из комнаты, и слезы текли по моим щекам.",
-      contextForm: "وَجْنَتَيَّ.",
+      contextForm: "وَجْنَتَيَّ",
     },
     {
       arabic: "عَاقِبَةٌ (عَوَاقِبُ)",
@@ -193,7 +193,7 @@ export const part2LessonSixteen: Part2Lesson = {
       kind: "noun",
       contextArabic: "فَلَمْ يُجَاوِزُ غَيْرَ بَعِيدٍ حَتَّى رَأَى ظَبْيًا.",
       contextRussian: "Он не успел далеко пройти, как увидел газель.",
-      contextForm: "ظَبْيًا.",
+      contextForm: "ظَبْيًا",
     },
     {
       arabic: "نَفَذَ (يَنْفُذُ)",
