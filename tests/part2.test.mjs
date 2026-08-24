@@ -4,6 +4,7 @@ import test from "node:test";
 
 import { BLANK, part2Questions } from "../content/part2/questions.ts";
 import { part2Summaries } from "../content/part2/manifest.ts";
+import { part2CardId, part2LessonIdsInCards, unlockedPart2Ids } from "../app/part2-access.ts";
 
 const directory = new URL("../content/part2/", import.meta.url);
 
@@ -137,4 +138,36 @@ test("the manifest agrees with the lessons", () => {
     );
     assert.deepEqual(summary.storyTitles, lesson.stories.map((story) => story.title));
   }
+});
+
+// Второй курс открывается по итоговой работе первого — и, как и первый,
+// никогда не отнимает уже пройденное.
+test("the second course waits for the final paper, then runs in order", () => {
+  const empty = { part2Scores: {}, part2Sessions: {}, cards: {} };
+  assert.equal(unlockedPart2Ids(part2Summaries, empty, false).size, 0);
+
+  const opened = unlockedPart2Ids(part2Summaries, empty, true);
+  assert.equal(opened.has(1), true, "первый урок должен открыться");
+  assert.equal(opened.has(2), false, "второй ждёт первого");
+
+  const oneDone = { ...empty, part2Scores: { 1: 30 } };
+  const next = unlockedPart2Ids(part2Summaries, oneDone, true);
+  assert.equal(next.has(2), true);
+  assert.equal(next.has(3), false);
+
+  // Урок, начатый когда-то раньше, остаётся открытым вместе со всем до него.
+  const roaming = { ...empty, cards: { [part2CardId(5, 0, "ar-ru")]: {} } };
+  const kept = unlockedPart2Ids(part2Summaries, roaming, true);
+  for (const id of [1, 2, 3, 4, 5]) assert.equal(kept.has(id), true, `урок ${id} закрылся`);
+});
+
+test("a second-course card says which lesson it came from", () => {
+  assert.equal(part2CardId(7, 12, "ru-ar"), "p2-lesson-7-word-12-ru-ar");
+  const cards = {
+    "p2-lesson-3-word-0-ar-ru": {},
+    "p2-lesson-9-word-4-ru-ar": {},
+    // Карточки первого курса живут в той же коробке и сюда не попадают.
+    "lesson-3-deck-0-word-0-ar-ru": {},
+  };
+  assert.deepEqual(part2LessonIdsInCards(cards).sort((a, b) => a - b), [3, 9]);
 });

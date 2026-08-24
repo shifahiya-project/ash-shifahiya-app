@@ -5,6 +5,7 @@ import type {
   ExamResult,
   ExamSession,
   LearningStats,
+  Part2Session,
   Progress,
   ReadingProgress,
   SavedSession,
@@ -136,6 +137,26 @@ function laterExamSession(mine: ExamSession | null, theirs: ExamSession | null) 
   return mine;
 }
 
+/** A second-course lesson is a position too: the later save is where the learner is. */
+function laterPart2Session(mine: Part2Session, theirs: Part2Session) {
+  const rank = (session: Part2Session) => [session.updatedAt ?? 0, session.index];
+  const [mineRank, theirsRank] = [rank(mine), rank(theirs)];
+  for (let i = 0; i < mineRank.length; i += 1) {
+    if (mineRank[i] !== theirsRank[i]) return mineRank[i] > theirsRank[i] ? mine : theirs;
+  }
+  return mine;
+}
+
+function mergePart2Sessions(mine: Record<number, Part2Session>, theirs: Record<number, Part2Session>) {
+  const merged: Record<number, Part2Session> = { ...mine };
+  for (const [id, session] of Object.entries(theirs)) {
+    const key = Number(id);
+    const existing = merged[key];
+    merged[key] = existing ? laterPart2Session(existing, session) : session;
+  }
+  return merged;
+}
+
 function mergeStats(mine: LearningStats, theirs: LearningStats): LearningStats {
   return {
     // A day spent studying on either device is a day studied.
@@ -163,6 +184,8 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
     readings: mergeReadings(mine.readings ?? {}, theirs.readings ?? {}),
     exams: mergeExams(mine.exams ?? {}, theirs.exams ?? {}),
     examSession: laterExamSession(mine.examSession ?? null, theirs.examSession ?? null),
+    part2Scores: mergeScores(mine.part2Scores ?? {}, theirs.part2Scores ?? {}),
+    part2Sessions: mergePart2Sessions(mine.part2Sessions ?? {}, theirs.part2Sessions ?? {}),
     stats: mergeStats(mine.stats, theirs.stats),
   };
 }
@@ -177,6 +200,8 @@ export function normalizeProgress(value: Partial<Progress> | null | undefined): 
     readings: value?.readings ?? {},
     exams: value?.exams ?? {},
     examSession: value?.examSession ?? null,
+    part2Scores: value?.part2Scores ?? {},
+    part2Sessions: value?.part2Sessions ?? {},
     stats: {
       activeDates: [],
       totalSeconds: 0,

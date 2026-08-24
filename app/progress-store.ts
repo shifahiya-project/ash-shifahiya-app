@@ -1,4 +1,5 @@
 import { lessonSummaries } from "../content/manifest";
+import { part2Summaries } from "../content/part2/manifest";
 import { GRAMMAR_ENABLED } from "./features.ts";
 
 export type SavedSession = {
@@ -15,6 +16,20 @@ export type SavedSession = {
   score: number;
   /** Counted apart from the lesson score, like the stored result. */
   grammarScore?: number;
+  mistakes: string[];
+  updatedAt?: number;
+};
+
+/**
+ * Where a learner stopped inside a second-course lesson. The lesson runs words
+ * → questions → text, and the position is one index into whichever of the three
+ * is on screen.
+ */
+export type Part2Session = {
+  lessonId: number;
+  view: "learn" | "practice" | "reading";
+  index: number;
+  score: number;
   mistakes: string[];
   updatedAt?: number;
 };
@@ -78,6 +93,9 @@ export type Progress = {
   readings: Record<number, ReadingProgress>;
   exams: Record<string, ExamResult>;
   examSession: ExamSession | null;
+  /** The second course keeps its own results; the review cards are shared. */
+  part2Scores: Record<number, number>;
+  part2Sessions: Record<number, Part2Session>;
   stats: LearningStats;
 };
 
@@ -90,6 +108,8 @@ export const ACTIVE_SESSION_KEY = "shifahiya-active-session";
 export const lessonScoreKey = (id: number | string) => `shifahiya-lesson-${id}`;
 export const grammarScoreKey = (id: number | string) => `shifahiya-grammar-${id}`;
 export const lessonSessionKey = (id: number | string) => `shifahiya-session-${id}`;
+export const part2ScoreKey = (id: number | string) => `shifahiya-p2-lesson-${id}`;
+export const part2SessionKey = (id: number | string) => `shifahiya-p2-session-${id}`;
 
 export const EMPTY_STATS: LearningStats = { activeDates: [], totalSeconds: 0, masteredPhrases: [] };
 const EMPTY: Progress = {
@@ -100,6 +120,8 @@ const EMPTY: Progress = {
   readings: {},
   exams: {},
   examSession: null,
+  part2Scores: {},
+  part2Sessions: {},
   stats: EMPTY_STATS,
 };
 
@@ -135,6 +157,15 @@ function readProgress(): Progress {
     if (session && session.lessonId === summary.id) sessions[summary.id] = session;
   }
 
+  const part2Scores: Record<number, number> = {};
+  const part2Sessions: Record<number, Part2Session> = {};
+  for (const summary of part2Summaries) {
+    const score = window.localStorage.getItem(part2ScoreKey(summary.id));
+    if (score !== null) part2Scores[summary.id] = Number(score);
+    const session = read<Part2Session | null>(part2SessionKey(summary.id), null);
+    if (session && session.lessonId === summary.id) part2Sessions[summary.id] = session;
+  }
+
   // A session interrupted mid-lesson is stored twice; the active copy wins.
   const active = read<SavedSession | null>(ACTIVE_SESSION_KEY, null);
   if (active && lessonSummaries.some((summary) => summary.id === active.lessonId)) {
@@ -160,6 +191,8 @@ function readProgress(): Progress {
     cards: read<Record<string, CardProgress>>(CARD_PROGRESS_KEY, {}),
     readings: read<Record<number, ReadingProgress>>(READING_PROGRESS_KEY, {}),
     exams: read<Record<string, ExamResult>>(EXAM_RESULTS_KEY, {}),
+    part2Scores,
+    part2Sessions,
     examSession: read<ExamSession | null>(EXAM_SESSION_KEY, null),
     stats: { ...EMPTY_STATS, ...read<Partial<LearningStats>>(LEARNING_STATS_KEY, {}) },
   };
@@ -242,6 +275,20 @@ export const progressStore = {
     publish();
   },
 
+  savePart2Session(session: Omit<Part2Session, "updatedAt">) {
+    const stamped: Part2Session = { ...session, updatedAt: Date.now() };
+    window.localStorage.setItem(part2SessionKey(session.lessonId), JSON.stringify(stamped));
+    publish();
+  },
+
+  /** Same rule as the first course: a repeat can only raise the result. */
+  finishPart2Lesson(lessonId: number, score: number) {
+    const earned = progressStore.getSnapshot().part2Scores[lessonId] ?? 0;
+    window.localStorage.setItem(part2ScoreKey(lessonId), String(Math.max(score, earned)));
+    window.localStorage.removeItem(part2SessionKey(lessonId));
+    publish();
+  },
+
   /** Like the lesson score: another attempt can only raise the stored result. */
   finishExam(examId: string, score: number, passed: boolean) {
     const stored = progressStore.getSnapshot().exams[examId];
@@ -275,6 +322,12 @@ export const progressStore = {
     window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(progress.cards));
     window.localStorage.setItem(READING_PROGRESS_KEY, JSON.stringify(progress.readings ?? {}));
     window.localStorage.setItem(EXAM_RESULTS_KEY, JSON.stringify(progress.exams ?? {}));
+    for (const [id, score] of Object.entries(progress.part2Scores ?? {})) {
+      window.localStorage.setItem(part2ScoreKey(id), String(score));
+    }
+    for (const [id, session] of Object.entries(progress.part2Sessions ?? {})) {
+      window.localStorage.setItem(part2SessionKey(id), JSON.stringify(session));
+    }
     window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(progress.stats));
     publish();
   },
