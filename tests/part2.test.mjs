@@ -45,6 +45,19 @@ test("every lesson brings words and the text they belong to", () => {
   }
 });
 
+// Каждая книга загружается своим импортом и нумеруется вслед за предыдущей.
+// Прогресс ученика хранится по номеру урока, поэтому книга обязана занимать
+// сплошной кусок нумерации, а сама нумерация — идти без дыр.
+test("the books lie one after another, numbered without gaps", () => {
+  lessons.forEach((lesson, index) => {
+    assert.equal(lesson.id, index + 1, `урок на месте ${index + 1} имеет номер ${lesson.id}`);
+  });
+
+  const shelf = [];
+  for (const lesson of lessons) if (shelf.at(-1) !== lesson.book) shelf.push(lesson.book);
+  assert.equal(new Set(shelf).size, shelf.length, `книга разорвана на куски: ${shelf.join(" · ")}`);
+});
+
 test("every word carries its meaning and the sentence it lives in", () => {
   const kinds = new Set(["verb", "noun", "masdar", "participle", "adj", "adverb", "expression"]);
   for (const lesson of lessons) {

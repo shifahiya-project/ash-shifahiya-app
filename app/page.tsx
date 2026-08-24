@@ -1198,16 +1198,21 @@ export default function Home() {
                   </span>
                 </div>
               )}
-              {part2Summaries.map((item) => {
+              {part2Summaries.flatMap((item, index) => {
                 const score = part2Scores[item.id];
                 const done = score !== undefined;
                 const parked = part2Sessions[item.id];
                 const locked = !unlockedPart2.has(item.id);
-                return (
+                // The course runs through one book after another, so the list
+                // says where each one starts.
+                const opensBook = part2Summaries[index - 1]?.book !== item.book;
+                const shelf = part2Summaries.filter((other) => other.book === item.book);
+                const card = (
                   <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`p2-${item.id}`}>
                     <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
                     <div className="lesson-copy">
-                      <div className="lesson-label">Часть 2 · урок {item.id} · {item.book}</div>
+                      {/* The book stands over the whole run of its lessons, so the card names only its own place. */}
+                      <div className="lesson-label">Часть 2 · урок {item.id}</div>
                       <h2>{item.title}</h2>
                       <p>
                         {plural(item.wordCount, "новое слово", "новых слова", "новых слов")} ·{" "}
@@ -1232,6 +1237,17 @@ export default function Home() {
                     {done && <div className="card-score">✓ {score}/{item.wordCount}</div>}
                   </div>
                 );
+                if (!opensBook) return [card];
+                return [
+                  <div className="book-divider" key={`book-${item.book}`}>
+                    <strong>{item.book}</strong>
+                    <span>
+                      уроки {shelf[0].id}–{shelf[shelf.length - 1].id} ·{" "}
+                      {plural(shelf.length, "урок", "урока", "уроков")}
+                    </span>
+                  </div>,
+                  card,
+                ];
               })}
             </div>
           )}

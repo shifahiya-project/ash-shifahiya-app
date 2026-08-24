@@ -4,20 +4,32 @@
 //
 //   node scripts/import-part2.mjs <glossary.json> <text.json>
 //
+// One book at a time. The second course runs through six of them, each export
+// numbering its lessons from one, so an import reads the books already on disk
+// and continues the numbering after them: the second book's lesson one becomes
+// lesson fifteen of the course. Importing a book that is already loaded
+// replaces it in place, keeping its numbers.
+//
 // The glossary is already cumulative against the first course, so every entry
 // here is a word the learner has not met. Each entry carries the sentence it
 // appears in, and this script locates the word inside that sentence: the
 // exercise puts its blank exactly there.
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const NUMBERS = [
-  "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
-  "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen",
-  "Eighteen", "Nineteen", "Twenty",
+const UNITS = [
+  "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+  "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+  "Seventeen", "Eighteen", "Nineteen",
 ];
+const TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
 
-const numberName = (n) => NUMBERS[n - 1] ?? `Number${n}`;
+/** The variable of a lesson file is its number in words, as in the first course. */
+function numberName(n) {
+  if (n < 20) return UNITS[n];
+  if (n < 100) return TENS[Math.floor(n / 10)] + UNITS[n % 10];
+  return `OneHundred${n > 100 ? numberName(n - 100) : ""}`;
+}
 
 /**
  * Corrections to the exports, each one confirmed against the text itself.
@@ -26,9 +38,15 @@ const numberName = (n) => NUMBERS[n - 1] ?? `Number${n}`;
  * number took its place, so the export marks the heading as an ordinary pair
  * and the story goes on without a title. The Russian name survived, and it is
  * enough to open the story; the Arabic one stays empty rather than invented.
+ *
+ * The other way round happens too: a line inside a text that looks like a
+ * heading and was marked as one. «الشَّاعِرُ:» is not the name of a story, it is
+ * the second half of "как сказал поэт:" before the verse it introduces, and as
+ * a heading it would tear the text about clothing in two.
  */
 const TEXT_FIXES = {
   "p2-s8-039": { type: "title", ar: "", ru: "Осёл и бык" },
+  "p3-s5-015": { type: "pair" },
 };
 
 /**
@@ -171,6 +189,27 @@ const glossary = JSON.parse(await readFile(glossaryPath, "utf8"));
 const text = JSON.parse(await readFile(textPath, "utf8"));
 const book = text.title ?? glossary.title;
 
+/**
+ * A story printed across a page break carries its heading again on the next
+ * page, and the export repeats it. The same name twice running inside one
+ * lesson is that repeat, not a second story: the sentences go on where they
+ * left off. The trailing full stop the export sometimes adds is ignored.
+ */
+const sameStory = (a, b) => a && b && a.replace(/[.\s]+$/, "").toLowerCase() === b.replace(/[.\s]+$/, "").toLowerCase();
+
+/** A story running through a third lesson is still «(продолжение)», not twice. */
+const continued = (title) => title.replace(/\s*\(продолжение\)$/, "").replace(/[.\s]+$/, "");
+
+/**
+ * A heading is not a sentence: the full stop the export sometimes keeps is
+ * dropped, and a name that came out of the text in lower case («обезьяна»)
+ * is raised, since it stands as the lesson's own name on the card.
+ */
+function storyTitle(russian) {
+  const clean = russian.trim().replace(/[.\s]+$/, "");
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
 // The text carries its stories as title rows between the pairs.
 const storiesByLesson = new Map();
 const dropped = [];
@@ -179,13 +218,25 @@ for (const raw of text.items) {
   const item = TEXT_FIXES[raw.id] ? { ...raw, ...TEXT_FIXES[raw.id] } : raw;
   const lesson = item.lesson ?? current?.lesson;
   if (item.type === "title") {
-    current = { lesson, arabicTitle: item.ar.trim(), title: item.ru.trim(), sentences: [] };
+    const continues = current?.lesson === lesson && sameStory(current.title, item.ru.trim());
+    if (continues) continue;
+    current = { lesson, arabicTitle: item.ar.trim(), title: storyTitle(item.ru), sentences: [] };
     if (!storiesByLesson.has(lesson)) storiesByLesson.set(lesson, []);
     storiesByLesson.get(lesson).push(current);
     continue;
   }
   if (!current || current.lesson !== lesson) {
-    current = { lesson, arabicTitle: "", title: `Текст ${(storiesByLesson.get(lesson)?.length ?? 0) + 1}`, sentences: [] };
+    // The book's own lesson division cuts a story in two often enough: the
+    // sentences that open a lesson before any heading are the end of what the
+    // lesson before was reading, and they are named after it rather than
+    // «Текст 1», which tells the learner nothing.
+    const carried = current?.lesson !== undefined && current.lesson !== lesson ? current : null;
+    current = {
+      lesson,
+      arabicTitle: carried?.arabicTitle ?? "",
+      title: carried ? `${continued(carried.title)} (продолжение)` : `Текст ${(storiesByLesson.get(lesson)?.length ?? 0) + 1}`,
+      sentences: [],
+    };
     if (!storiesByLesson.has(lesson)) storiesByLesson.set(lesson, []);
     storiesByLesson.get(lesson).push(current);
   }
@@ -224,11 +275,43 @@ function applyContextFix(word, sentences) {
 
 const byId = new Map(text.items.map((item) => [item.id, item]));
 
+const directory = fileURLToPath(new URL("../content/part2/", import.meta.url));
+await mkdir(directory, { recursive: true });
+
+/** The lessons of the books already imported, read back from what is on disk. */
+async function loadImported() {
+  const files = (await readdir(directory)).filter((file) => /^lesson-\d+\.ts$/.test(file));
+  const loaded = await Promise.all(
+    files.map(async (file) => {
+      const loaded = await import(pathToFileURL(`${directory}${file}`).href);
+      return { file, lesson: Object.values(loaded)[0] };
+    }),
+  );
+  return loaded.sort((a, b) => a.lesson.id - b.lesson.id);
+}
+
+const imported = await loadImported();
+const already = imported.filter(({ lesson }) => lesson.book === book);
+const lastId = imported.length ? imported.at(-1).lesson.id : 0;
+
+// A book already loaded keeps the numbers it has; a new one continues after
+// the last. Numbers are what a learner's progress is stored under, so a
+// re-import must not shift the books that follow: if it would, the import
+// stops and says which books have to be laid down again after it.
+const offset = already.length ? already[0].lesson.id - 1 : lastId;
+if (already.length && already.at(-1).lesson.id !== lastId && glossary.lessons.length !== already.length) {
+  const following = [...new Set(imported.filter(({ lesson }) => lesson.id > already.at(-1).lesson.id).map(({ lesson }) => lesson.book))];
+  throw new Error(
+    `«${book}» переимпортируется с другим числом уроков (${already.length} → ${glossary.lessons.length}), ` +
+      `а после неё уже загружены: ${following.join(", ")}. Перезалейте их следом за ней.`,
+  );
+}
+
 let located = 0;
 let missing = 0;
 const lessons = glossary.lessons.map((entry) => {
-  const id = entry.lesson;
-  const stories = (storiesByLesson.get(id) ?? []).filter((story) => story.sentences.length);
+  const id = offset + entry.lesson;
+  const stories = (storiesByLesson.get(entry.lesson) ?? []).filter((story) => story.sentences.length);
   const words = entry.entries.map((raw) => {
     const word = applyContextFix(raw, byId);
     const contextForm = locate(word);
@@ -246,13 +329,23 @@ const lessons = glossary.lessons.map((entry) => {
   return { id, book, title: stories[0]?.title ?? `Урок ${id}`, words, stories };
 });
 
-const directory = fileURLToPath(new URL("../content/part2/", import.meta.url));
-await mkdir(directory, { recursive: true });
+const fileName = (id) => `lesson-${String(id).padStart(2, "0")}.ts`;
+
 for (const lesson of lessons) {
-  await writeFile(`${directory}lesson-${String(lesson.id).padStart(2, "0")}.ts`, render(lesson), "utf8");
+  await writeFile(`${directory}${fileName(lesson.id)}`, render(lesson), "utf8");
 }
 
-const summaries = lessons
+// A book re-imported shorter than before leaves its last files behind, and the
+// glob that loads lessons would go on serving them.
+for (const { lesson, file } of already) {
+  if (lesson.id > offset + lessons.length) await rm(`${directory}${file}`);
+}
+
+// The manifest is rebuilt over the whole course, not over this book alone.
+const course = [...imported.filter(({ lesson }) => lesson.book !== book).map(({ lesson }) => lesson), ...lessons]
+  .sort((a, b) => a.id - b.id);
+
+const summaries = course
   .map((lesson) => {
     const sentences = lesson.stories.reduce((total, story) => total + story.sentences.length, 0);
     return [
@@ -284,14 +377,16 @@ ${summaries}
   "utf8",
 );
 
-const totalWords = lessons.reduce((n, lesson) => n + lesson.words.length, 0);
-const totalSentences = lessons.reduce(
-  (n, lesson) => n + lesson.stories.reduce((m, story) => m + story.sentences.length, 0),
-  0,
+const count = (list, pick) => list.reduce((n, lesson) => n + pick(lesson), 0);
+const words = (lesson) => lesson.words.length;
+const sentences = (lesson) => lesson.stories.reduce((n, story) => n + story.sentences.length, 0);
+
+console.log(
+  `«${book}»: уроки ${lessons[0].id}–${lessons.at(-1).id} · ${count(lessons, words)} слов · ` +
+    `${count(lessons, sentences)} фраз · слово найдено в контексте: ${located}, не найдено: ${missing}`,
 );
 console.log(
-  `${lessons.length} уроков · ${totalWords} слов · ${totalSentences} фраз · ` +
-    `слово найдено в контексте: ${located}, не найдено: ${missing}`,
+  `вся вторая часть: ${course.length} уроков · ${count(course, words)} слов · ${count(course, sentences)} фраз`,
 );
 if (dropped.length) {
   console.log(`отброшено строк без арабского: ${dropped.length}`);
