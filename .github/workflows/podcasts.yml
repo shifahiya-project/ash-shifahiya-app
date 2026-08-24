@@ -1,0 +1,92 @@
+# Rebuilds the podcast catalogue from YouTube once a week and publishes it.
+#
+# The site is static files, so the episode list cannot be fetched when a page is
+# opened — it has to be built in advance and committed. Doing that by hand means
+# the list quietly goes stale and the app starts offering episodes the learner
+# has already seen, so it is done here instead.
+name: Refresh podcasts
+
+on:
+  schedule:
+    # Monday morning: the channels publish through the week, and a list a few
+    # days old costs nothing — the app only needs one unwatched episode a day.
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Two refreshes at once would race for the same commit on main.
+concurrency:
+  group: refresh-podcasts
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # A scheduled job nobody is watching should say plainly why it failed,
+      # rather than leaving a Russian stack trace in a collapsed log.
+      - name: Check the API key is configured
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          set -eu
+          if [ -z "${YOUTUBE_API_KEY:-}" ]; then
+            echo "::error::Секрет YOUTUBE_API_KEY не задан. Settings → Secrets and variables → Actions → New repository secret. Ключ выпускается в Google Cloud Console с включённым YouTube Data API v3."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Import the episodes
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: npm run podcasts:import
+
+      # The catalogue is what the app offers, so a refresh that breaks it must
+      # not reach main at all — the tests check its shape.
+      - run: npm test
+
+      - name: Commit the refreshed catalogue
+        id: commit
+        run: |
+          set -eu
+          if git diff --quiet -- content/podcasts/catalog.ts; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Каталог не изменился — публиковать нечего."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/podcasts/catalog.ts
+          git commit -m "Refresh the podcast catalogue"
+          git push origin HEAD:main
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  # Called rather than left to the push above: a commit pushed with
+  # GITHUB_TOKEN never starts another workflow, so the deploy has to be asked
+  # for by name, and pointed at the commit that was just made.
+  publish:
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: write
+    with:
+      ref: ${{ needs.refresh.outputs.sha }}
