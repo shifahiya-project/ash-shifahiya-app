@@ -1072,6 +1072,20 @@ export default function Home() {
             </button>
           </div>
 
+          {/* A separate habit, kept on its own screen: watching a podcast is
+              not a lesson, and it must not compete with the review queue.
+              A plain link rather than next/link — the deployed site is static
+              files under a subdirectory, and the static build rewrites this
+              href to a relative one. */}
+          <a className="podcast-link" href="/podcasts/">
+            <span className="daily-icon">▶</span>
+            <div>
+              <strong>Подкаст дня</strong>
+              <small>Один выпуск на арабском в день — своя серия и свой календарь</small>
+            </div>
+            <span>→</span>
+          </a>
+
           {dueReadings.length > 0 && (
             <div className="daily-review reading-due">
               <div>
