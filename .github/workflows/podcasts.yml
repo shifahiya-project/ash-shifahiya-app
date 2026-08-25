@@ -1,9 +1,16 @@
-# Rebuilds the podcast catalogue from YouTube once a week and publishes it.
+# Rebuilds the podcast catalogue from YouTube once a week and offers it as a
+# pull request.
 #
 # The site is static files, so the episode list cannot be fetched when a page is
 # opened — it has to be built in advance and committed. Doing that by hand means
-# the list quietly goes stale and the app starts offering episodes the learner
-# has already seen, so it is done here instead.
+# the list quietly goes stale, and a stale list means the app runs out of
+# unwatched episodes, so it is rebuilt on a schedule instead.
+#
+# A pull request rather than a push to main, because main is protected by the
+# «protect main branches» ruleset and GitHub Actions cannot be granted a bypass
+# in it. That turns out to suit the job: the diff shows which episodes appeared,
+# and merging is what publishes the site — a merge is an ordinary push by a
+# person, so deploy.yml starts on its own.
 name: Refresh podcasts
 
 on:
@@ -15,18 +22,21 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
-# Two refreshes at once would race for the same commit on main.
+# Two refreshes at once would race for the same branch.
 concurrency:
   group: refresh-podcasts
   cancel-in-progress: false
 
+env:
+  # One standing branch rather than a dated one: a refresh nobody merged last
+  # week should be replaced by this week's, not queued behind it.
+  BRANCH: podcasts/refresh
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.commit.outputs.changed }}
-      sha: ${{ steps.commit.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,37 +66,49 @@ jobs:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: npm run podcasts:import
 
-      # The catalogue is what the app offers, so a refresh that breaks it must
-      # not reach main at all — the tests check its shape.
+      # The catalogue is what the app offers a learner, so a refresh that breaks
+      # its shape must not even reach a pull request.
       - run: npm test
 
-      - name: Commit the refreshed catalogue
-        id: commit
+      - name: Offer the refreshed catalogue as a pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -eu
           if git diff --quiet -- content/podcasts/catalog.ts; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Каталог не изменился — публиковать нечего."
+            echo "Каталог не изменился — предлагать нечего."
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
           git add content/podcasts/catalog.ts
           git commit -m "Refresh the podcast catalogue"
-          git push origin HEAD:main
+          # The branch carries one generated commit on top of main and nothing
+          # else, so it is replaced whole rather than added to.
+          git push --force origin "$BRANCH"
 
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          # One line per episode in the generated file, and one handle per
+          # channel; both are cheaper to count here than to thread out of the
+          # importer, and they are what the reviewer actually wants to know.
+          episodes=$(grep -c '^    { id: ' content/podcasts/catalog.ts || true)
+          channels=$(grep -c '^      handle: ' content/podcasts/catalog.ts || true)
 
-  # Called rather than left to the push above: a commit pushed with
-  # GITHUB_TOKEN never starts another workflow, so the deploy has to be asked
-  # for by name, and pointed at the commit that was just made.
-  publish:
-    needs: refresh
-    if: needs.refresh.outputs.changed == 'true'
-    uses: ./.github/workflows/deploy.yml
-    permissions:
-      contents: write
-    with:
-      ref: ${{ needs.refresh.outputs.sha }}
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            echo "Открытый pull request обновлён свежим каталогом: $episodes выпусков."
+            exit 0
+          fi
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Обновить каталог подкастов" \
+            --body "$(printf '%s\n' \
+              'Каталог пересобран из YouTube заданием `Refresh podcasts`.' \
+              '' \
+              "- выпусков: $episodes" \
+              "- каналов: $channels" \
+              '' \
+              'Тесты прошли до создания ветки, так что форма каталога проверена.' \
+              'Мерж этого PR публикует сайт со свежим списком.')"

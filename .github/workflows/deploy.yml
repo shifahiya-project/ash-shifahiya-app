@@ -7,15 +7,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  # Callable, so the podcast refresh can publish the catalogue it just pushed.
-  # A push made with GITHUB_TOKEN does not start another workflow, so without
-  # this the refreshed list would sit on main until the next real commit.
-  workflow_call:
-    inputs:
-      ref:
-        description: Commit to build. Empty means whatever triggered the run.
-        type: string
-        required: false
 
 permissions:
   contents: write
@@ -30,10 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Empty for a push or a manual run, where checkout's own default —
-          # the commit that triggered it — is already right.
-          ref: ${{ inputs.ref }}
 
       - uses: actions/setup-node@v4
         with:
