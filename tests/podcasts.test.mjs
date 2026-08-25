@@ -378,6 +378,12 @@ test("the podcast screen is its own route and renders on the server", async () =
   // Nothing about the learner is known on the server, so the day starts blank
   // and the counters start at zero: the client fills both in on hydration.
   assert.match(html, /Серия, дней/);
+
+  // And the server must not choose today's episode. The date it would pin one
+  // to is empty here, so the choice would differ from the one the client makes
+  // and the card would visibly swap — in a feature whose whole point is that
+  // today's episode is decided once and stays put.
+  assert.doesNotMatch(html, /podcast-card/);
 });
 
 test("the course home offers the podcast habit without mixing it into a lesson", async () => {

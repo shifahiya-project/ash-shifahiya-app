@@ -75,7 +75,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -eu
-          if git diff --quiet -- content/podcasts/catalog.ts; then
+          # generatedAt is stamped afresh on every import, so a plain diff is
+          # never empty and a week with no new episodes would still open a
+          # pull request changing one line of timestamp.
+          if git diff --quiet -I '^  generatedAt: ' -- content/podcasts/catalog.ts; then
             echo "Каталог не изменился — предлагать нечего."
             exit 0
           fi

@@ -16,7 +16,7 @@ import {
   type LengthWindow,
   type PodcastVideo,
 } from "../podcast-catalog";
-import { currentVideoId, planForDay, withAnotherPick, withExtraEpisode } from "../podcast-day";
+import { currentVideoId, emptyPlan, planForDay, withAnotherPick, withExtraEpisode } from "../podcast-day";
 import {
   isGoalMet,
   monthCalendar,
@@ -163,8 +163,14 @@ export default function PodcastsPage() {
     [state.watches],
   );
 
+  // No date, no episode. The server does not know what day it is where the
+  // learner is, and an episode pinned to an empty date is one the client then
+  // swaps for a different one — the exact opposite of what pinning is for.
   const plan = useMemo(
-    () => planForDay(catalog, watchedIds, today, state.plans[today], state.window),
+    () =>
+      today
+        ? planForDay(catalog, watchedIds, today, state.plans[today], state.window)
+        : emptyPlan(""),
     [catalog, watchedIds, today, state.plans, state.window],
   );
 
@@ -391,7 +397,7 @@ export default function PodcastsPage() {
           </article>
         )}
 
-        {!empty && !video && !doneToday && (
+        {!empty && today && !video && !doneToday && (
           <div className="podcast-empty">
             <h2>На сегодня выпусков не нашлось</h2>
             <p>
