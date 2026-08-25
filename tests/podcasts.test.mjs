@@ -386,6 +386,17 @@ test("the podcast screen is its own route and renders on the server", async () =
   assert.doesNotMatch(html, /podcast-card/);
 });
 
+test("the day's card follows the pinned episode, not the goal", async () => {
+  const page = await readFile(new URL("../app/podcasts/page.tsx", import.meta.url), "utf8");
+
+  // The daily goal is a floor, not a ceiling. Gating the card on the goal left
+  // «Посмотреть ещё» pinning an episode with nowhere to show it: the goal stays
+  // met for the rest of the day, so the card never came back and a learner who
+  // wanted a second episode could not watch one.
+  assert.match(page, /!empty && video && !currentWatched/);
+  assert.doesNotMatch(page, /video && !doneToday/);
+});
+
 test("the course home offers the podcast habit without mixing it into a lesson", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.match(page, /className="podcast-link" href="\/podcasts\/"/);
