@@ -24,6 +24,8 @@ import {
 import { lessonParts } from "../content/lesson-parts";
 import {
   GRAMMAR_ENABLED,
+  hasVisibleReading,
+  visibleDueReadings,
   visibleExamQuestions,
   visibleExamSummary,
   visiblePartCount,
@@ -352,7 +354,10 @@ export default function Home() {
   const p2Task = p2Tasks[p2Index];
   // The texts are read on their own schedule, so today's reading is counted
   // apart from the cards and shown as its own line on the home screen.
-  const dueReadings = useMemo(() => dueReadingIds(savedReadings, localDate()), [savedReadings]);
+  const dueReadings = useMemo(
+    () => visibleDueReadings(dueReadingIds(savedReadings, localDate())),
+    [savedReadings],
+  );
   const learnedCards = useMemo(
     () => Object.values(cardProgress).filter((item) => item.box > 0).length,
     [cardProgress],
@@ -1284,7 +1289,7 @@ export default function Home() {
                     <h2>{item.title}</h2>
                     <p>{item.description}{visiblePartCount(item) > 1 ? ` · в ${visiblePartCount(item)} части` : ""}</p>
                     <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-                    {readingByLesson.has(item.id) && !locked && (() => {
+                    {hasVisibleReading(item.id, readingByLesson) && !locked && (() => {
                       const read = savedReadings[item.id];
                       const due = read && read.nextReview <= localDate();
                       return (

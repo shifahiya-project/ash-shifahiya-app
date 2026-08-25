@@ -4,6 +4,9 @@ import test from "node:test";
 
 import {
   GRAMMAR_ENABLED,
+  READING_ENABLED,
+  hasVisibleReading,
+  visibleDueReadings,
   visibleExamQuestions,
   visibleExamSummary,
   visiblePartCount,
@@ -12,6 +15,7 @@ import {
 import { isGrammarPassed, isLessonComplete, examPassMark } from "../app/lesson-access.ts";
 import { lessonParts } from "../content/lesson-parts.ts";
 import { lessonSummaries } from "../content/manifest.ts";
+import { readingByLesson, readingSummaries } from "../content/reading-manifest.ts";
 import { examSummaries } from "../content/exams.ts";
 import { midtermExam } from "../content/exams/midterm.ts";
 import { finalExam } from "../content/exams/final.ts";
@@ -106,4 +110,25 @@ test("the switch is one constant, and it is off", () => {
   // Everything below reads that one value rather than deciding for itself.
   assert.equal(visibleParts(lessonParts(withGrammar[0])).length, lessonParts(withGrammar[0]).length - 1);
   assert.equal(visibleExamSummary(examSummaries[0]).grammarCount, 0);
+});
+
+test("the reading layer is hidden, and nothing of it is lost", () => {
+  assert.equal(READING_ENABLED, false);
+
+  // The texts, the manifest and the schedule all stay on disk. Hiding is a
+  // decision about what the learner is shown, not about what the repository
+  // keeps: the translations are being corrected, not abandoned.
+  assert.equal(readingSummaries.length, 25);
+  assert.ok(readingByLesson.has(36));
+
+  // But no lesson offers its text, and nothing is ever due.
+  for (const summary of lessonSummaries) {
+    assert.equal(hasVisibleReading(summary.id, readingByLesson), false);
+  }
+  assert.deepEqual(visibleDueReadings([36, 40, 52]), []);
+
+  // Turned back on, every one of them returns exactly where it was.
+  assert.equal(hasVisibleReading(36, readingByLesson, true), true);
+  assert.equal(hasVisibleReading(37, readingByLesson, true), false);
+  assert.deepEqual(visibleDueReadings([36, 40, 52], true), [36, 40, 52]);
 });
