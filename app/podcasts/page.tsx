@@ -153,7 +153,11 @@ export default function PodcastsPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [keyDraft, setKeyDraft] = useState("");
   const [sourceDraft, setSourceDraft] = useState("");
-  const [noteDraft, setNoteDraft] = useState("");
+  // null means the note has not been touched, so the stored one is shown; an
+  // empty string is an edit like any other, which is what makes clearing a note
+  // possible at all.
+  const [noteDraft, setNoteDraft] = useState<string | null>(null);
+  const [noteSaved, setNoteSaved] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshNote, setRefreshNote] = useState("");
 
@@ -233,6 +237,8 @@ export default function PodcastsPage() {
         watchedAt: Date.now(),
       });
       setPlaying(false);
+      setNoteDraft(null);
+      setNoteSaved(false);
     },
     [video, today, plan],
   );
@@ -251,7 +257,6 @@ export default function PodcastsPage() {
       return;
     }
     podcastStore.savePlan(withExtraEpisode(catalog, watchedIds, plan, state.window));
-    setNoteDraft("");
     setPlaying(false);
   }
 
@@ -431,8 +436,9 @@ export default function PodcastsPage() {
             className="podcast-note"
             onSubmit={(event) => {
               event.preventDefault();
-              podcastStore.saveNote(lastWatch.videoId, noteDraft);
-              setNoteDraft("");
+              podcastStore.saveNote(lastWatch.videoId, noteDraft ?? lastWatch.note ?? "");
+              setNoteDraft(null);
+              setNoteSaved(true);
             }}
           >
             <label htmlFor="podcast-note">
@@ -441,13 +447,21 @@ export default function PodcastsPage() {
             <textarea
               id="podcast-note"
               rows={2}
-              value={noteDraft || lastWatch.note || ""}
-              onChange={(event) => setNoteDraft(event.target.value)}
+              value={noteDraft ?? lastWatch.note ?? ""}
+              onChange={(event) => {
+                setNoteDraft(event.target.value);
+                setNoteSaved(false);
+              }}
               placeholder="Хотя бы одно предложение — можно по-арабски"
             />
-            <button className="secondary" type="submit">
-              Сохранить
-            </button>
+            <div className="note-actions">
+              <button className="secondary" type="submit">
+                Сохранить
+              </button>
+              {/* Saving changed nothing on screen, which is indistinguishable
+                  from a dead button. It has to say that it worked. */}
+              {noteSaved && <span className="note-saved">Сохранено ✓</span>}
+            </div>
           </form>
         )}
 

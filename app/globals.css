@@ -1128,3 +1128,6 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .source-add .primary, .source-add .secondary { width: 100%; }
   .calendar-grid { gap: 4px; }
 }
+
+.note-actions { display: flex; align-items: center; gap: 12px; }
+.note-saved { color: var(--green); font-size: 12px; font-weight: 600; }
