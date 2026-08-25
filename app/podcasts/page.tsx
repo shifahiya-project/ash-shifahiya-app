@@ -184,6 +184,11 @@ export default function PodcastsPage() {
   }, [plan, videosById]);
 
   const doneToday = today ? isGoalMet(state.watches, today) : false;
+  // What decides whether the episode card is on screen is not whether the day's
+  // goal is met, but whether the pinned episode has been watched. The goal is a
+  // floor, not a ceiling: once it is met, «Посмотреть ещё» pins another episode,
+  // and that one needs somewhere to appear.
+  const currentWatched = video !== undefined && watchedIds.has(video.id);
   const todaysWatches = useMemo(
     () => (today ? watchedOn(state.watches, today) : []),
     [state.watches, today],
@@ -238,6 +243,13 @@ export default function PodcastsPage() {
   }
 
   function oneMore() {
+    // An episode already pinned and still unwatched is the extra one: asking
+    // again should bring the learner back to it, not burn through the
+    // catalogue a click at a time.
+    if (!currentWatched) {
+      setPlaying(false);
+      return;
+    }
     podcastStore.savePlan(withExtraEpisode(catalog, watchedIds, plan, state.window));
     setNoteDraft("");
     setPlaying(false);
@@ -350,7 +362,7 @@ export default function PodcastsPage() {
           </div>
         ) : null}
 
-        {!empty && video && !doneToday && (
+        {!empty && video && !currentWatched && (
           <article className="podcast-card">
             {playing ? (
               <EpisodePlayer video={video} onWatched={() => finish(true)} />
@@ -393,11 +405,15 @@ export default function PodcastsPage() {
               </button>
             </div>
 
-            <p className="podcast-goal">Цель сегодня · 0 / 1 подкаст</p>
+            <p className="podcast-goal">
+              {doneToday
+                ? `Цель выполнена · ${plural(todaysWatches.length, "подкаст", "подкаста", "подкастов")} сегодня, это сверх неё`
+                : "Цель сегодня · 0 / 1 подкаст"}
+            </p>
           </article>
         )}
 
-        {!empty && today && !video && !doneToday && (
+        {!empty && today && !video && (
           <div className="podcast-empty">
             <h2>На сегодня выпусков не нашлось</h2>
             <p>
