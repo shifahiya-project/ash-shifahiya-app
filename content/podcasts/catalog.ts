@@ -10,7 +10,7 @@
 import type { PodcastCatalog } from "../../app/podcast-catalog.ts";
 
 export const shippedCatalog: PodcastCatalog = {
-  generatedAt: "2026-08-25T02:51:58.634Z",
+  generatedAt: "2026-08-25T03:02:45.508Z",
   channels: [
     {
       id: "UCaQqIhrC0vL5HSTMHTJFf-g",
