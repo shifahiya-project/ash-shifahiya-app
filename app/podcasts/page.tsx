@@ -60,15 +60,28 @@ function formatDay(date: string) {
  * Mounted only once the learner presses «Смотреть», so a visit that does not
  * end in watching fetches nothing from YouTube.
  */
-function EpisodePlayer({ video, onWatched }: { video: PodcastVideo; onWatched: () => void }) {
+function EpisodePlayer({
+  video,
+  watched,
+  onWatched,
+  onFinished,
+}: {
+  video: PodcastVideo;
+  /** Whether the day has already been credited for this episode. */
+  watched: boolean;
+  onWatched: () => void;
+  onFinished: () => void;
+}) {
   const host = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
 
-  // The effect must not re-run when the callback identity changes, or the
+  // The effect must not re-run when a callback's identity changes, or the
   // player would be torn down and rebuilt mid-episode.
   const latest = useRef(onWatched);
+  const latestFinished = useRef(onFinished);
   useEffect(() => {
     latest.current = onWatched;
+    latestFinished.current = onFinished;
   });
 
   useEffect(() => {
@@ -108,7 +121,12 @@ function EpisodePlayer({ video, onWatched }: { video: PodcastVideo; onWatched: (
               }, POLL_MS);
             },
             onStateChange: (event) => {
-              if (event.data === api.PlayerState.ENDED) count();
+              // Reaching the end counts the episode if the poll had not yet,
+              // and only then does the player come down.
+              if (event.data === api.PlayerState.ENDED) {
+                count();
+                latestFinished.current();
+              }
             },
           },
         });
@@ -131,7 +149,9 @@ function EpisodePlayer({ video, onWatched }: { video: PodcastVideo; onWatched: (
       <p className="podcast-hint">
         {failed
           ? "Плеер не загрузился. Откройте выпуск в YouTube и отметьте вручную."
-          : "Отметится само, когда проиграет 80% выпуска."}
+          : watched
+            ? "Засчитано ✓ — досматривайте спокойно, выпуск уже в счёте."
+            : "Отметится само, когда проиграет 80% выпуска."}
       </p>
     </div>
   );
@@ -236,7 +256,11 @@ export default function PodcastsPage() {
         auto,
         watchedAt: Date.now(),
       });
-      setPlaying(false);
+      // Crossing 80% credits the day; it does not end the viewing. Tearing the
+      // player down here took the last fifth of every episode away from the
+      // learner, which is the opposite of what the habit is for. A hand-marked
+      // episode is one being watched elsewhere, so there the player can go.
+      if (!auto) setPlaying(false);
       setNoteDraft(null);
       setNoteSaved(false);
     },
@@ -367,10 +391,15 @@ export default function PodcastsPage() {
           </div>
         ) : null}
 
-        {!empty && video && !currentWatched && (
+        {!empty && video && (!currentWatched || playing) && (
           <article className="podcast-card">
             {playing ? (
-              <EpisodePlayer video={video} onWatched={() => finish(true)} />
+              <EpisodePlayer
+                video={video}
+                watched={currentWatched}
+                onWatched={() => finish(true)}
+                onFinished={() => setPlaying(false)}
+              />
             ) : (
               <button className="podcast-cover" onClick={() => setPlaying(true)}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- next/image
@@ -411,9 +440,11 @@ export default function PodcastsPage() {
             </div>
 
             <p className="podcast-goal">
-              {doneToday
-                ? `Цель выполнена · ${plural(todaysWatches.length, "подкаст", "подкаста", "подкастов")} сегодня, это сверх неё`
-                : "Цель сегодня · 0 / 1 подкаст"}
+              {currentWatched
+                ? `Засчитано · ${plural(todaysWatches.length, "подкаст", "подкаста", "подкастов")} сегодня`
+                : doneToday
+                  ? "Цель выполнена · это выпуск сверх неё"
+                  : "Цель сегодня · 0 / 1 подкаст"}
             </p>
           </article>
         )}
