@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { mergeProgress, normalizeProgress } from "../app/merge-progress.ts";
+import {
+  mergePodcasts,
+  mergeProgress,
+  mergeSynced,
+  normalizePodcasts,
+  normalizeProgress,
+  normalizeSynced,
+} from "../app/merge-progress.ts";
 
 function card(overrides = {}) {
   return { box: 1, nextReview: "2026-01-02", lastReviewed: "2026-01-01", correct: 1, wrong: 0, ...overrides };
@@ -118,3 +125,100 @@ function session(overrides = {}) {
     ...overrides,
   };
 }
+
+// ── Подкасты ──────────────────────────────────────────────────────────────
+
+function watch(videoId, date, watchedAt, note) {
+  return {
+    videoId,
+    channelId: "UC-x",
+    title: videoId,
+    date,
+    seconds: 600,
+    auto: true,
+    watchedAt,
+    ...(note ? { note } : {}),
+  };
+}
+
+function podcasts(overrides = {}) {
+  return normalizePodcasts(overrides);
+}
+
+test("a podcast watched on either device is watched", () => {
+  const phone = podcasts({ watches: [watch("a", "2026-08-25", 100)] });
+  const laptop = podcasts({ watches: [watch("b", "2026-08-26", 200)] });
+
+  const merged = mergePodcasts(phone, laptop);
+  assert.deepEqual(merged.watches.map((item) => item.videoId), ["a", "b"]);
+  // Which is the whole point: two devices, two days, one unbroken streak.
+  assert.deepEqual(merged.watches.map((item) => item.date), ["2026-08-25", "2026-08-26"]);
+});
+
+test("the same episode on both devices is one watch, dated when it first counted", () => {
+  const first = podcasts({ watches: [watch("a", "2026-08-25", 100)] });
+  const again = podcasts({ watches: [watch("a", "2026-08-26", 500)] });
+
+  const merged = mergePodcasts(first, again);
+  // Counting it twice would inflate both the episode count and the minutes.
+  assert.equal(merged.watches.length, 1);
+  assert.equal(merged.watches[0].watchedAt, 100);
+  assert.equal(merged.watches[0].date, "2026-08-25");
+});
+
+test("a note survives, and two notes settle the same way on both devices", () => {
+  const withNote = podcasts({ watches: [watch("a", "2026-08-25", 100, "فهمت")] });
+  const without = podcasts({ watches: [watch("a", "2026-08-25", 100)] });
+  assert.equal(mergePodcasts(withNote, without).watches[0].note, "فهمت");
+  assert.equal(mergePodcasts(without, withNote).watches[0].note, "فهمت");
+
+  const longer = podcasts({ watches: [watch("a", "2026-08-25", 100, "فهمت كل شيء")] });
+  assert.equal(mergePodcasts(withNote, longer).watches[0].note, "فهمت كل شيء");
+  assert.equal(mergePodcasts(longer, withNote).watches[0].note, "فهمت كل شيء");
+});
+
+test("a day keeps the plan that saw more of it, and pools what was turned down", () => {
+  const quiet = podcasts({ plans: { "2026-08-26": { date: "2026-08-26", videoIds: ["v1"], skipped: ["x"] } } });
+  const busy = podcasts({ plans: { "2026-08-26": { date: "2026-08-26", videoIds: ["v1", "v2"], skipped: ["y"] } } });
+
+  const merged = mergePodcasts(quiet, busy).plans["2026-08-26"];
+  assert.deepEqual(merged.videoIds, ["v1", "v2"]);
+  // An episode refused on either device is one the learner already decided on.
+  assert.deepEqual(merged.skipped, ["x", "y"]);
+});
+
+test("channels added anywhere are channels the learner wants", () => {
+  const merged = mergePodcasts(podcasts({ sources: ["@b"] }), podcasts({ sources: ["@a", "@b"] }));
+  assert.deepEqual(merged.sources, ["@a", "@b"]);
+});
+
+test("merging podcasts does not depend on which device synced first", () => {
+  const phone = podcasts({
+    watches: [watch("a", "2026-08-25", 100, "قصير"), watch("b", "2026-08-26", 200)],
+    plans: { "2026-08-26": { date: "2026-08-26", videoIds: ["b"], skipped: ["x"] } },
+    sources: ["@one"],
+  });
+  const laptop = podcasts({
+    watches: [watch("a", "2026-08-25", 150, "نص أطول"), watch("c", "2026-08-27", 300)],
+    plans: { "2026-08-26": { date: "2026-08-26", videoIds: ["b", "z"], skipped: ["y"] } },
+    sources: ["@two"],
+  });
+
+  assert.deepEqual(mergePodcasts(phone, laptop), mergePodcasts(laptop, phone));
+});
+
+test("the course and the habit travel together, and old payloads still load", () => {
+  const mine = { ...progress({ scores: { 1: 20 } }), podcasts: podcasts({ watches: [watch("a", "2026-08-25", 100)] }) };
+  const theirs = { ...progress({ scores: { 2: 30 } }), podcasts: podcasts({ watches: [watch("b", "2026-08-26", 200)] }) };
+
+  const merged = mergeSynced(mine, theirs);
+  assert.deepEqual(merged.scores, { 1: 20, 2: 30 });
+  assert.equal(merged.watches, undefined, "the habit must not leak into the course");
+  assert.deepEqual(merged.podcasts.watches.map((item) => item.videoId), ["a", "b"]);
+  assert.deepEqual(mergeSynced(mine, theirs), mergeSynced(theirs, mine));
+
+  // A payload written before podcasts synced simply has none of them.
+  const old = normalizeSynced({ scores: { 3: 10 } });
+  assert.deepEqual(old.podcasts, { watches: [], plans: {}, sources: [] });
+  assert.deepEqual(normalizeSynced(null).podcasts, { watches: [], plans: {}, sources: [] });
+});

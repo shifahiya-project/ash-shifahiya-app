@@ -7,6 +7,7 @@
 import type { PodcastCatalog, PodcastWatch } from "./podcast-catalog.ts";
 import { DEFAULT_WINDOW, EMPTY_CATALOG, type LengthWindow } from "./podcast-catalog.ts";
 import type { DayPlan } from "./podcast-day.ts";
+import type { SyncedPodcasts } from "./merge-progress.ts";
 import { podcastDate } from "./podcast-stats.ts";
 
 export const WATCHES_KEY = "shifahiya-podcasts-v1";
@@ -145,6 +146,25 @@ export const podcastStore = {
 
   setWindow(next: LengthWindow) {
     window.localStorage.setItem(WINDOW_KEY, JSON.stringify(next));
+    publish();
+  },
+
+  /**
+   * The part of the habit that belongs on every device: what was watched, what
+   * each day was offered, and which channels were added. The length window and
+   * the API key stay behind — one has no timestamp to merge by, the other is a
+   * credential.
+   */
+  syncedSnapshot(): SyncedPodcasts {
+    const state = podcastStore.getSnapshot();
+    return { watches: state.watches, plans: state.plans, sources: state.sources };
+  },
+
+  /** Writes back the merge of this device and the server. */
+  applySynced(next: SyncedPodcasts) {
+    window.localStorage.setItem(WATCHES_KEY, JSON.stringify(next.watches));
+    window.localStorage.setItem(PLANS_KEY, JSON.stringify(next.plans));
+    window.localStorage.setItem(SOURCES_KEY, JSON.stringify(next.sources));
     publish();
   },
 

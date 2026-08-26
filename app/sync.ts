@@ -1,5 +1,6 @@
-import { mergeProgress, normalizeProgress } from "./merge-progress";
-import { progressStore, type Progress } from "./progress-store";
+import { mergeSynced, normalizeSynced, type SyncedProgress } from "./merge-progress";
+import { podcastStore } from "./podcast-store";
+import { progressStore } from "./progress-store";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSyncConfigured } from "./supabase-config";
 
 // Cross-device progress. localStorage stays the source of truth — the course
@@ -28,6 +29,15 @@ const SETTLE_MS = 8_000;
 const MAX_WAIT_MS = 60_000;
 
 const OFF: SyncState = { status: "off", email: null, message: null, syncedAt: null };
+
+/**
+ * Everything this device would send: the course, and the podcast habit beside
+ * it. They live in separate stores because they are separate things, and they
+ * travel together because they belong to the same learner.
+ */
+function localPayload(): SyncedProgress {
+  return { ...progressStore.getSnapshot(), podcasts: podcastStore.syncedSnapshot() };
+}
 
 const listeners = new Set<() => void>();
 let state: SyncState = isSyncConfigured
@@ -104,11 +114,12 @@ async function reconcile() {
     return;
   }
 
-  const local = progressStore.getSnapshot();
-  const merged = data ? mergeProgress(local, normalizeProgress(data.data as Partial<Progress>)) : local;
-  // Writing the merge back notifies the store, which would otherwise queue a
+  const local = localPayload();
+  const merged = data ? mergeSynced(local, normalizeSynced(data.data as Partial<SyncedProgress>)) : local;
+  // Writing the merge back notifies both stores, which would otherwise queue a
   // push of what is about to be pushed here anyway.
   progressStore.replaceAll(merged);
+  podcastStore.applySynced(merged.podcasts);
   reconciling = false;
   cancelPending();
 
@@ -121,7 +132,7 @@ async function reconcile() {
   });
 }
 
-async function write(progress: Progress) {
+async function write(progress: SyncedProgress) {
   const supabase = await client();
   const user = await currentUser();
   if (!user) return "нет активного входа";
@@ -144,7 +155,7 @@ function cancelPending() {
 async function flush() {
   cancelPending();
   if (state.status === "off" || !(await currentUser())) return;
-  const failure = await write(progressStore.getSnapshot());
+  const failure = await write(localPayload());
   setState(
     failure
       ? { message: `Не удалось сохранить прогресс: ${failure}` }
@@ -191,9 +202,13 @@ export function startSync() {
     }
   })();
 
-  progressStore.subscribe(() => {
+  const queue = () => {
     if (state.status === "signed-in" && !reconciling) schedulePush();
-  });
+  };
+  progressStore.subscribe(queue);
+  // A podcast watched is progress too, and it has to reach the other device
+  // before tomorrow, or the streak breaks on a day that was not missed.
+  podcastStore.subscribe(queue);
 
   // Closing the tab mid-lesson must not drop the last few answers.
   window.addEventListener("pagehide", () => {
