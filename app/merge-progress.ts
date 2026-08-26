@@ -10,6 +10,8 @@ import type {
   ReadingProgress,
   SavedSession,
 } from "./progress-store";
+import type { PodcastWatch } from "./podcast-catalog";
+import type { DayPlan } from "./podcast-day";
 
 // Two devices hold two independent histories, and neither is "the" truth: the
 // phone may know about yesterday's review while the laptop knows about today's
@@ -209,4 +211,127 @@ export function normalizeProgress(value: Partial<Progress> | null | undefined): 
       ...(value?.stats ?? {}),
     },
   };
+}
+
+// ── Подкасты ──────────────────────────────────────────────────────────────
+//
+// The habit's own record, merged on the same terms as the course: a day
+// watched on either device is a day watched, and neither side is the truth.
+//
+// Only what the habit records travels — the watch log, the pinned episodes and
+// the channels. The length window stays on its device because there is no
+// timestamp to say which of two settings is the newer one, and guessing would
+// silently change what a learner is offered. The YouTube key never leaves the
+// device it was typed on: it is a credential, not progress.
+
+export type SyncedPodcasts = {
+  watches: PodcastWatch[];
+  plans: Record<string, DayPlan>;
+  sources: string[];
+};
+
+export const EMPTY_PODCASTS: SyncedPodcasts = { watches: [], plans: {}, sources: [] };
+
+/**
+ * Two notes for one episode. Neither carries a time, so the choice has to be
+ * made from the text itself: something beats nothing, and the longer of two
+ * answers is the one that says more. Equal lengths fall through to a
+ * comparison, which decides nothing of substance but decides it the same way
+ * on both devices.
+ */
+function pickNote(mine?: string, theirs?: string) {
+  if (!mine) return theirs;
+  if (!theirs) return mine;
+  if (mine === theirs) return mine;
+  if (mine.length !== theirs.length) return mine.length > theirs.length ? mine : theirs;
+  return mine > theirs ? mine : theirs;
+}
+
+/**
+ * The same episode credited on both devices is one watch, dated when it was
+ * first credited: the later copy is the same viewing arriving twice, and
+ * counting it again would inflate both the episode count and the minutes.
+ */
+function mergeWatch(mine: PodcastWatch, theirs: PodcastWatch): PodcastWatch {
+  const rank = (watch: PodcastWatch) => [watch.watchedAt, watch.date, watch.seconds];
+  const [mineRank, theirsRank] = [rank(mine), rank(theirs)];
+  let first = mine;
+  for (let i = 0; i < mineRank.length; i += 1) {
+    if (mineRank[i] !== theirsRank[i]) {
+      first = mineRank[i] < theirsRank[i] ? mine : theirs;
+      break;
+    }
+  }
+  const note = pickNote(mine.note, theirs.note);
+  return { ...first, ...(note ? { note } : {}) };
+}
+
+function mergeWatches(mine: PodcastWatch[], theirs: PodcastWatch[]): PodcastWatch[] {
+  const byId = new Map<string, PodcastWatch>();
+  for (const watch of mine) byId.set(watch.videoId, watch);
+  for (const watch of theirs) {
+    const existing = byId.get(watch.videoId);
+    byId.set(watch.videoId, existing ? mergeWatch(existing, watch) : watch);
+  }
+  // Sorted, so merging two devices gives the same list whichever synced first.
+  return [...byId.values()].sort((a, b) => a.videoId.localeCompare(b.videoId));
+}
+
+/**
+ * A day's plan is what that day was offered, not something that accumulates.
+ * The side that pinned more episodes has seen more of the day, so it stands;
+ * refusals are pooled, because an episode turned down on either device is one
+ * the learner has already decided about.
+ */
+function mergePlan(mine: DayPlan, theirs: DayPlan): DayPlan {
+  const skipped = [...new Set([...mine.skipped, ...theirs.skipped])].sort();
+  if (mine.videoIds.length !== theirs.videoIds.length) {
+    const longer = mine.videoIds.length > theirs.videoIds.length ? mine : theirs;
+    return { ...longer, skipped };
+  }
+  const kept = mine.videoIds.join() >= theirs.videoIds.join() ? mine : theirs;
+  return { ...kept, skipped };
+}
+
+function mergePlans(mine: Record<string, DayPlan>, theirs: Record<string, DayPlan>) {
+  const merged: Record<string, DayPlan> = { ...mine };
+  for (const [date, plan] of Object.entries(theirs)) {
+    const existing = merged[date];
+    merged[date] = existing ? mergePlan(existing, plan) : plan;
+  }
+  return merged;
+}
+
+export function mergePodcasts(mine: SyncedPodcasts, theirs: SyncedPodcasts): SyncedPodcasts {
+  return {
+    watches: mergeWatches(mine.watches, theirs.watches),
+    plans: mergePlans(mine.plans, theirs.plans),
+    // A channel added on either device is a channel the learner wants.
+    sources: [...new Set([...mine.sources, ...theirs.sources])].sort(),
+  };
+}
+
+export function normalizePodcasts(value: Partial<SyncedPodcasts> | null | undefined): SyncedPodcasts {
+  return {
+    watches: value?.watches ?? [],
+    plans: value?.plans ?? {},
+    sources: value?.sources ?? [],
+  };
+}
+
+/** Everything one device syncs: the course, and the habit beside it. */
+export type SyncedProgress = Progress & { podcasts: SyncedPodcasts };
+
+export function mergeSynced(mine: SyncedProgress, theirs: SyncedProgress): SyncedProgress {
+  return {
+    ...mergeProgress(mine, theirs),
+    podcasts: mergePodcasts(mine.podcasts, theirs.podcasts),
+  };
+}
+
+/** A payload written before podcasts synced simply has none of them. */
+export function normalizeSynced(
+  value: (Partial<Progress> & { podcasts?: Partial<SyncedPodcasts> }) | null | undefined,
+): SyncedProgress {
+  return { ...normalizeProgress(value), podcasts: normalizePodcasts(value?.podcasts) };
 }
