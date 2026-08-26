@@ -89,15 +89,15 @@ test("a channel is recognised however the link was copied", () => {
     parseChannelHandle("https://youtube.com/@echo_arabic_podcast?si=vFvpAaCmyA2ynJRy"),
     "@echo_arabic_podcast",
   );
-  assert.equal(parseChannelHandle("@mcmissam"), "@mcmissam");
+  assert.equal(parseChannelHandle("@masterarabic1"), "@masterarabic1");
   assert.equal(parseChannelHandle("ArabicSpeakingPractice"), "@arabicspeakingpractice");
-  assert.equal(parseChannelHandle("  https://www.youtube.com/@McMissam  "), "@mcmissam");
+  assert.equal(parseChannelHandle("  https://www.youtube.com/@MasterArabic1  "), "@masterarabic1");
   // The other YouTube URL shapes carry no handle, and guessing one from the
   // path would silently add a channel that does not exist.
   assert.equal(parseChannelHandle("https://www.youtube.com/channel/UC123"), "");
   assert.equal(parseChannelHandle("https://youtube.com/c/Something"), "");
   assert.equal(parseChannelHandle(""), "");
-  assert.ok(sameHandle("@McMissam", "@mcmissam"));
+  assert.ok(sameHandle("@MasterArabic1", "@masterarabic1"));
 });
 
 test("only unwatched episodes inside the length window are offered", () => {
@@ -325,7 +325,7 @@ test("the shipped catalog is the shape the app expects", () => {
 test("the three starting channels are the ones that were asked for", () => {
   assert.deepEqual(DEFAULT_HANDLES, [
     "@echo_arabic_podcast",
-    "@mcmissam",
+    "@masterarabic1",
     "@arabicspeakingpractice",
   ]);
   // Stored the way the parser produces them, so a pasted link matches a default
@@ -393,8 +393,13 @@ test("the day's card follows the pinned episode, not the goal", async () => {
   // «Посмотреть ещё» pinning an episode with nowhere to show it: the goal stays
   // met for the rest of the day, so the card never came back and a learner who
   // wanted a second episode could not watch one.
-  assert.match(page, /!empty && video && !currentWatched/);
+  assert.match(page, /!empty && video && \(!currentWatched \|\| playing\)/);
   assert.doesNotMatch(page, /video && !doneToday/);
+
+  // And the card outlives the moment the episode is credited, so that crossing
+  // 80% does not snatch the player away with a fifth of the episode still to
+  // run. Only a hand-marked episode — one being watched elsewhere — closes it.
+  assert.match(page, /if \(!auto\) setPlaying\(false\);/);
 });
 
 test("the course home offers the podcast habit without mixing it into a lesson", async () => {

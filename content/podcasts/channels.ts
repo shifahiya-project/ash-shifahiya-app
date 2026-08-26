@@ -10,6 +10,6 @@
  */
 export const DEFAULT_HANDLES = [
   "@echo_arabic_podcast",
-  "@mcmissam",
+  "@masterarabic1",
   "@arabicspeakingpractice",
 ];

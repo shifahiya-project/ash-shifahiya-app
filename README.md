@@ -110,7 +110,7 @@ API v3», выпустить API key. Он читает только публи�
 через поиск: страница плейлиста стоит 1 единицу квоты против 100 у поиска при
 дневном лимите 10 000.
 
-Стартовые каналы — `@echo_arabic_podcast`, `@mcmissam`, `@arabicspeakingpractice`.
+Стартовые каналы — `@echo_arabic_podcast`, `@masterarabic1`, `@arabicspeakingpractice`.
 Свои добавляются в настройках вставкой ссылки вида `youtube.com/@name`.
 
 ### Обновление раз в неделю
