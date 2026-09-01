@@ -28,16 +28,18 @@ const NUMBERS = [
 ];
 
 /**
- * Lessons that can take a text: inside the stretch, not split into parts, and
- * without a grammar block — both of those already give the lesson a second
- * part. Of those, the ones with the fewest exercises, spread over the range.
+ * Lessons that can take a text: inside the stretch and without a grammar
+ * block, which would already give the lesson a part of its own. Being split in
+ * two does not disqualify a lesson — reading is a screen beside the lesson,
+ * not a third part of it — and once the lessons cover the book in full, almost
+ * every one of them is split, so requiring a whole lesson left nowhere to put
+ * the texts. Of those, the ones with the fewest exercises, spread over the range.
  */
 export function hostLessons(count) {
   const free = lessonSummaries.filter(
     (item) =>
       item.id >= FIRST_LESSON &&
       item.id <= LAST_LESSON &&
-      item.partCount === 1 &&
       item.grammarQuestionCount === 0,
   );
   return free
