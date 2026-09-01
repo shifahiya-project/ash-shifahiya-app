@@ -5,12 +5,16 @@ import type { Exam, ExamQuestion, ExamSummary, ReadingSummary } from "../content
 /**
  * Whether the course shows its grammar blocks.
  *
- * While the course leans on vocabulary and reading, grammar is hidden — but
- * nothing about it is deleted. The blocks, their rules and their questions stay
- * in the lesson files; the exam papers keep their grammar questions; and every
- * `shifahiya-grammar-{id}` score stays in storage and keeps syncing between
- * devices. Flip this back to `true` and all of it returns exactly as it was,
- * scores included.
+ * It does not, and that is the author's decision rather than pending work:
+ * grammar as written here is not part of what the course teaches. Do not turn
+ * this on, and do not read the blocks below as a feature waiting to be
+ * finished.
+ *
+ * Nothing about it is deleted, though. The blocks, their rules and their
+ * questions stay in the lesson files; the exam papers keep their grammar
+ * questions; and every `shifahiya-grammar-{id}` score stays in storage and
+ * keeps syncing between devices — kept in case the material is ever revisited
+ * in some other shape. The switch itself stays reversible.
  *
  * What the flag does while it is off:
  *  - a lesson has no grammar part, so it ends with its own words;
@@ -54,15 +58,17 @@ export function visibleExamSummary(summary: ExamSummary, enabled = GRAMMAR_ENABL
 /**
  * Whether the course offers its reading texts.
  *
- * The twenty-five texts from «Мабдауль кыраат» carry too many errors in their
- * translations to put in front of a learner, so the whole layer is hidden while
- * they are checked. The first course is Shifahiya alone again. The second
- * course is untouched — its texts come from other books and are not affected.
+ * It does not. The twenty-five texts from «Мабдауль кыраат» carry too many
+ * errors in their translations, and the author decided the layer is not shown
+ * in this shape — not that it waits on proofreading. The first course is
+ * Shifahiya alone. The second course is untouched — its texts come from other
+ * books and are not affected.
  *
  * Nothing is deleted. `content/reading/section-*.ts`, the manifest, the reading
  * screen and its schedule all stay, and every `shifahiya-reading-v1` entry stays
- * in storage: a learner who had read texts keeps that history, and it comes back
- * where it was. Flip this to `true` and the layer returns as it was.
+ * in storage, so a learner who had read texts keeps that history — kept in case
+ * the material is ever revisited in some other shape. The switch itself stays
+ * reversible.
  *
  * The course never depended on it, which is what makes hiding it this cheap:
  * reading fed no cards, no scores and no unlocking, so removing it takes nothing
