@@ -30,9 +30,9 @@ test("every text is offered from a lesson that has room for it", () => {
     const host = summaryById.get(section.lessonId);
     assert.ok(host, `section ${section.id} points at lesson ${section.lessonId}, which does not exist`);
     // The learner meets the texts once the course is under way, and only in a
-    // lesson that is not already split or carrying a grammar block.
+    // lesson that is not carrying a grammar block. A split lesson is fine:
+    // reading is a screen beside the lesson, not a part of it.
     assert.ok(host.id >= 35 && host.id <= 96, `lesson ${host.id} is outside the reading stretch`);
-    assert.equal(host.partCount, 1, `lesson ${host.id} is already taught in parts`);
     assert.equal(host.grammarQuestionCount, 0, `lesson ${host.id} already carries a grammar block`);
   }
 });
