@@ -1,0 +1,43 @@
+# Runs the checks on a branch before it can land. Deploy runs them too, but
+# only after a merge — by then a broken change is already in main and the site
+# is stuck on the previous build.
+name: Checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# A fresh push to the same branch makes the previous run pointless.
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # npm test builds first, so this covers the build as well.
+      - run: npm test
+
+      - run: npm run lint
+
+      # The manifest is generated. A lesson edited without regenerating it
+      # would show the wrong counts on the home screen while the lesson itself
+      # is right, and nothing else would notice.
+      - name: content/manifest.ts is up to date
+        run: |
+          npm run content:manifest
+          if ! git diff --quiet -- content/manifest.ts; then
+            echo "content/manifest.ts is stale — run npm run content:manifest and commit it"
+            git diff -- content/manifest.ts
+            exit 1
+          fi

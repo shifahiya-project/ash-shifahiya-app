@@ -21,7 +21,7 @@ import {
   isLessonComplete,
   unlockedLessonIds,
 } from "./lesson-access";
-import { lessonParts } from "../content/lesson-parts";
+import { lessonParts, partIndexFor } from "../content/lesson-parts";
 import {
   GRAMMAR_ENABLED,
   hasVisibleReading,
@@ -282,6 +282,7 @@ export default function Home() {
     progressStore.getServerSnapshot,
   );
   const savedScores = stored.scores;
+  const savedScoreTotals = stored.scoreTotals;
   const savedGrammarScores = stored.grammarScores;
   const savedSessions = stored.sessions;
   const cardProgress = stored.cards;
@@ -309,11 +310,14 @@ export default function Home() {
     }));
   }, []);
 
-  /** Pulls lessons into memory and hands them to the render. */
+  /** Pulls lessons into memory, hands them to the render, and returns them. */
   const openLessonsById = useCallback(
     async (ids: number[]) => {
       const wanted = ids.filter(Boolean);
-      if (wanted.length) mergeLessons(await loadLessons(wanted));
+      if (!wanted.length) return [];
+      const loaded = await loadLessons(wanted);
+      mergeLessons(loaded);
+      return loaded;
     },
     [mergeLessons],
   );
@@ -421,9 +425,16 @@ export default function Home() {
     : 0;
 
   async function restoreSession(session: SavedSession) {
-    await openLessonsById([session.lessonId]);
+    const [restored] = await openLessonsById([session.lessonId]);
     setLessonId(session.lessonId);
-    setPartIndex(session.partIndex ?? 0);
+    // The lesson may have grown since the session was parked, which splits it
+    // in two and moves the part boundaries. Resume where the position actually
+    // sits now, not where it sat then.
+    setPartIndex(
+      restored
+        ? partIndexFor(lessonParts(restored), session, session.partIndex ?? 0)
+        : session.partIndex ?? 0,
+    );
     setRuleIndex(session.ruleIndex ?? 0);
     setDeckIndex(session.deckIndex);
     setRound(session.round);
@@ -836,6 +847,7 @@ export default function Home() {
       version: 1,
       exportedAt: new Date().toISOString(),
       scores: savedScores,
+      scoreTotals: savedScoreTotals,
       grammarScores: savedGrammarScores,
       sessions: savedSessions,
       cards: cardProgress,
@@ -862,6 +874,9 @@ export default function Home() {
       const payload = JSON.parse(await file.text());
       if (payload.format !== "shifahiya-progress" || payload.version !== 1) throw new Error("Invalid backup");
       const scores = payload.scores ?? {};
+      // Backups written before the totals were kept simply have none of them,
+      // and the card then shows the result without a denominator.
+      const scoreTotals = payload.scoreTotals ?? {};
       // Backups written before the grammar block simply have none of it.
       const grammarScores = payload.grammarScores ?? {};
       const sessions = payload.sessions ?? {};
@@ -871,6 +886,7 @@ export default function Home() {
       const stats = { ...EMPTY_STATS, ...(payload.stats ?? {}) };
       progressStore.replaceAll({
         scores,
+        scoreTotals,
         grammarScores,
         sessions,
         cards,
@@ -948,7 +964,7 @@ export default function Home() {
     // block after it is a part of the same lesson but keeps its own result, so
     // adding one to a finished lesson never rewrites what was earned.
     if (!following || following.kind === "grammar") {
-      progressStore.finishLesson(lesson.id, score);
+      progressStore.finishLesson(lesson.id, score, lesson.questions.length);
     }
     if (following) {
       // Leaving from the result screen must not lose the part just finished, so
@@ -1325,7 +1341,10 @@ export default function Home() {
                   )}
                   {completed && (
                     <div className="card-score">
-                      ✓ {saved}/{item.questionCount}
+                      {/* A result earned before the lesson grew is shown on its
+                          own: printing it over today's larger total would read
+                          as a loss the learner never suffered. */}
+                      ✓ {saved}{savedScoreTotals[item.id] === undefined ? " верных" : `/${savedScoreTotals[item.id]}`}
                       {GRAMMAR_ENABLED && item.grammarQuestionCount > 0 &&
                         ` · грамматика ${savedGrammarScores[item.id]}/${item.grammarQuestionCount}`}
                     </div>

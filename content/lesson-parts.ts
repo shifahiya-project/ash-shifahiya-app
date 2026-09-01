@@ -92,3 +92,29 @@ export function lessonParts(lesson: Lesson, threshold = PART_THRESHOLD): LessonP
 export function partCount(lesson: Lesson, threshold = PART_THRESHOLD) {
   return lessonParts(lesson, threshold).length;
 }
+
+/**
+ * Which part a saved position belongs to now.
+ *
+ * A lesson that grows past the threshold splits in two, and a session parked
+ * in what used to be the whole lesson would resume in a part that no longer
+ * reaches its question. The stored index is a hint, not the answer: the part
+ * that actually contains the position wins.
+ */
+export function partIndexFor(
+  parts: LessonPart[],
+  position: { questionIndex: number; deckIndex: number; view: string },
+  stored = 0,
+) {
+  const cards = parts.filter((part) => part.kind === "cards");
+  if (!cards.length) return 0;
+
+  const found = position.view === "learn"
+    ? cards.find((part) => position.deckIndex >= part.deckStart && position.deckIndex < part.deckEnd)
+    : cards.find((part) => position.questionIndex >= part.questionStart && position.questionIndex < part.questionEnd);
+
+  if (found) return found.index;
+  // Past the end of every part — the lesson shrank under the learner. The last
+  // part is the closest honest answer.
+  return parts[stored] ? stored : cards[cards.length - 1].index;
+}

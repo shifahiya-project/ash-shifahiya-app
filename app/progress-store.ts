@@ -84,6 +84,11 @@ export type LearningStats = {
 
 export type Progress = {
   scores: Record<number, number>;
+  /** How many questions the stored score was earned out of, where it is known.
+   *  A lesson can grow after it was passed, and printing an old result over the
+   *  new total would show the learner a loss they never suffered. Absent for
+   *  results recorded before the total was kept. */
+  scoreTotals: Record<number, number>;
   /** Kept apart from the lesson score so adding a grammar block to a finished
    *  lesson neither rewrites its result nor makes it look like a loss. */
   grammarScores: Record<number, number>;
@@ -106,6 +111,7 @@ export const EXAM_SESSION_KEY = "shifahiya-exam-session";
 export const LEARNING_STATS_KEY = "shifahiya-learning-stats-v1";
 export const ACTIVE_SESSION_KEY = "shifahiya-active-session";
 export const lessonScoreKey = (id: number | string) => `shifahiya-lesson-${id}`;
+export const lessonScoreTotalKey = (id: number | string) => `shifahiya-lesson-total-${id}`;
 export const grammarScoreKey = (id: number | string) => `shifahiya-grammar-${id}`;
 export const lessonSessionKey = (id: number | string) => `shifahiya-session-${id}`;
 export const part2ScoreKey = (id: number | string) => `shifahiya-p2-lesson-${id}`;
@@ -114,6 +120,7 @@ export const part2SessionKey = (id: number | string) => `shifahiya-p2-session-${
 export const EMPTY_STATS: LearningStats = { activeDates: [], totalSeconds: 0, masteredPhrases: [] };
 const EMPTY: Progress = {
   scores: {},
+  scoreTotals: {},
   grammarScores: {},
   sessions: {},
   cards: {},
@@ -145,12 +152,15 @@ function read<T>(key: string, fallback: T): T {
 
 function readProgress(): Progress {
   const scores: Record<number, number> = {};
+  const scoreTotals: Record<number, number> = {};
   const grammarScores: Record<number, number> = {};
   const sessions: Record<number, SavedSession> = {};
 
   for (const summary of lessonSummaries) {
     const score = window.localStorage.getItem(lessonScoreKey(summary.id));
     if (score !== null) scores[summary.id] = Number(score);
+    const total = window.localStorage.getItem(lessonScoreTotalKey(summary.id));
+    if (total !== null) scoreTotals[summary.id] = Number(total);
     const grammarScore = window.localStorage.getItem(grammarScoreKey(summary.id));
     if (grammarScore !== null) grammarScores[summary.id] = Number(grammarScore);
     const session = read<SavedSession | null>(lessonSessionKey(summary.id), null);
@@ -186,6 +196,7 @@ function readProgress(): Progress {
 
   return {
     scores,
+    scoreTotals,
     grammarScores,
     sessions,
     cards: read<Record<string, CardProgress>>(CARD_PROGRESS_KEY, {}),
@@ -226,8 +237,13 @@ export const progressStore = {
   },
 
   /** Repeating a lesson can only raise its result, never take one away. */
-  finishLesson(lessonId: number, score: number) {
+  finishLesson(lessonId: number, score: number, outOf: number) {
     const earned = progressStore.getSnapshot().scores[lessonId] ?? 0;
+    // A weaker retake never lowers the record, so the total has to follow the
+    // score that actually stands.
+    if (score >= earned) {
+      window.localStorage.setItem(lessonScoreTotalKey(lessonId), String(outOf));
+    }
     window.localStorage.setItem(lessonScoreKey(lessonId), String(Math.max(score, earned)));
     window.localStorage.removeItem(ACTIVE_SESSION_KEY);
     window.localStorage.removeItem(lessonSessionKey(lessonId));
@@ -246,6 +262,7 @@ export const progressStore = {
   resetLesson(lessonId: number) {
     window.localStorage.removeItem(grammarScoreKey(lessonId));
     window.localStorage.removeItem(lessonScoreKey(lessonId));
+    window.localStorage.removeItem(lessonScoreTotalKey(lessonId));
     window.localStorage.removeItem(ACTIVE_SESSION_KEY);
     window.localStorage.removeItem(lessonSessionKey(lessonId));
     publish();
@@ -312,6 +329,9 @@ export const progressStore = {
   replaceAll(progress: Progress) {
     for (const [id, score] of Object.entries(progress.scores)) {
       window.localStorage.setItem(lessonScoreKey(id), String(score));
+    }
+    for (const [id, total] of Object.entries(progress.scoreTotals)) {
+      window.localStorage.setItem(lessonScoreTotalKey(id), String(total));
     }
     for (const [id, score] of Object.entries(progress.grammarScores ?? {})) {
       window.localStorage.setItem(grammarScoreKey(id), String(score));
