@@ -10,7 +10,7 @@
 import type { PodcastCatalog } from "../../app/podcast-catalog.ts";
 
 export const shippedCatalog: PodcastCatalog = {
-  generatedAt: "2026-08-26T04:10:07.482Z",
+  generatedAt: "2026-08-31T11:28:22.985Z",
   channels: [
     {
       id: "UCaQqIhrC0vL5HSTMHTJFf-g",
@@ -32,6 +32,13 @@ export const shippedCatalog: PodcastCatalog = {
     },
   ],
   videos: [
+    { id: "_UjM7ArxXX0", channelId: "UCaQqIhrC0vL5HSTMHTJFf-g", seconds: 731, publishedAt: "2026-08-30T17:01:45Z", title: "محادثة عربية بطيئة للمبتدئين ☕ أَغْسِلُ الْمَلَابِس | Slow Arabic Podcast for Beginners" },
+    { id: "jota8UsbycI", channelId: "UCzi6C2AIl0-z99WwXNNFHYw", seconds: 1032, publishedAt: "2026-08-30T13:00:27Z", title: "Learn Arabic Podcast | Money & Happiness (Beginner Friendly A1-A2) | Arabic Podcast" },
+    { id: "UnnBRTk1Xrs", channelId: "UCzi6C2AIl0-z99WwXNNFHYw", seconds: 1280, publishedAt: "2026-08-29T13:00:33Z", title: "Learn Arabic Podcast | The 5 Second Rule by Mel Robbins (B1-B2) | Arabic Podcast" },
+    { id: "tpunhQmmDtA", channelId: "UCaQqIhrC0vL5HSTMHTJFf-g", seconds: 690, publishedAt: "2026-08-28T16:16:00Z", title: "محادثة عربية بطيئة للمبتدئين ☕ فَقَدْتُ مَحْفَظَتِي | Slow Arabic Podcast for Beginners" },
+    { id: "n4mjSBLbP9Y", channelId: "UCzi6C2AIl0-z99WwXNNFHYw", seconds: 1258, publishedAt: "2026-08-28T13:00:08Z", title: "Learn Arabic Podcast | Breaking Bad Habits in Simple Arabic (A1-A2) | Arabic Podcast" },
+    { id: "N-DAHgkzgGU", channelId: "UCzi6C2AIl0-z99WwXNNFHYw", seconds: 1486, publishedAt: "2026-08-27T13:00:27Z", title: "Learn Arabic Podcast | Stocks for Beginners in Simple Arabic (A1-A2) | Arabic Podcast" },
+    { id: "xmmVCxFCW28", channelId: "UCzi6C2AIl0-z99WwXNNFHYw", seconds: 1053, publishedAt: "2026-08-26T13:00:03Z", title: "Learn Arabic Podcast |Learn Arabic Through Stories: The Story of Prophet Noah's Ark | Arabic Podcast" },
     { id: "a7IYFMTmkkQ", channelId: "UCaQqIhrC0vL5HSTMHTJFf-g", seconds: 648, publishedAt: "2026-08-25T16:51:39Z", title: "محادثة عربية بطيئة للمبتدئين ☕ في المطعم: الحساب من فضلك | Slow Arabic Podcast for Beginners" },
     { id: "GuTbZAXuigc", channelId: "UCnaRgXNtAF1UjC3TDgAjn7g", seconds: 165, publishedAt: "2026-08-25T14:18:46Z", title: "مقطع من درس كيف تصف منزلك بالعربية مجموعة من الدروس لأعضاء القناة" },
     { id: "gbrwY4IzykI", channelId: "UCzi6C2AIl0-z99WwXNNFHYw", seconds: 2001, publishedAt: "2026-08-25T13:00:23Z", title: "Learn Arabic Podcast | Apologizing Sincerely in Arabic (A1-A2) | Arabic Podcast" },
