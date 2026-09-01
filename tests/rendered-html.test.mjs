@@ -277,6 +277,11 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(lessonNinetyEight, /حَيَاةُ الْقَلْبِ عِلْمٌ فَاغْتَنِمْهُ/);
   assert.match(lessonNinetyNine, /دَقَّ رَجُلٌ بَابَ أَحَدٍ مِنْ أَصْدِقَائِهِ/);
   assert.match(lessonOneHundred, /قَالَ الثَّعْلَبُ عَلَّمَنِي سَاقُ الذِّئْبِ/);
+  assert.match(lessonNinetySix, /عَزَّ مَنْ قَنِعَ وَذَلَّ مَنْ طَمِعَ/);
+  assert.match(lessonNinetySeven, /الْعِلْمُ صَيْدٌ وَالْكِتَابَةُ قَيْدٌ/);
+  assert.match(lessonNinetyEight, /مَنْ غَرَسَ الْعِلْمَ اجْتَنَى النَّبَاهَةَ/);
+  assert.match(lessonNinetyNine, /قَالَ ضَاعَ نِصْفُ عُمْرِكَ/);
+  assert.match(lessonOneHundred, /فَافْعَلْ لَنَا مَا يَفْعَلُ مِثْلُكَ بِأَضْيَافِهِ/);
   assert.match(lessonFortyEight, /لَمْ يَقْرَأْ وَلَمْ يَكْتُبْ/);
   assert.match(lessonFortySix, /دَارُ الدُّنْيَا فَانِيَةٌ وَدَارُ الْآخِرَةِ بَاقِيَةٌ/);
   assert.match(page, /import \{ lessonSummaries \} from "\.\.\/content\/manifest"/);
