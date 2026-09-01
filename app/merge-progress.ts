@@ -28,6 +28,30 @@ function mergeScores(mine: Record<number, number>, theirs: Record<number, number
 }
 
 /**
+ * The totals travel with the scores they belong to: the device holding the
+ * better result also holds the number that result was earned out of. Taking
+ * the larger total instead would print a loss the learner never suffered.
+ */
+function mergeScoreTotals(
+  mine: Record<number, number>,
+  theirs: Record<number, number>,
+  myScores: Record<number, number>,
+  theirScores: Record<number, number>,
+) {
+  const merged: Record<number, number> = {};
+  for (const id of new Set([...Object.keys(mine), ...Object.keys(theirs)])) {
+    const key = Number(id);
+    const ours = myScores[key] ?? -1;
+    const yours = theirScores[key] ?? -1;
+    const winner = ours === yours
+      ? Math.max(mine[key] ?? 0, theirs[key] ?? 0)
+      : (ours > yours ? mine[key] : theirs[key]);
+    if (winner !== undefined) merged[key] = winner;
+  }
+  return merged;
+}
+
+/**
  * A card the learner answered later is the one that knows its real box. Ties
  * fall through to the box and then to the number of answers behind it, so the
  * winner never depends on which side was passed first.
@@ -180,6 +204,12 @@ function mergeStats(mine: LearningStats, theirs: LearningStats): LearningStats {
 export function mergeProgress(mine: Progress, theirs: Progress): Progress {
   return {
     scores: mergeScores(mine.scores, theirs.scores),
+    scoreTotals: mergeScoreTotals(
+      mine.scoreTotals ?? {},
+      theirs.scoreTotals ?? {},
+      mine.scores,
+      theirs.scores,
+    ),
     grammarScores: mergeScores(mine.grammarScores, theirs.grammarScores),
     sessions: mergeSessions(mine.sessions, theirs.sessions),
     cards: mergeCards(mine.cards, theirs.cards),
@@ -196,6 +226,7 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
 export function normalizeProgress(value: Partial<Progress> | null | undefined): Progress {
   return {
     scores: value?.scores ?? {},
+    scoreTotals: value?.scoreTotals ?? {},
     grammarScores: value?.grammarScores ?? {},
     sessions: value?.sessions ?? {},
     cards: value?.cards ?? {},
