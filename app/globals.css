@@ -494,10 +494,12 @@ h1 em { color: var(--green); font-weight: inherit; }
 
 /* Two courses live on one screen, so the list says which one is open before
    the cards do. */
+/* Three courses now, and the pill has to hold them on a narrow phone: equal
+   columns and a shorter line rather than a switch that wraps onto three rows. */
 .course-switch {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
   margin-bottom: 18px;
   padding: 5px;
   background: rgba(255,255,255,.6);
@@ -506,13 +508,17 @@ h1 em { color: var(--green); font-weight: inherit; }
 }
 
 .course-switch button {
-  padding: 10px 14px;
+  padding: 10px 8px;
   border: 0;
   border-radius: 99px;
   background: none;
   color: var(--ink-soft);
-  font: 600 13px/1.2 inherit;
+  font: 600 12px/1.2 inherit;
   cursor: pointer;
+}
+
+@media (max-width: 420px) {
+  .course-switch button { padding: 10px 4px; font-size: 11px; }
 }
 
 .course-switch button.is-active { background: var(--green); color: white; }
@@ -541,6 +547,18 @@ h1 em { color: var(--green); font-weight: inherit; }
 
 .book-divider strong { color: var(--ink); font: 500 18px Georgia, serif; }
 .book-divider span { color: var(--ink-soft); font-size: 13px; }
+
+/* The third course is one book divided into бабы, so the divider inside it
+   names a chapter rather than a book and stands a step quieter. */
+.book-divider.is-section { border-bottom-style: dashed; }
+.book-divider.is-section strong { font-size: 16px; color: var(--ink-soft); }
+
+/* Its lessons are named in Arabic as well: the title the book itself gives. */
+.lesson-arabic-title {
+  margin: 2px 0 6px;
+  font: 400 19px/1.7 "Traditional Arabic", "Noto Naskh Arabic", serif;
+  color: var(--ink);
+}
 
 /* A second-course card shows the word above the sentence it was taken from. */
 .word-context {

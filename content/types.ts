@@ -93,6 +93,54 @@ export type Part2Lesson = {
   stories: Part2Story[];
 };
 
+/**
+ * The third course is a scholarly text — «Основы исламского вероубеждения» in
+ * twenty lessons — and its glossary is built the way such a book needs: mostly
+ * terms, with the proper names and particles the argument turns on. It carries
+ * no example sentences, so a word here is taught by its dictionary form and its
+ * meaning, and met again whole when the lesson's text is read.
+ */
+export type Part3WordKind =
+  | "verb"
+  | "noun"
+  | "masdar"
+  | "adjective"
+  | "expression"
+  | "term"
+  | "proper_name"
+  | "particle";
+
+export type Part3Word = {
+  /** The dictionary form as the glossary gives it: مَذْهَبٌ (مَذَاهِبُ), شَرَطَ (يَشْرُطُ). */
+  arabic: string;
+  russian: string;
+  kind: Part3WordKind;
+};
+
+export type Part3Lesson = {
+  id: number;
+  /** Which باب of the book the lesson belongs to: Иляхийят, Пророчества, Сам‘ийят. */
+  section: string;
+  arabicTitle: string;
+  title: string;
+  words: Part3Word[];
+  /**
+   * The lesson's text, read whole. The book argues in paragraphs rather than
+   * sentences, so a fragment is longer here than a line of the second course's
+   * stories — it is the unit the translation is aligned on.
+   */
+  fragments: ReadingSentence[];
+};
+
+export type Part3Summary = {
+  id: number;
+  section: string;
+  arabicTitle: string;
+  title: string;
+  wordCount: number;
+  fragmentCount: number;
+};
+
 export type Part2Summary = {
   id: number;
   book: string;
