@@ -1,19 +1,20 @@
 # Аш-Шифахия — краткая памятка агенту
 
 Подробные соглашения — в [CLAUDE.md](./CLAUDE.md). Прочитайте его перед работой:
-там модель данных, устройство второй части, подкастов и экзаменов, а также
+там модель данных, устройство второй и третьей частей, подкастов и экзаменов, а также
 разбор ошибок, на которые проект уже наступал. Здесь — только то, что ломается
 чаще всего.
 
 ## Ловушки
 
-**Не правьте генерируемые файлы руками.** Их четыре, и каждый пересобирается
+**Не правьте генерируемые файлы руками.** Их пять, и каждый пересобирается
 скриптом:
 
 | Файл | Чем пересобрать |
 |---|---|
 | `content/manifest.ts` | `npm run content:manifest` |
 | `content/part2/manifest.ts` | `node scripts/import-part2.mjs <словарь.json> <текст.json>` |
+| `content/part3/manifest.ts` | `node scripts/import-part3.mjs <словарь.json> <текст.json>` |
 | `content/reading-manifest.ts` | `node scripts/import-reading.mjs <файл.json>` |
 | `content/podcasts/catalog.ts` | `YOUTUBE_API_KEY=… npm run podcasts:import` |
 

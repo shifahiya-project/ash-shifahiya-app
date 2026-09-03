@@ -1,5 +1,6 @@
 import { lessonSummaries } from "../content/manifest";
 import { part2Summaries } from "../content/part2/manifest";
+import { part3Summaries } from "../content/part3/manifest";
 import { GRAMMAR_ENABLED } from "./features.ts";
 
 export type SavedSession = {
@@ -21,11 +22,11 @@ export type SavedSession = {
 };
 
 /**
- * Where a learner stopped inside a second-course lesson. The lesson runs words
- * → questions → text, and the position is one index into whichever of the three
- * is on screen.
+ * Where a learner stopped inside a lesson of the reading courses. Both of them
+ * run a lesson the same way — words → questions → text — so the position is one
+ * index into whichever of the three is on screen.
  */
-export type Part2Session = {
+export type ReadingCourseSession = {
   lessonId: number;
   view: "learn" | "practice" | "reading";
   index: number;
@@ -33,6 +34,9 @@ export type Part2Session = {
   mistakes: string[];
   updatedAt?: number;
 };
+
+export type Part2Session = ReadingCourseSession;
+export type Part3Session = ReadingCourseSession;
 
 export type CardProgress = {
   box: number;
@@ -101,6 +105,9 @@ export type Progress = {
   /** The second course keeps its own results; the review cards are shared. */
   part2Scores: Record<number, number>;
   part2Sessions: Record<number, Part2Session>;
+  /** The third course likewise: its own results, the same boxes. */
+  part3Scores: Record<number, number>;
+  part3Sessions: Record<number, Part3Session>;
   stats: LearningStats;
 };
 
@@ -116,6 +123,8 @@ export const grammarScoreKey = (id: number | string) => `shifahiya-grammar-${id}
 export const lessonSessionKey = (id: number | string) => `shifahiya-session-${id}`;
 export const part2ScoreKey = (id: number | string) => `shifahiya-p2-lesson-${id}`;
 export const part2SessionKey = (id: number | string) => `shifahiya-p2-session-${id}`;
+export const part3ScoreKey = (id: number | string) => `shifahiya-p3-lesson-${id}`;
+export const part3SessionKey = (id: number | string) => `shifahiya-p3-session-${id}`;
 
 export const EMPTY_STATS: LearningStats = { activeDates: [], totalSeconds: 0, masteredPhrases: [] };
 const EMPTY: Progress = {
@@ -129,6 +138,8 @@ const EMPTY: Progress = {
   examSession: null,
   part2Scores: {},
   part2Sessions: {},
+  part3Scores: {},
+  part3Sessions: {},
   stats: EMPTY_STATS,
 };
 
@@ -176,6 +187,15 @@ function readProgress(): Progress {
     if (session && session.lessonId === summary.id) part2Sessions[summary.id] = session;
   }
 
+  const part3Scores: Record<number, number> = {};
+  const part3Sessions: Record<number, Part3Session> = {};
+  for (const summary of part3Summaries) {
+    const score = window.localStorage.getItem(part3ScoreKey(summary.id));
+    if (score !== null) part3Scores[summary.id] = Number(score);
+    const session = read<Part3Session | null>(part3SessionKey(summary.id), null);
+    if (session && session.lessonId === summary.id) part3Sessions[summary.id] = session;
+  }
+
   // A session interrupted mid-lesson is stored twice; the active copy wins.
   const active = read<SavedSession | null>(ACTIVE_SESSION_KEY, null);
   if (active && lessonSummaries.some((summary) => summary.id === active.lessonId)) {
@@ -204,6 +224,8 @@ function readProgress(): Progress {
     exams: read<Record<string, ExamResult>>(EXAM_RESULTS_KEY, {}),
     part2Scores,
     part2Sessions,
+    part3Scores,
+    part3Sessions,
     examSession: read<ExamSession | null>(EXAM_SESSION_KEY, null),
     stats: { ...EMPTY_STATS, ...read<Partial<LearningStats>>(LEARNING_STATS_KEY, {}) },
   };
@@ -306,6 +328,20 @@ export const progressStore = {
     publish();
   },
 
+  savePart3Session(session: Omit<Part3Session, "updatedAt">) {
+    const stamped: Part3Session = { ...session, updatedAt: Date.now() };
+    window.localStorage.setItem(part3SessionKey(session.lessonId), JSON.stringify(stamped));
+    publish();
+  },
+
+  /** And the same again: another pass can only raise the stored result. */
+  finishPart3Lesson(lessonId: number, score: number) {
+    const earned = progressStore.getSnapshot().part3Scores[lessonId] ?? 0;
+    window.localStorage.setItem(part3ScoreKey(lessonId), String(Math.max(score, earned)));
+    window.localStorage.removeItem(part3SessionKey(lessonId));
+    publish();
+  },
+
   /** Like the lesson score: another attempt can only raise the stored result. */
   finishExam(examId: string, score: number, passed: boolean) {
     const stored = progressStore.getSnapshot().exams[examId];
@@ -347,6 +383,12 @@ export const progressStore = {
     }
     for (const [id, session] of Object.entries(progress.part2Sessions ?? {})) {
       window.localStorage.setItem(part2SessionKey(id), JSON.stringify(session));
+    }
+    for (const [id, score] of Object.entries(progress.part3Scores ?? {})) {
+      window.localStorage.setItem(part3ScoreKey(id), String(score));
+    }
+    for (const [id, session] of Object.entries(progress.part3Sessions ?? {})) {
+      window.localStorage.setItem(part3SessionKey(id), JSON.stringify(session));
     }
     window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(progress.stats));
     publish();
