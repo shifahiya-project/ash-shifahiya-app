@@ -175,6 +175,19 @@ test("a third-course card says which lesson it came from", () => {
 
 // Арабский учебного курса даётся с полной огласовкой. Здесь она пришла из
 // выгрузки, поэтому её проверяют машинно, а не на глаз.
+//
+// Два урока набраны в исходнике иначе: огласовано 40% и 69% слов. Это известно
+// и описано в CLAUDE.md — решение по ним за автором, — но остальные восемнадцать
+// держат планку, и тест сторожит именно их: новый урок, съехавший туда же,
+// упадёт здесь, а не будет замечен на экране.
+//
+// Планка не сто процентов, потому что сноски в этой книге не огласуются: там
+// имена, названия трудов и ссылки на суры. Самый насыщенный сносками урок 8
+// даёт 87%, остальные — 93–99%, так что 85% отделяет аппарат от съехавшего
+// набора, не притворяясь, что огласован каждый токен.
+const PARTLY_VOWELLED = new Set([14, 15]);
+const VOWELLED_SHARE = 0.85;
+
 test("the Arabic of the course is vowelled", () => {
   const harakat = /[ً-ْ]/;
   for (const lesson of lessons) {
@@ -184,6 +197,16 @@ test("the Arabic of the course is vowelled", () => {
     for (const line of lesson.fragments) {
       assert.match(line.arabic, harakat, `урок ${lesson.id}: фрагмент без огласовок`);
     }
+
+    if (PARTLY_VOWELLED.has(lesson.id)) continue;
+    const words = lesson.fragments.flatMap((line) =>
+      line.arabic.split(/\s+/).filter((token) => /[ء-ي]/.test(token)),
+    );
+    const vowelled = words.filter((token) => harakat.test(token)).length;
+    assert.ok(
+      vowelled / words.length >= VOWELLED_SHARE,
+      `урок ${lesson.id}: огласовано ${Math.round((vowelled / words.length) * 100)}% слов текста`,
+    );
   }
 });
 
