@@ -32,6 +32,59 @@ function numberName(n) {
 }
 
 /**
+ * The corrected edition of the text renamed four lessons after they were
+ * checked against what the lesson actually says, and the glossary — which was
+ * not exported again — still carries the old names. A retitling is not a
+ * different edition, so each one is recorded here, verified against the text:
+ * the check passes only when both sides read exactly as written below, and any
+ * other divergence still stops the import.
+ */
+const TITLE_FIXES = {
+  4: { glossary: "Сальбийские (отрицающие) атрибуты", text: "Отрицающие атрибуты (ас-сифат ас-сальбийя)" },
+  8: { glossary: "Тексты, создающие впечатление уподобления", text: "Тексты, внушающие мысль об уподоблении" },
+  11: { glossary: "Миссия пророков и посланников и их качества", text: "Направление пророков и посланников и их качества" },
+  20: { glossary: "Критерии такфира", text: "Правила такфира" },
+};
+
+/**
+ * Two places the corrected edition's own sweep ran over. Unifying حُدُوث on
+ * «возникновение во времени» was right, but it also caught خَلْق in the fifth
+ * section's heading — where the Arabic reads مَسْأَلَةُ خَلْقِ الْقُرْآنِ, «the question
+ * of the Qur'an being created», which is the very distinction the same sweep
+ * was drawing, and which the lesson's own title still states correctly — and it
+ * left a participle stranded in the instrumental after the verb it agreed with
+ * was cut. Both are quoted here exactly, so a re-export that fixes or changes
+ * them stops the import rather than passing quietly.
+ */
+const TEXT_FIXES = {
+  "hab-0218": [
+    { from: "вопрос о возникновения во времени Корана", to: "вопрос о сотворённости Корана" },
+  ],
+  "hab-0219": [
+    {
+      from: "они — возникающие акциденции, следующими одна за другой",
+      to: "они — возникающие акциденции, следующие одна за другой",
+    },
+  ],
+};
+
+/**
+ * A word of the glossary the corrected text has since outrun. The edition
+ * settled the transliteration — ‘ for ‘айн, ’ for хамза — and the glossary was
+ * left with one straight apostrophe, which would show the learner two spellings
+ * of the same sound in one lesson. Keyed by the entry's id, and checked: a fix
+ * that no longer matches stops the import instead of passing quietly.
+ */
+const GLOSSARY_FIXES = {
+  "hab-vocab-0543": {
+    russian: {
+      from: "таби'ины; поколение мусульман, встретившее сподвижников",
+      to: "таби‘ины; поколение мусульман, встретившее сподвижников",
+    },
+  },
+};
+
+/**
  * The glossary's own type names, kept as they come — as in the second course.
  * This book is a scholarly text, so its list is a different one: «term» is by
  * far the largest group, and proper names and particles appear where stories
@@ -91,12 +144,20 @@ if (!book) throw new Error("в выгрузке нет названия книг
 // like a sentence of the book.
 const fragmentsByLesson = new Map();
 const dropped = [];
+let patched = 0;
 for (const item of text.items) {
   if (item.type !== "pair") {
     throw new Error(`неизвестный тип строки «${item.type}» (${item.id}) — научите импортёр, что это`);
   }
   const arabic = unquote(item.ar);
-  const russian = unquote(item.ru);
+  let russian = unquote(item.ru);
+  for (const fix of TEXT_FIXES[item.id] ?? []) {
+    if (!russian.includes(fix.from)) {
+      throw new Error(`правка текста ${item.id} больше не совпадает: «${fix.from}»`);
+    }
+    russian = russian.replace(fix.from, fix.to);
+    patched += 1;
+  }
   // Строка без единой арабской буквы — след разметки исходника, а не текст.
   if (!/[ء-ي]/.test(arabic)) {
     dropped.push({ lesson: item.lesson, arabic, russian });
@@ -112,27 +173,52 @@ for (const item of text.items) {
 // for a lesson the learner is not reading.
 const titles = new Map(text.lessons.map((lesson) => [lesson.number, lesson]));
 
+let retitled = 0;
+let mended = 0;
+
 const lessons = glossary.lessons.map((entry) => {
   const named = titles.get(entry.number);
   if (!named) throw new Error(`урок ${entry.number} есть в словаре, но не в тексте`);
-  if (named.ru.trim() !== entry.title_ru.trim()) {
-    throw new Error(
-      `урок ${entry.number} назван по-разному: «${entry.title_ru}» в словаре, «${named.ru}» в тексте`,
-    );
+
+  const fromGlossary = entry.title_ru.trim();
+  const fromText = named.ru.trim();
+  const fix = TITLE_FIXES[entry.number];
+  let title = fromText;
+  if (fromGlossary !== fromText) {
+    if (!fix || fix.glossary !== fromGlossary || fix.text !== fromText) {
+      throw new Error(
+        `урок ${entry.number} назван по-разному: «${fromGlossary}» в словаре, «${fromText}» в тексте`,
+      );
+    }
+    retitled += 1;
   }
 
   const words = entry.entries.map((word) => {
     if (!KINDS.has(word.type)) {
       throw new Error(`урок ${entry.number}: неизвестный тип слова «${word.type}» (${word.id})`);
     }
-    return { arabic: word.arabic.trim(), russian: word.russian.trim(), kind: word.type };
+    const patch = GLOSSARY_FIXES[word.id];
+    let russian = word.russian.trim();
+    if (patch?.russian) {
+      if (russian !== patch.russian.from) {
+        throw new Error(`правка словаря ${word.id} больше не совпадает: «${russian}»`);
+      }
+      russian = patch.russian.to;
+      mended += 1;
+    }
+    return { arabic: word.arabic.trim(), russian, kind: word.type };
   });
 
   return {
     id: entry.number,
+    // The باب comes from the glossary on purpose. The corrected text calls it
+    // «Часть первая», which is right for the book's own headings but not for
+    // this screen: the app already numbers its three courses «Часть 1…3», and
+    // the two would read as one scale. The book's own word — «Баб» — does not
+    // collide with anything.
     section: (entry.section ?? named.section ?? "").trim(),
     arabicTitle: (entry.title_ar ?? named.ar ?? "").trim(),
-    title: entry.title_ru.trim(),
+    title,
     words,
     fragments: fragmentsByLesson.get(entry.number) ?? [],
   };
@@ -199,6 +285,9 @@ console.log(
     `${count((lesson) => lesson.words.length)} слов · ` +
     `${count((lesson) => lesson.fragments.length)} фрагментов текста`,
 );
+if (patched) console.log(`правок текста применено: ${patched}`);
+if (retitled) console.log(`уроков переименовано по сверенному тексту: ${retitled}`);
+if (mended) console.log(`правок словаря применено: ${mended}`);
 if (dropped.length) {
   console.log(`отброшено строк без арабского: ${dropped.length}`);
   for (const line of dropped) console.log(`  урок ${line.lesson}: ${JSON.stringify(line.arabic)} — ${line.russian}`);
