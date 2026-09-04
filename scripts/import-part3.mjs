@@ -2,7 +2,12 @@
 // a cumulative glossary of the words each lesson introduces, and the lesson's
 // text as Frank-method pairs.
 //
-//   node scripts/import-part3.mjs <glossary.json> <text.json>
+//   npm run part3:import -- <glossary.json> <text.json>
+//
+// Through npm, because reading the lessons already on disk means importing
+// .ts files: type stripping is only on by default from Node 22.18, and this
+// project supports 22.13 upward. The npm script carries the flag that the rest
+// of the project's tooling already runs with.
 //
 // One book at a time, like the second course. An import reads the books already
 // on disk and continues the numbering after them, so the second book's lesson
@@ -99,8 +104,18 @@ const KINDS = new Set([
   "verb", "noun", "masdar", "adjective", "expression", "term", "proper_name", "particle",
 ]);
 
+/**
+ * Fatha before shadda, not after. The two orders look identical on screen and
+ * are different sequences of code points, so an exact comparison — a lookup, a
+ * deduplication, a regex typed from one file and run against another — can
+ * quietly disagree with itself. NFC is that canonical order: shadda's combining
+ * class is 33 and a vowel's is 30, so normalising sorts the vowel first.
+ * Verified on this data that it reorders diacritics and changes nothing else.
+ */
+const nfc = (text) => (text ?? "").normalize("NFC");
+
 /** Markdown quotation the export sometimes carries over from its source. */
-const unquote = (text) => (text ?? "").replace(/^\s*>+\s*/, "").trim();
+const unquote = (text) => nfc(text ?? "").replace(/^\s*>+\s*/, "").trim();
 
 const quote = (value) => JSON.stringify(value);
 
@@ -132,7 +147,7 @@ ${lesson.fragments.map(renderFragment).join("\n")}
 
 const [glossaryPath, textPath] = process.argv.slice(2);
 if (!glossaryPath || !textPath) {
-  console.error("usage: node scripts/import-part3.mjs <glossary.json> <text.json>");
+  console.error("usage: npm run part3:import -- <glossary.json> <text.json>");
   process.exit(1);
 }
 
@@ -142,8 +157,8 @@ await mkdir(directory, { recursive: true });
 const glossary = JSON.parse(await readFile(glossaryPath, "utf8"));
 const text = JSON.parse(await readFile(textPath, "utf8"));
 
-const book = (text.title_ru ?? glossary.title_ru ?? "").trim();
-const author = (text.author_ru ?? glossary.author ?? "").trim();
+const book = nfc(text.title_ru ?? glossary.title_ru ?? "").trim();
+const author = nfc(text.author_ru ?? glossary.author ?? "").trim();
 if (!book) throw new Error("в выгрузке нет названия книги (title_ru)");
 
 // The text is one continuous treatise: its rows are pairs and nothing else.
@@ -214,7 +229,7 @@ const lessons = glossary.lessons.map((entry) => {
       russian = patch.russian.to;
       mended += 1;
     }
-    return { arabic: word.arabic.trim(), russian, kind: word.type };
+    return { arabic: nfc(word.arabic).trim(), russian: nfc(russian), kind: word.type };
   });
 
   return {
@@ -226,9 +241,9 @@ const lessons = glossary.lessons.map((entry) => {
     // «Часть 1…3», and the two would read as one scale. The book's own word —
     // «Баб» — does not collide with anything. A book that runs straight through
     // has no division, and none is invented for it.
-    section: (entry.section ?? named.section ?? "").trim() || undefined,
-    arabicTitle: (entry.title_ar ?? named.ar ?? "").trim(),
-    title,
+    section: nfc(entry.section ?? named.section ?? "").trim() || undefined,
+    arabicTitle: nfc(entry.title_ar ?? named.ar ?? "").trim(),
+    title: nfc(title),
     words,
     fragments: fragmentsByLesson.get(entry.number) ?? [],
   };

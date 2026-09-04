@@ -35,6 +35,7 @@ npm test          # build + node --test tests/*.test.mjs
 npm run lint      # eslint
 npm run smoke     # прогон урока в браузере по .static-site (нужен Chromium)
 npm run content:manifest  # пересобрать content/manifest.ts после правки урока
+npm run part3:import      # импорт книги третьей части (нужен флаг strip-types)
 npm run podcasts:import   # обновить content/podcasts/catalog.ts (нужен YOUTUBE_API_KEY)
 ```
 
@@ -564,7 +565,7 @@ type Lesson = {
   то есть другое слово. Правится только разбором каждого случая; решение за
   автором, пока отложено.
 - **Импорт данных — по одной книге**:
-  `node scripts/import-part3.mjs <словарь.json> <текст.json>`.
+  `npm run part3:import -- <словарь.json> <текст.json>`.
   Первый файл — накопительный словарь по урокам (уже вычтенный относительно
   предыдущих частей и предыдущих книг), второй — фрагменты текста парами.
   **Книги ложатся одна за другой**, как во второй части: импорт читает уроки,

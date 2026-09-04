@@ -7,7 +7,7 @@ export const part3LessonThirtyFour: Part3Lesson = {
   title: "Пророки, ангелы, Писания, ми‘радж и караматы",
   words: [
     { arabic: "مَشْيٌ", russian: "хождение; ходьба", kind: "masdar" },
-    { arabic: "اِرْتَدَّ (يَرْتَدُّ)", russian: "отступать; становиться вероотступником", kind: "verb" },
+    { arabic: "اِرْتَدَّ (يَرْتَدُّ)", russian: "отступать; становиться вероотступником", kind: "verb" },
     { arabic: "أَظْهَرَ (يُظْهِرُ)", russian: "проявлять; являть", kind: "verb" },
     { arabic: "بَارَكَ (يُبَارِكُ)", russian: "благословлять", kind: "verb" },
     { arabic: "سِدْرٌ", russian: "сидр; лотосовое дерево", kind: "noun" },

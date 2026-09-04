@@ -34,7 +34,7 @@ test("every lesson brings words and the text they belong to", () => {
     assert.ok(lesson.fragments.length > 0, `урок ${lesson.id}: нет текста`);
     assert.ok(lesson.title.length > 0, `урок ${lesson.id}: без названия`);
     assert.ok(lesson.book.length > 0, `урок ${lesson.id}: не указана книга`);
-    // Раздел есть не у всякой книги: делит себя на бабы только первая.
+    // Not every book carries a section: only the first divides itself into بَاب.
     if (lesson.section !== undefined) {
       assert.ok(lesson.section.length > 0, `урок ${lesson.id}: пустой раздел`);
     }

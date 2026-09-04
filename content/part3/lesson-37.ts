@@ -3,10 +3,10 @@ import type { Part3Lesson } from "../types";
 export const part3LessonThirtySeven: Part3Lesson = {
   id: 37,
   book: "Шарх аль-‘Акаид аль-джадида",
-  arabicTitle: "أَشْرَاطُ السَّاعَةِ وَالِاجْتِهَادُ وَتَفَاضُلُ الْخَلْقِ",
+  arabicTitle: "أَشْرَاطُ السَّاعَةِ وَالِاجْتِهَادُ وَتَفَاضُلُ الْخَلْقِ",
   title: "Признаки Часа, иджтихад и иерархия творений",
   words: [
-    { arabic: "أَحَطُّ مِنْ", russian: "ниже и хуже, чем", kind: "expression" },
+    { arabic: "أَحَطُّ مِنْ", russian: "ниже и хуже, чем", kind: "expression" },
     { arabic: "غَضَبٌ", russian: "гнев", kind: "masdar" },
     { arabic: "تَذَاكَرَ (يَتَذَاكَرُ)", russian: "обсуждать друг с другом; совместно вспоминать", kind: "verb" },
     { arabic: "زَغَبَةٌ", russian: "пушинка; тонкий волосок", kind: "noun" },
