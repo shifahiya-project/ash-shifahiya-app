@@ -189,21 +189,18 @@ test("a third-course card says which lesson it came from", () => {
 // A teaching course gives its Arabic fully vowelled. Here the vowels came from
 // the export, so they are checked by machine rather than by eye.
 //
-// Lessons 14 and 15 come from a differently typeset stretch of the source, and
-// it shows in two places at once: 40% and 69% of their words carry vowel marks,
-// and every fragment over two hundred words — nine of them, 202 to 295, several
-// printed pages each — is theirs. One re-export of those two lessons closes
-// both, and until it lands they are named here; the reasoning is in CLAUDE.md.
+// Both bars hold for every lesson of the course now: lessons 14 and 15 were
+// re-exported and came back at 99% and 98%, so the exception they used to need
+// is gone. Nothing here is allowed to slip back below them unnoticed.
 //
 // The vowelling mark is not a hundred percent because this book does not vowel
 // its footnotes: names, titles of works, references to suras. Lesson 8, the
-// densest in footnotes, comes to 87% and the rest to 93-99%, so 85% tells the
-// apparatus apart from a stretch that was set differently, without pretending
-// every token is vowelled.
-const NEEDS_REEXPORT = new Set([14, 15]);
+// densest in footnotes, comes to 87% and the rest to 93-100%, so 85% tells the
+// apparatus apart from a stretch set differently, without pretending every
+// token is vowelled.
 const VOWELLED_SHARE = 0.85;
-// The longest fragment outside those two lessons is 159 words. Much beyond that
-// is read as a page rather than a paragraph, and its translation opens at once.
+// The longest fragment in the course is 159 words. Much beyond that is read as
+// a page rather than a paragraph, and its translation opens all at once.
 const MAX_FRAGMENT_WORDS = 180;
 
 test("the Arabic of the course is vowelled", () => {
@@ -216,7 +213,6 @@ test("the Arabic of the course is vowelled", () => {
       assert.match(line.arabic, harakat, `урок ${lesson.id}: фрагмент без огласовок`);
     }
 
-    if (NEEDS_REEXPORT.has(lesson.id)) continue;
     const words = lesson.fragments.flatMap((line) =>
       line.arabic.split(/\s+/).filter((token) => /[ء-ي]/.test(token)),
     );
@@ -229,14 +225,12 @@ test("the Arabic of the course is vowelled", () => {
 });
 
 // A fragment is the unit the translation is aligned on, so it cannot be cut
-// into sentences: the Arabic runs long chains of clauses where the Russian
-// breaks them into separate sentences, and the two sides agree on sentence
-// count in exactly one fragment out of twenty-seven. A block this large
-// therefore only ever arrives from the source, and this holds the door against
-// a re-export bringing in new ones.
+// into sentences here: the Arabic runs long chains of clauses where the Russian
+// breaks them into separate sentences. Where a block did need breaking up, the
+// translator did it on both sides at once and re-exported; this holds the door
+// against a future export bringing oversized blocks back.
 test("a fragment stays a paragraph, not a page", () => {
   for (const lesson of lessons) {
-    if (NEEDS_REEXPORT.has(lesson.id)) continue;
     for (const line of lesson.fragments) {
       const words = line.arabic.split(/\s+/).filter((token) => /[ء-ي]/.test(token)).length;
       assert.ok(

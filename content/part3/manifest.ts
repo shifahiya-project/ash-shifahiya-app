@@ -129,7 +129,7 @@ export const part3Summaries: Part3Summary[] = [
     arabicTitle: "شُبُهَاتٌ وَجَوَابُهَا",
     title: "Возражения и ответы на них",
     wordCount: 20,
-    fragmentCount: 4,
+    fragmentCount: 38,
   },
   {
     id: 15,
@@ -138,7 +138,7 @@ export const part3Summaries: Part3Summary[] = [
     arabicTitle: "عَوَالِمُ غَيْبِيَّةٌ",
     title: "Сокрытые миры",
     wordCount: 54,
-    fragmentCount: 56,
+    fragmentCount: 130,
   },
   {
     id: 16,
