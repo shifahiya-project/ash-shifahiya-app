@@ -13,7 +13,8 @@
     "test": "npm run build && node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/*.test.mjs",
     "content:manifest": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/generate-manifest.mjs",
     "podcasts:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-podcasts.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .static-site"
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .static-site",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.111.0",
@@ -31,6 +32,7 @@
     "@vitejs/plugin-rsc": "0.5.26",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "playwright-core": "1.62.1",
     "react-server-dom-webpack": "19.2.6",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
