@@ -2,6 +2,7 @@ import type { Part3Lesson } from "../types";
 
 export const part3LessonOne: Part3Lesson = {
   id: 1,
+  book: "Основы исламского вероубеждения",
   section: "Вводная часть",
   arabicTitle: "مُقَدِّمَاتٌ تَمْهِيدِيَّةٌ",
   title: "Вводные положения",
