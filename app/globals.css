@@ -548,7 +548,7 @@ h1 em { color: var(--green); font-weight: inherit; }
 .book-divider strong { color: var(--ink); font: 500 18px Georgia, serif; }
 .book-divider span { color: var(--ink-soft); font-size: 13px; }
 
-/* The third course is one book divided into chapters (باب), so the divider
+/* The third course is one book divided into chapters (بَاب), so the divider
    inside it names a chapter rather than a book and stands a step quieter. */
 .book-divider.is-section { border-bottom-style: dashed; }
 .book-divider.is-section strong { font-size: 16px; color: var(--ink-soft); }
