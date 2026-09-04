@@ -43,8 +43,9 @@ test("every lesson brings words and the text they belong to", () => {
   }
 });
 
-// Книга идёт подряд, а прогресс ученика хранится по номеру урока: нумерация
-// обязана быть сплошной, а бабы — не разрываться на куски.
+// The book runs straight through and a learner's progress is stored under the
+// lesson number: the numbering has to be unbroken, and a باب must not be torn
+// into pieces.
 test("the lessons are numbered without gaps and the chapters hold together", () => {
   lessons.forEach((lesson, index) => {
     assert.equal(lesson.id, index + 1, `урок на месте ${index + 1} имеет номер ${lesson.id}`);
@@ -68,8 +69,8 @@ test("every word carries its meaning and a kind the course knows", () => {
   }
 });
 
-// Словарь этой книги примеров не даёт, и выдумывать их курс не стал: слово
-// спрашивается по значению, а в предложении встречается целиком — на чтении.
+// This book's glossary offers no examples and the course invented none: a word
+// is asked by its meaning, and met whole inside a sentence at the reading step.
 test("a word is asked by its meaning, and the text is never cut up for a gap", () => {
   for (const lesson of lessons) {
     const questions = part3Questions(lesson);
@@ -96,7 +97,8 @@ test("a question is answerable, and only one answer fits", () => {
       );
       assert.ok(question.explanation.length > 0, `урок ${lesson.id}: «${question.prompt}» без разбора`);
 
-      // Вариант, отличающийся от ответа только огласовками, — второй верный ответ.
+      // An option differing from the answer only in vowel marks is a second
+      // right answer.
       const wrong = question.options.filter((option) => option !== question.answer);
       for (const option of wrong) {
         if (!/[ء-ي]/.test(option)) continue;
@@ -131,18 +133,18 @@ test("the manifest agrees with the lessons", () => {
   }
 });
 
-// Третий курс ждёт второй целиком: научный текст читают после того, как
-// рассказы читаются свободно. Одного урока второй части для этого мало.
+// The third course waits for the whole second one: a scholarly text is read
+// once the stories read easily. One lesson of the second course is not enough.
 test("the third course waits for the whole second one", () => {
   const shelf = [{ id: 1 }, { id: 2 }, { id: 3 }];
   assert.equal(isPart3Open(shelf, {}), false);
   assert.equal(isPart3Open(shelf, { 1: 30, 2: 20 }), false);
   assert.equal(isPart3Open(shelf, { 1: 30, 2: 20, 3: 10 }), true);
-  // Пустая полка не «пройдена» — иначе курс открылся бы сам собой.
+  // An empty shelf is not "finished" — the course would then open by itself.
   assert.equal(isPart3Open([], {}), false);
 });
 
-// И, как первые два курса, никогда не отнимает уже пройденное.
+// And, like the first two courses, it never takes back ground already covered.
 test("the third course runs in order and never takes ground back", () => {
   const empty = { part3Scores: {}, part3Sessions: {}, cards: {} };
   assert.equal(unlockedPart3Ids(part3Summaries, empty, false).size, 0);
@@ -166,15 +168,15 @@ test("a third-course card says which lesson it came from", () => {
   const cards = {
     "p3-lesson-3-word-0-ar-ru": {},
     "p3-lesson-9-word-4-ru-ar": {},
-    // Карточки первых двух курсов живут в той же коробке и сюда не попадают.
+    // The first two courses' cards live in the same box and do not belong here.
     "p2-lesson-3-word-0-ar-ru": {},
     "lesson-3-deck-0-word-0-ar-ru": {},
   };
   assert.deepEqual(part3LessonIdsInCards(cards).sort((a, b) => a - b), [3, 9]);
 });
 
-// Арабский учебного курса даётся с полной огласовкой. Здесь она пришла из
-// выгрузки, поэтому её проверяют машинно, а не на глаз.
+// A teaching course gives its Arabic fully vowelled. Here the vowels came from
+// the export, so they are checked by machine rather than by eye.
 //
 // Lessons 14 and 15 come from a differently typeset stretch of the source, and
 // it shows in two places at once: 40% and 69% of their words carry vowel marks,
@@ -234,8 +236,8 @@ test("a fragment stays a paragraph, not a page", () => {
   }
 });
 
-// Прогресс третьего курса ездит между устройствами и хранится под своими
-// ключами — иначе слияние или бэкап молча теряли бы её.
+// The third course's progress travels between devices and is stored under keys
+// of its own; otherwise a merge or a backup would drop it in silence.
 test("the third course is carried by the store, the merge and the backup", async () => {
   const store = await readFile(new URL("../app/progress-store.ts", import.meta.url), "utf8");
   const merge = await readFile(new URL("../app/merge-progress.ts", import.meta.url), "utf8");
