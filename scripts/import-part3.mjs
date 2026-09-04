@@ -2,7 +2,7 @@
 // a cumulative glossary of the words each lesson introduces, and the lesson's
 // text as Frank-method pairs.
 //
-//   node scripts/import-part3.mjs <словарь.json> <текст.json>
+//   node scripts/import-part3.mjs <glossary.json> <text.json>
 //
 // Unlike the second course, this one is a single book: «Основы исламского
 // вероубеждения» in twenty lessons. There is no numbering to continue and no
@@ -70,7 +70,7 @@ const TEXT_FIXES = {
 
 /**
  * A word of the glossary the corrected text has since outrun. The edition
- * settled the transliteration — ‘ for ‘айн, ’ for хамза — and the glossary was
+ * settled the transliteration — ‘ for ayn, ’ for hamza — and the glossary was
  * left with one straight apostrophe, which would show the learner two spellings
  * of the same sound in one lesson. Keyed by the entry's id, and checked: a fix
  * that no longer matches stops the import instead of passing quietly.
@@ -127,7 +127,7 @@ ${lesson.fragments.map(renderFragment).join("\n")}
 
 const [glossaryPath, textPath] = process.argv.slice(2);
 if (!glossaryPath || !textPath) {
-  console.error("usage: node scripts/import-part3.mjs <словарь.json> <текст.json>");
+  console.error("usage: node scripts/import-part3.mjs <glossary.json> <text.json>");
   process.exit(1);
 }
 
@@ -158,7 +158,7 @@ for (const item of text.items) {
     russian = russian.replace(fix.from, fix.to);
     patched += 1;
   }
-  // Строка без единой арабской буквы — след разметки исходника, а не текст.
+  // A row without a single Arabic letter is markup from the source, not text.
   if (!/[ء-ي]/.test(arabic)) {
     dropped.push({ lesson: item.lesson, arabic, russian });
     continue;

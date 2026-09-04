@@ -255,7 +255,7 @@ export function normalizeProgress(value: Partial<Progress> | null | undefined): 
   };
 }
 
-// ── Подкасты ──────────────────────────────────────────────────────────────
+// ── Podcasts ──────────────────────────────────────────────────────────────
 //
 // The habit's own record, merged on the same terms as the course: a day
 // watched on either device is a day watched, and neither side is the truth.

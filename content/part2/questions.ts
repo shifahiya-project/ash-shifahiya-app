@@ -58,12 +58,12 @@ function distractors(word: Part2Word, lesson: Part2Lesson, pick: (word: Part2Wor
 
 function clozeQuestion(word: Part2Word, lesson: Part2Lesson): Question | null {
   if (!word.contextForm) return null;
-  // Иногда контекстом стоит одно слово — заголовок рассказа, подпись. Пропуск
-  // съел бы фразу целиком и оставил на экране голый прочерк: такое слово
-  // спрашивают на смысл.
+  // Sometimes the context is a single word — a story's heading, a caption. A
+  // blank would swallow the phrase whole and leave a bare dash on screen, so
+  // such a word is asked by its meaning instead.
   if (word.contextArabic.split(/\s+/).filter((token) => /[ء-ي]/.test(token)).length < 2) return null;
-  // «رُوَيْدًا رُوَيْدًا» — слово, повторённое во фразе, оставило бы ответ на виду
-  // рядом с пропуском. Такую фразу спрашивают целиком.
+  // «رُوَيْدًا رُوَيْدًا» — a word repeated inside its phrase would leave the answer
+  // in plain sight next to the blank. Such a phrase is asked whole.
   if (word.contextArabic.split(word.contextForm).length !== 2) return null;
   const prompt = word.contextArabic.replace(word.contextForm, BLANK);
 
