@@ -14,7 +14,7 @@
 | Файл | Чем пересобрать |
 |---|---|
 | `content/manifest.ts` | `npm run content:manifest` |
-| `content/part2/manifest.ts` | `node scripts/import-part2.mjs <словарь.json> <текст.json>` |
+| `content/part2/manifest.ts` | `npm run part2:import -- <словарь.json> <текст.json>` |
 | `content/part3/manifest.ts` | `npm run part3:import -- <словарь.json> <текст.json>` |
 | `content/part4/manifest.ts` | `npm run part4:import -- <словарь.json> <текст.json>` |
 | `content/part4/glossary.ts` | тем же импортом четвёртой части |
