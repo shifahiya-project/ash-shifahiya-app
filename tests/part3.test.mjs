@@ -44,7 +44,7 @@ test("every lesson brings words and the text they belong to", () => {
 });
 
 // The book runs straight through and a learner's progress is stored under the
-// lesson number: the numbering has to be unbroken, and a باب must not be torn
+// lesson number: the numbering has to be unbroken, and a بَاب must not be torn
 // into pieces.
 test("the lessons are numbered without gaps and the chapters hold together", () => {
   lessons.forEach((lesson, index) => {

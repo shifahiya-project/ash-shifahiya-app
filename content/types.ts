@@ -9,8 +9,8 @@ export type Question = {
 };
 
 /**
- * Which of the two classical disciplines a rule belongs to: نحو is how words
- * combine into a sentence, صرف is how a word itself is built from a root.
+ * Which of the two classical disciplines a rule belongs to: نَحْو is how words
+ * combine into a sentence, صَرْف is how a word itself is built from a root.
  */
 export type GrammarKind = "nahw" | "sarf";
 
@@ -26,7 +26,7 @@ export type GrammarRule = {
    * it aloud, so the term is taught as a word from the start.
    */
   termSound?: string;
-  /** The صرف pattern under discussion, e.g. فَعَّال. */
+  /** The صَرْف pattern under discussion, e.g. فَعَّال. */
   pattern?: string;
   explanation: string;
   /** Illustrations, drawn from words the learner has already met. */
@@ -119,7 +119,7 @@ export type Part3Word = {
 
 export type Part3Lesson = {
   id: number;
-  /** Which باب of the book the lesson belongs to: Иляхийят, Пророчества, Сам‘ийят. */
+  /** Which بَاب of the book the lesson belongs to: Иляхийят, Пророчества, Сам‘ийят. */
   section: string;
   arabicTitle: string;
   title: string;

@@ -211,7 +211,7 @@ const lessons = glossary.lessons.map((entry) => {
 
   return {
     id: entry.number,
-    // The باب comes from the glossary on purpose. The corrected text calls it
+    // The بَاب comes from the glossary on purpose. The corrected text calls it
     // «Часть первая», which is right for the book's own headings but not for
     // this screen: the app already numbers its three courses «Часть 1…3», and
     // the two would read as one scale. The book's own word — «Баб» — does not
