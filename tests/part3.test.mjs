@@ -176,17 +176,22 @@ test("a third-course card says which lesson it came from", () => {
 // Арабский учебного курса даётся с полной огласовкой. Здесь она пришла из
 // выгрузки, поэтому её проверяют машинно, а не на глаз.
 //
-// Два урока набраны в исходнике иначе: огласовано 40% и 69% слов. Это известно
-// и описано в CLAUDE.md — решение по ним за автором, — но остальные восемнадцать
-// держат планку, и тест сторожит именно их: новый урок, съехавший туда же,
-// упадёт здесь, а не будет замечен на экране.
+// Lessons 14 and 15 come from a differently typeset stretch of the source, and
+// it shows in two places at once: 40% and 69% of their words carry vowel marks,
+// and every fragment over two hundred words — nine of them, 202 to 295, several
+// printed pages each — is theirs. One re-export of those two lessons closes
+// both, and until it lands they are named here; the reasoning is in CLAUDE.md.
 //
-// Планка не сто процентов, потому что сноски в этой книге не огласуются: там
-// имена, названия трудов и ссылки на суры. Самый насыщенный сносками урок 8
-// даёт 87%, остальные — 93–99%, так что 85% отделяет аппарат от съехавшего
-// набора, не притворяясь, что огласован каждый токен.
-const PARTLY_VOWELLED = new Set([14, 15]);
+// The vowelling mark is not a hundred percent because this book does not vowel
+// its footnotes: names, titles of works, references to suras. Lesson 8, the
+// densest in footnotes, comes to 87% and the rest to 93-99%, so 85% tells the
+// apparatus apart from a stretch that was set differently, without pretending
+// every token is vowelled.
+const NEEDS_REEXPORT = new Set([14, 15]);
 const VOWELLED_SHARE = 0.85;
+// The longest fragment outside those two lessons is 159 words. Much beyond that
+// is read as a page rather than a paragraph, and its translation opens at once.
+const MAX_FRAGMENT_WORDS = 180;
 
 test("the Arabic of the course is vowelled", () => {
   const harakat = /[ً-ْ]/;
@@ -198,7 +203,7 @@ test("the Arabic of the course is vowelled", () => {
       assert.match(line.arabic, harakat, `урок ${lesson.id}: фрагмент без огласовок`);
     }
 
-    if (PARTLY_VOWELLED.has(lesson.id)) continue;
+    if (NEEDS_REEXPORT.has(lesson.id)) continue;
     const words = lesson.fragments.flatMap((line) =>
       line.arabic.split(/\s+/).filter((token) => /[ء-ي]/.test(token)),
     );
@@ -207,6 +212,25 @@ test("the Arabic of the course is vowelled", () => {
       vowelled / words.length >= VOWELLED_SHARE,
       `урок ${lesson.id}: огласовано ${Math.round((vowelled / words.length) * 100)}% слов текста`,
     );
+  }
+});
+
+// A fragment is the unit the translation is aligned on, so it cannot be cut
+// into sentences: the Arabic runs long chains of clauses where the Russian
+// breaks them into separate sentences, and the two sides agree on sentence
+// count in exactly one fragment out of twenty-seven. A block this large
+// therefore only ever arrives from the source, and this holds the door against
+// a re-export bringing in new ones.
+test("a fragment stays a paragraph, not a page", () => {
+  for (const lesson of lessons) {
+    if (NEEDS_REEXPORT.has(lesson.id)) continue;
+    for (const line of lesson.fragments) {
+      const words = line.arabic.split(/\s+/).filter((token) => /[ء-ي]/.test(token)).length;
+      assert.ok(
+        words <= MAX_FRAGMENT_WORDS,
+        `урок ${lesson.id}: фрагмент в ${words} слов — это уже страница`,
+      );
+    }
   }
 });
 
