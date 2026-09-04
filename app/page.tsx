@@ -12,10 +12,20 @@ import { BLANK, part2Questions } from "../content/part2/questions";
 import { part2CardId, part2LessonIdsInCards, unlockedPart2Ids } from "./part2-access";
 import { part3Summaries } from "../content/part3/manifest";
 import { loadPart3Lesson, loadPart3Lessons } from "../content/part3/lessons";
-import { part3Questions } from "../content/part3/questions";
 import { isPart3Open, part3CardId, part3LessonIdsInCards, unlockedPart3Ids } from "./part3-access";
+import { part4Summaries } from "../content/part4/manifest";
+import { loadPart4Lesson, loadPart4Lessons, loadPart4WordsMetBefore } from "../content/part4/lessons";
+import { isPart4Open, part4CardId, part4LessonIdsInCards, unlockedPart4Ids } from "./part4-access";
+import { textCourseQuestions } from "../content/text-course-questions";
 import { plural } from "../content/questions";
-import type { Exam, Lesson, Part2Lesson, Part3Lesson, ReadingSection } from "../content/types";
+import type {
+  Exam,
+  Lesson,
+  Part2Lesson,
+  ReadingSection,
+  TextCourseLesson,
+  TextCourseWord,
+} from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
 import {
   examPassMark,
@@ -164,13 +174,16 @@ function part2ReviewCardsOf(lesson: Part2Lesson): ReviewCard[] {
 }
 
 /**
- * The third course teaches a word by itself — its glossary carries no example
- * sentences — so its card is the word and its meaning, nothing else.
+ * A text course teaches a word by itself — neither book's glossary carries
+ * example sentences — so its card is the word and its meaning, nothing else.
  */
-function part3ReviewCardsOf(lesson: Part3Lesson): ReviewCard[] {
+function textCourseReviewCardsOf(
+  lesson: TextCourseLesson,
+  cardId: (lessonId: number, index: number, direction: "ar-ru" | "ru-ar") => string,
+): ReviewCard[] {
   return lesson.words.flatMap((word, index) => [
     {
-      id: part3CardId(lesson.id, index, "ar-ru"),
+      id: cardId(lesson.id, index, "ar-ru"),
       lessonId: lesson.id,
       prompt: word.arabic,
       answer: word.russian,
@@ -178,7 +191,7 @@ function part3ReviewCardsOf(lesson: Part3Lesson): ReviewCard[] {
       answerLang: "ru" as const,
     },
     {
-      id: part3CardId(lesson.id, index, "ru-ar"),
+      id: cardId(lesson.id, index, "ru-ar"),
       lessonId: lesson.id,
       prompt: word.russian,
       answer: word.arabic,
@@ -187,6 +200,37 @@ function part3ReviewCardsOf(lesson: Part3Lesson): ReviewCard[] {
     },
   ]);
 }
+
+/** The two courses that teach a scholarly book: its glossary, then its text. */
+type TextCourseId = 3 | 4;
+
+/**
+ * All the third and fourth courses differ in. A lesson runs identically in
+ * both — the new words, one question on each, then the text read whole — so one
+ * set of screens serves them, and what is looked up here is the data, the card
+ * addresses and the rows of the store.
+ */
+const TEXT_COURSES = {
+  3: {
+    label: "Часть 3",
+    summaries: part3Summaries,
+    loadLesson: loadPart3Lesson,
+    cardId: part3CardId,
+    /** Only the fourth course has lessons short enough to need them. */
+    wordsMetBefore: async (): Promise<TextCourseWord[]> => [],
+    saveSession: progressStore.savePart3Session,
+    finishLesson: progressStore.finishPart3Lesson,
+  },
+  4: {
+    label: "Часть 4",
+    summaries: part4Summaries,
+    loadLesson: loadPart4Lesson,
+    cardId: part4CardId,
+    wordsMetBefore: loadPart4WordsMetBefore,
+    saveSession: progressStore.savePart4Session,
+    finishLesson: progressStore.finishPart4Lesson,
+  },
+} as const;
 
 /** Lesson ids the learner has any card progress in, read off the stored keys. */
 function lessonIdsInProgress(progress: Record<string, CardProgress>) {
@@ -271,7 +315,9 @@ export default function Home() {
     | "home" | "learn" | "practice" | "grammar" | "reading" | "review" | "result"
     | "exam" | "exam-result"
     | "p2-learn" | "p2-practice" | "p2-reading" | "p2-result"
-    | "p3-learn" | "p3-practice" | "p3-reading" | "p3-result"
+    // The third and fourth courses run a lesson the same way, so one set of
+    // screens serves both and the course itself is held beside them.
+    | "text-learn" | "text-practice" | "text-reading" | "text-result"
   >("home");
   const [lessonId, setLessonId] = useState(1);
   const [partIndex, setPartIndex] = useState(0);
@@ -291,12 +337,20 @@ export default function Home() {
   const [backupMessage, setBackupMessage] = useState("");
   const [openLessons, setOpenLessons] = useState<Record<number, Lesson>>({});
   const [openPart2, setOpenPart2] = useState<Record<number, Part2Lesson>>({});
-  const [openPart3, setOpenPart3] = useState<Record<number, Part3Lesson>>({});
+  const [openPart3, setOpenPart3] = useState<Record<number, TextCourseLesson>>({});
+  const [openPart4, setOpenPart4] = useState<Record<number, TextCourseLesson>>({});
   const [reading, setReading] = useState<ReadingSection | null>(null);
   const [openLines, setOpenLines] = useState<string[]>([]);
-  const [course, setCourse] = useState<1 | 2 | 3>(1);
+  const [course, setCourse] = useState<1 | 2 | 3 | 4>(1);
   const [part2, setPart2] = useState<Part2Lesson | null>(null);
-  const [part3, setPart3] = useState<Part3Lesson | null>(null);
+  /** Which text course is on screen, and the lesson of it that is open. */
+  const [textCourseId, setTextCourseId] = useState<TextCourseId>(3);
+  const [textLesson, setTextLesson] = useState<TextCourseLesson | null>(null);
+  /**
+   * Words already met, for a lesson too short to fill three options out of its
+   * own glossary. Empty for every other lesson, which is nearly all of them.
+   */
+  const [textMet, setTextMet] = useState<TextCourseWord[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
   const [stepScore, setStepScore] = useState(0);
   const [stepMistakes, setStepMistakes] = useState<string[]>([]);
@@ -360,9 +414,10 @@ export default function Home() {
     () => [
       ...Object.values(openLessons).flatMap(reviewCardsOf),
       ...Object.values(openPart2).flatMap(part2ReviewCardsOf),
-      ...Object.values(openPart3).flatMap(part3ReviewCardsOf),
+      ...Object.values(openPart3).flatMap((item) => textCourseReviewCardsOf(item, part3CardId)),
+      ...Object.values(openPart4).flatMap((item) => textCourseReviewCardsOf(item, part4CardId)),
     ],
-    [openLessons, openPart2, openPart3],
+    [openLessons, openPart2, openPart3, openPart4],
   );
   const dueCards = useMemo(() => {
     const today = localDate();
@@ -391,17 +446,49 @@ export default function Home() {
   const p2Task = p2Tasks[stepIndex];
   const part3Scores = stored.part3Scores;
   const part3Sessions = stored.part3Sessions;
+  const part4Scores = stored.part4Scores;
+  const part4Sessions = stored.part4Sessions;
   // The third course waits for the second one whole, not for a paper: a
   // treatise is what the hundred and five lessons of stories were reading for.
   const part3Ready = isPart3Open(part2Summaries, part2Scores);
+  // And the fourth waits for the third on the same terms: a book of fiqh is
+  // read once a scholarly page reads at all.
+  const part4Ready = isPart4Open(part3Summaries, part3Scores);
   const unlockedPart3 = useMemo(
     () => unlockedPart3Ids(part3Summaries, stored, part3Ready),
     [stored, part3Ready],
   );
-  const p3Words = part3?.words ?? [];
-  const p3Tasks = useMemo(() => (part3 ? part3Questions(part3) : []), [part3]);
-  const p3Word = p3Words[stepIndex];
-  const p3Task = p3Tasks[stepIndex];
+  const unlockedPart4 = useMemo(
+    () => unlockedPart4Ids(part4Summaries, stored, part4Ready),
+    [stored, part4Ready],
+  );
+  /** The text course on screen: its data, and the learner's place in it. */
+  const textCourse = useMemo(
+    () =>
+      textCourseId === 3
+        ? {
+            ...TEXT_COURSES[3],
+            id: 3 as const,
+            scores: part3Scores,
+            sessions: part3Sessions,
+            unlocked: unlockedPart3,
+          }
+        : {
+            ...TEXT_COURSES[4],
+            id: 4 as const,
+            scores: part4Scores,
+            sessions: part4Sessions,
+            unlocked: unlockedPart4,
+          },
+    [textCourseId, part3Scores, part3Sessions, unlockedPart3, part4Scores, part4Sessions, unlockedPart4],
+  );
+  const textWords = textLesson?.words ?? [];
+  const textTasks = useMemo(
+    () => (textLesson ? textCourseQuestions(textLesson, textMet) : []),
+    [textLesson, textMet],
+  );
+  const textWord = textWords[stepIndex];
+  const textTask = textTasks[stepIndex];
   // The texts are read on their own schedule, so today's reading is counted
   // apart from the cards and shown as its own line on the home screen.
   const dueReadings = useMemo(
@@ -532,6 +619,15 @@ export default function Home() {
       .join(",");
   }, [cardProgress, part3Sessions]);
 
+  const wantedPart4Ids = useMemo(() => {
+    const resume = Object.values(part4Sessions).sort(
+      (a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId),
+    )[0];
+    return [...new Set([...part4LessonIdsInCards(cardProgress), ...(resume ? [resume.lessonId] : [])])]
+      .sort((a, b) => a - b)
+      .join(",");
+  }, [cardProgress, part4Sessions]);
+
   useEffect(() => {
     if (!wantedPart2Ids) return;
 
@@ -557,6 +653,19 @@ export default function Home() {
       cancelled = true;
     };
   }, [wantedPart3Ids]);
+
+  useEffect(() => {
+    if (!wantedPart4Ids) return;
+
+    let cancelled = false;
+    loadPart4Lessons(wantedPart4Ids.split(",").map(Number)).then((loaded) => {
+      if (cancelled) return;
+      setOpenPart4((items) => ({ ...items, ...Object.fromEntries(loaded.map((item) => [item.id, item])) }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wantedPart4Ids]);
 
   useEffect(() => {
     if (!wantedLessonIds) return;
@@ -589,7 +698,7 @@ export default function Home() {
   }, [view, lessonId, partIndex, ruleIndex, deckIndex, round, cardIndex, questionIndex, score, grammarScore, mistakes]);
 
   useEffect(() => {
-    if (!["learn", "practice", "grammar", "reading", "review", "exam", "p2-learn", "p2-practice", "p2-reading", "p3-learn", "p3-practice", "p3-reading"].includes(view)) return;
+    if (!["learn", "practice", "grammar", "reading", "review", "exam", "p2-learn", "p2-practice", "p2-reading", "text-learn", "text-practice", "text-reading"].includes(view)) return;
     const recordActivity = (seconds: number) => {
       if (document.visibilityState !== "visible") return;
       progressStore.updateStats((items) => ({
@@ -610,10 +719,10 @@ export default function Home() {
     ? (stepIndex / Math.max(p2Words.length, 1)) * 100
     : view === "p2-practice"
     ? ((stepIndex + (selected ? 1 : 0)) / Math.max(p2Tasks.length, 1)) * 100
-    : view === "p3-learn"
-    ? (stepIndex / Math.max(p3Words.length, 1)) * 100
-    : view === "p3-practice"
-    ? ((stepIndex + (selected ? 1 : 0)) / Math.max(p3Tasks.length, 1)) * 100
+    : view === "text-learn"
+    ? (stepIndex / Math.max(textWords.length, 1)) * 100
+    : view === "text-practice"
+    ? ((stepIndex + (selected ? 1 : 0)) / Math.max(textTasks.length, 1)) * 100
     : view === "exam"
     ? (examIndex / Math.max(examOrder.length, 1)) * 100
     : !lesson || !part
@@ -637,7 +746,7 @@ export default function Home() {
   const options = useMemo(() => shuffle(currentQuestion?.options ?? []), [currentQuestion]);
   const examOptions = useMemo(() => shuffle(examQuestion?.options ?? []), [examQuestion]);
   const p2Options = useMemo(() => shuffle(p2Task?.options ?? []), [p2Task]);
-  const p3Options = useMemo(() => shuffle(p3Task?.options ?? []), [p3Task]);
+  const textOptions = useMemo(() => shuffle(textTask?.options ?? []), [textTask]);
 
   async function startLesson(id: number) {
     if (!unlockedLessons.has(id)) return;
@@ -820,38 +929,58 @@ export default function Home() {
   }
 
   /**
-   * Opens a lesson of the third course. It runs the same three passes as the
-   * second — the new words, one question on each, then the text — and the
-   * position is remembered after every step. What differs is the middle one:
-   * this book's glossary has no example sentences, so the question asks the
-   * word's meaning rather than hiding it inside a phrase.
+   * Opens a lesson of a text course. Both of them run it in the same three
+   * passes as the second course — the new words, one question on each, then
+   * the text — and the position is remembered after every step. What differs
+   * from the second course is the middle pass: these glossaries have no example
+   * sentences, so the question asks a word's meaning rather than hiding it
+   * inside a phrase.
    */
-  async function startPart3(id: number, from: "start" | "resume" = "resume") {
-    if (!unlockedPart3.has(id)) return;
-    const lesson = await loadPart3Lesson(id);
-    setOpenPart3((items) => ({ ...items, [id]: lesson }));
-    setPart3(lesson);
+  async function startTextCourse(
+    courseId: TextCourseId,
+    id: number,
+    from: "start" | "resume" = "resume",
+  ) {
+    const opening = TEXT_COURSES[courseId];
+    const unlocked = courseId === 3 ? unlockedPart3 : unlockedPart4;
+    if (!unlocked.has(id)) return;
+    const lesson = await opening.loadLesson(id);
+    const met = await opening.wordsMetBefore(lesson);
+    (courseId === 3 ? setOpenPart3 : setOpenPart4)((items) => ({ ...items, [id]: lesson }));
+    setTextCourseId(courseId);
+    setTextLesson(lesson);
+    setTextMet(met);
     setSelected(null);
     setRevealed(false);
     setStepOpen([]);
 
-    const parked = from === "resume" ? part3Sessions[id] : undefined;
+    const sessions = courseId === 3 ? part3Sessions : part4Sessions;
+    const parked = from === "resume" ? sessions[id] : undefined;
     setStepIndex(parked?.index ?? 0);
     setStepScore(parked?.score ?? 0);
     setStepMistakes(parked?.mistakes ?? []);
-    setView(parked ? `p3-${parked.view}` as "p3-learn" | "p3-practice" | "p3-reading" : "p3-learn");
+    // A lesson that brings no new words has nothing to show on cards and
+    // nothing to ask: the fourth course's glossary is cumulative, and deep in
+    // a book a lesson can meet nothing new. Such a lesson is its text.
+    const step = lesson.words.length ? (parked?.view ?? "learn") : "reading";
+    setView(`text-${step}` as "text-learn" | "text-practice" | "text-reading");
   }
 
-  function savePart3(view: "learn" | "practice" | "reading", index: number, score = stepScore, mistakes = stepMistakes) {
-    if (!part3) return;
-    progressStore.savePart3Session({ lessonId: part3.id, view, index, score, mistakes });
+  function saveTextCourse(
+    view: "learn" | "practice" | "reading",
+    index: number,
+    score = stepScore,
+    mistakes = stepMistakes,
+  ) {
+    if (!textLesson) return;
+    textCourse.saveSession({ lessonId: textLesson.id, view, index, score, mistakes });
   }
 
-  /** A word of the third course enters the same boxes the first two courses use. */
-  function ratePart3Card(remembered: boolean) {
-    if (!part3) return;
-    const forward = part3CardId(part3.id, stepIndex, "ar-ru");
-    const reverse = part3CardId(part3.id, stepIndex, "ru-ar");
+  /** A word of a text course enters the same boxes every course before it uses. */
+  function rateTextCourseCard(remembered: boolean) {
+    if (!textLesson) return;
+    const forward = textCourse.cardId(textLesson.id, stepIndex, "ar-ru");
+    const reverse = textCourse.cardId(textLesson.id, stepIndex, "ru-ar");
     progressStore.updateCards((items) => ({
       ...items,
       [forward]: nextCardProgress(items[forward], remembered),
@@ -865,44 +994,44 @@ export default function Home() {
     }));
 
     setRevealed(false);
-    if (stepIndex < p3Words.length - 1) {
+    if (stepIndex < textWords.length - 1) {
       setStepIndex(stepIndex + 1);
-      savePart3("learn", stepIndex + 1);
+      saveTextCourse("learn", stepIndex + 1);
       return;
     }
     setStepIndex(0);
-    savePart3("practice", 0);
-    setView("p3-practice");
+    saveTextCourse("practice", 0);
+    setView("text-practice");
   }
 
-  function answerPart3(option: string) {
-    if (!p3Task || selected) return;
+  function answerTextCourse(option: string) {
+    if (!textTask || selected) return;
     setSelected(option);
-    if (option === p3Task.answer) setStepScore((value) => value + 1);
-    else setStepMistakes((items) => [...items, p3Task.prompt]);
+    if (option === textTask.answer) setStepScore((value) => value + 1);
+    else setStepMistakes((items) => [...items, textTask.prompt]);
   }
 
-  function nextPart3Task() {
-    if (!p3Task) return;
+  function nextTextCourseTask() {
+    if (!textTask) return;
     const score = stepScore;
     const mistakes = stepMistakes;
     setSelected(null);
 
-    if (stepIndex < p3Tasks.length - 1) {
+    if (stepIndex < textTasks.length - 1) {
       setStepIndex(stepIndex + 1);
-      savePart3("practice", stepIndex + 1, score, mistakes);
+      saveTextCourse("practice", stepIndex + 1, score, mistakes);
       return;
     }
     setStepOpen([]);
-    savePart3("reading", 0, score, mistakes);
-    setView("p3-reading");
+    saveTextCourse("reading", 0, score, mistakes);
+    setView("text-reading");
   }
 
   /** The text is the point of the lesson here too, so reading it finishes it. */
-  function finishPart3() {
-    if (!part3) return;
-    progressStore.finishPart3Lesson(part3.id, stepScore);
-    setView("p3-result");
+  function finishTextCourse() {
+    if (!textLesson) return;
+    textCourse.finishLesson(textLesson.id, stepScore);
+    setView("text-result");
   }
 
   /**
@@ -1016,6 +1145,8 @@ export default function Home() {
       part2Sessions,
       part3Scores,
       part3Sessions,
+      part4Scores,
+      part4Sessions,
       stats: learningStats,
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
@@ -1059,6 +1190,9 @@ export default function Home() {
         // Backups written before the third course simply have none of it.
         part3Scores: payload.part3Scores ?? {},
         part3Sessions: payload.part3Sessions ?? {},
+        // And the same for the fourth.
+        part4Scores: payload.part4Scores ?? {},
+        part4Sessions: payload.part4Sessions ?? {},
         stats,
       });
       setBackupMessage("Прогресс восстановлен.");
@@ -1199,7 +1333,7 @@ export default function Home() {
         <div className="streak" title="Текущая серия занятий"><span>✦</span> {studyStreaks.current} дн.</div>
       </header>
 
-      {!["home", "result", "exam-result", "p2-result", "p3-result"].includes(view) && (
+      {!["home", "result", "exam-result", "p2-result", "text-result"].includes(view) && (
         <div className="lesson-progress" aria-label="Прогресс урока">
           <button className="close" onClick={() => setView("home")} aria-label="Закрыть урок">×</button>
           {parts.length > 1 && view !== "review" && view !== "reading" && (
@@ -1209,27 +1343,27 @@ export default function Home() {
           )}
           {view === "reading" && <span className="part-badge">Чтение</span>}
           {view === "exam" && <span className="part-badge">Экзамен</span>}
-          {(view.startsWith("p2-") || view.startsWith("p3-")) && (
+          {(view.startsWith("p2-") || view.startsWith("text-")) && (
             <span className="part-badge">
               {view.endsWith("-learn") ? "Слова" : view.endsWith("-practice") ? "Задания" : "Чтение"}
             </span>
           )}
-          {view !== "reading" && view !== "p2-reading" && view !== "p3-reading" && (
+          {view !== "reading" && view !== "p2-reading" && view !== "text-reading" && (
           <div className="track"><span style={{ width: `${Math.min(progress, 100)}%` }} /></div>
           )}
           <span className="counter">
             {view === "p2-reading"
               ? `${plural(part2?.stories.length ?? 0, "рассказ", "рассказа", "рассказов")}`
-              : view === "p3-reading"
-                ? `${plural(part3?.fragments.length ?? 0, "фрагмент", "фрагмента", "фрагментов")}`
+              : view === "text-reading"
+                ? `${plural(textLesson?.fragments.length ?? 0, "фрагмент", "фрагмента", "фрагментов")}`
               : view === "p2-learn"
                 ? `${stepIndex + 1}/${p2Words.length}`
                 : view === "p2-practice"
                   ? `${stepIndex + 1}/${p2Tasks.length}`
-                  : view === "p3-learn"
-                    ? `${stepIndex + 1}/${p3Words.length}`
-                    : view === "p3-practice"
-                      ? `${stepIndex + 1}/${p3Tasks.length}`
+                  : view === "text-learn"
+                    ? `${stepIndex + 1}/${textWords.length}`
+                    : view === "text-practice"
+                      ? `${stepIndex + 1}/${textTasks.length}`
                   : view === "exam"
               ? `${Math.min(examIndex + 1, examOrder.length)}/${examOrder.length}`
               : view === "reading"
@@ -1398,6 +1532,14 @@ export default function Home() {
             >
               Часть 3 · Акыда {part3Ready ? "" : "🔒"}
             </button>
+            <button
+              role="tab"
+              aria-selected={course === 4}
+              className={course === 4 ? "is-active" : ""}
+              onClick={() => setCourse(4)}
+            >
+              Часть 4 · Фикх {part4Ready ? "" : "🔒"}
+            </button>
           </div>
 
           {course === 2 && (
@@ -1465,41 +1607,68 @@ export default function Home() {
             </div>
           )}
 
-          {course === 3 && (
+          {(course === 3 || course === 4) && (
             <div className="lesson-list">
-              {!part3Ready && (
+              {(course === 3 ? part3Ready : part4Ready) || (
                 <div className="part2-gate">
-                  <strong>Третья часть открывается по второй</strong>
-                  <span>
-                    Пройдите все уроки второй части — и книга по акыде станет доступна.
-                    Научный текст читают после того, как рассказы читаются свободно.
-                  </span>
+                  {course === 3 ? (
+                    <>
+                      <strong>Третья часть открывается по второй</strong>
+                      <span>
+                        Пройдите все уроки второй части — и книга по акыде станет доступна.
+                        Научный текст читают после того, как рассказы читаются свободно.
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <strong>Четвёртая часть открывается по третьей</strong>
+                      <span>
+                        Пройдите все уроки третьей части — и книга по фикху станет доступна.
+                        Разбор правовых вопросов читают после того, как читается научный текст.
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
-              {part3Summaries.flatMap((item, index) => {
-                const score = part3Scores[item.id];
+              {(course === 3 ? part3Summaries : part4Summaries).flatMap((item, index, all) => {
+                const scores = course === 3 ? part3Scores : part4Scores;
+                const sessions = course === 3 ? part3Sessions : part4Sessions;
+                const unlocked = course === 3 ? unlockedPart3 : unlockedPart4;
+                const score = scores[item.id];
                 const done = score !== undefined;
-                const parked = part3Sessions[item.id];
-                const locked = !unlockedPart3.has(item.id);
+                const parked = sessions[item.id];
+                const locked = !unlocked.has(item.id);
                 // The course runs through one book after another, so the list
                 // says where each one starts.
-                const opensBook = part3Summaries[index - 1]?.book !== item.book;
-                const shelf = part3Summaries.filter((other) => other.book === item.book);
-                // Only the first book divides itself into بَاب chapters; where a
-                // book has none, there is no divider to draw.
+                const opensBook = all[index - 1]?.book !== item.book;
+                const shelf = all.filter((other) => other.book === item.book);
+                // A book that runs straight through has no division to draw:
+                // only the creed book has بَاب chapters, only the fiqh one
+                // كِتَاب sections.
                 const opensSection =
                   item.section !== undefined &&
-                  (opensBook || part3Summaries[index - 1]?.section !== item.section);
-                const chapter = part3Summaries.filter((other) => other.section === item.section);
+                  (opensBook || all[index - 1]?.section !== item.section);
+                const chapter = all.filter((other) => other.section === item.section);
+                const key = `p${course}`;
                 const card = (
-                  <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`p3-${item.id}`}>
+                  <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`${key}-${item.id}`}>
                     <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
                     <div className="lesson-copy">
-                      <div className="lesson-label">Часть 3 · урок {item.id}</div>
+                      <div className="lesson-label">
+                        {/* The finer division of the book turns over too often
+                            to head a run of the list, so it is named here. */}
+                        Часть {course} · урок {item.id}
+                        {item.chapter ? ` · ${item.chapter}` : ""}
+                      </div>
                       <h2>{item.title}</h2>
                       <p className="lesson-arabic-title" lang="ar" dir="rtl">{item.arabicTitle}</p>
                       <p>
-                        {plural(item.wordCount, "новое слово", "новых слова", "новых слов")} ·{" "}
+                        {/* A lesson can bring no new words: the glossary is
+                            cumulative, and the card says so rather than
+                            printing «0 новых слов». */}
+                        {item.wordCount
+                          ? `${plural(item.wordCount, "новое слово", "новых слова", "новых слов")} · `
+                          : "только чтение · "}
                         {plural(item.fragmentCount, "фрагмент", "фрагмента", "фрагментов")} текста
                       </p>
                     </div>
@@ -1508,23 +1677,27 @@ export default function Home() {
                     ) : done ? (
                       <div className="lesson-actions">
                         <button className="done" disabled>Пройден <span>✓</span></button>
-                        <button className="repeat" onClick={() => startPart3(item.id, "start")}>
+                        <button className="repeat" onClick={() => startTextCourse(course, item.id, "start")}>
                           Повторить <span>→</span>
                         </button>
                       </div>
                     ) : (
-                      <button className="primary" onClick={() => startPart3(item.id)}>
+                      <button className="primary" onClick={() => startTextCourse(course, item.id)}>
                         {parked ? "Продолжить" : "Начать урок"} <span>→</span>
                       </button>
                     )}
-                    {done && <div className="card-score">✓ {score}/{item.wordCount}</div>}
+                    {done && (
+                      <div className="card-score">
+                        {item.wordCount ? `✓ ${score}/${item.wordCount}` : "✓ прочитан"}
+                      </div>
+                    )}
                   </div>
                 );
                 if (!opensBook && !opensSection) return [card];
                 return [
                   ...(opensBook
                     ? [
-                        <div className="book-divider" key={`p3-book-${item.book}`}>
+                        <div className="book-divider" key={`${key}-book-${item.book}`}>
                           <strong>{item.book}</strong>
                           <span>
                             уроки {shelf[0].id}–{shelf[shelf.length - 1].id} ·{" "}
@@ -1535,7 +1708,7 @@ export default function Home() {
                     : []),
                   ...(opensSection
                     ? [
-                        <div className="book-divider is-section" key={`p3-section-${item.section}`}>
+                        <div className="book-divider is-section" key={`${key}-section-${item.section}`}>
                           <strong>{item.section}</strong>
                           <span>
                             {chapter.length > 1
@@ -1686,7 +1859,7 @@ export default function Home() {
         </section>
       )}
 
-      {!lesson && !view.startsWith("p2-") && !view.startsWith("p3-") && !["home", "review", "reading", "exam", "exam-result"].includes(view) && (
+      {!lesson && !view.startsWith("p2-") && !view.startsWith("text-") && !["home", "review", "reading", "exam", "exam-result"].includes(view) && (
         <section className="study-view">
           <p className="instruction">Загружаем урок…</p>
         </section>
@@ -1941,10 +2114,10 @@ export default function Home() {
         </section>
       )}
 
-      {view === "p3-learn" && part3 && p3Word && (
+      {view === "text-learn" && textLesson && textWord && (
         <section className="study-view">
           <div className="stage-label"><span>1</span>Новые слова урока</div>
-          <div className="repeat-badge active">{part3.title} · слово {stepIndex + 1} из {p3Words.length}</div>
+          <div className="repeat-badge active">{textLesson.title} · слово {stepIndex + 1} из {textWords.length}</div>
           <p className="instruction">
             {revealed
               ? "Это слово встретится вам в тексте урока"
@@ -1952,12 +2125,12 @@ export default function Home() {
           </p>
           <article className={`word-card ${revealed ? "is-revealed" : ""}`}>
             <div className="card-ornament">•</div>
-            <button className="sound" onClick={() => speak(p3Word.arabic)} aria-label="Прослушать произношение">◖))</button>
-            <div className="arabic-word" lang="ar" dir="rtl">{p3Word.arabic}</div>
+            <button className="sound" onClick={() => speak(textWord.arabic)} aria-label="Прослушать произношение">◖))</button>
+            <div className="arabic-word" lang="ar" dir="rtl">{textWord.arabic}</div>
             <div className="divider" />
             {revealed ? (
               <div className="translation">
-                <strong>{p3Word.russian}</strong>
+                <strong>{textWord.russian}</strong>
               </div>
             ) : <div className="hidden-translation">перевод скрыт</div>}
           </article>
@@ -1966,32 +2139,32 @@ export default function Home() {
               <button className="primary wide" onClick={() => setRevealed(true)}>Показать перевод</button>
             ) : (
               <>
-                <button className="secondary" onClick={() => ratePart3Card(false)}>Пока трудно</button>
-                <button className="primary" onClick={() => ratePart3Card(true)}>Запомнил <span>→</span></button>
+                <button className="secondary" onClick={() => rateTextCourseCard(false)}>Пока трудно</button>
+                <button className="primary" onClick={() => rateTextCourseCard(true)}>Запомнил <span>→</span></button>
               </>
             )}
           </div>
         </section>
       )}
 
-      {view === "p3-practice" && part3 && p3Task && (
+      {view === "text-practice" && textLesson && textTask && (
         <section className="practice-view">
           <div className="stage-label"><span>2</span>Проверяем слова урока</div>
-          <div className="repeat-badge active">{part3.title} · задание {stepIndex + 1} из {p3Tasks.length}</div>
+          <div className="repeat-badge active">{textLesson.title} · задание {stepIndex + 1} из {textTasks.length}</div>
           <p className="instruction">Что означает это слово</p>
           <div className="prompt-card">
             <span>Арабский</span>
-            <strong className="arabic-prompt" dir={promptDirection(p3Task.prompt, p3Task.promptLang)}>
-              {p3Task.prompt}
+            <strong className="arabic-prompt" dir={promptDirection(textTask.prompt, textTask.promptLang)}>
+              {textTask.prompt}
             </strong>
           </div>
           <div className="options">
-            {p3Options.map((option) => {
+            {textOptions.map((option) => {
               const state = selected
-                ? option === p3Task.answer ? "correct" : option === selected ? "wrong" : "dimmed"
+                ? option === textTask.answer ? "correct" : option === selected ? "wrong" : "dimmed"
                 : "";
               return (
-                <button key={option} className={state} onClick={() => answerPart3(option)} disabled={!!selected}>
+                <button key={option} className={state} onClick={() => answerTextCourse(option)} disabled={!!selected}>
                   <span dir="ltr">{option}</span>
                   {state === "correct" && <b>✓</b>}{state === "wrong" && <b>×</b>}
                 </button>
@@ -1999,33 +2172,38 @@ export default function Home() {
             })}
           </div>
           {selected && (
-            <div className={`feedback ${selected === p3Task.answer ? "good" : "bad"}`}>
+            <div className={`feedback ${selected === textTask.answer ? "good" : "bad"}`}>
               <div>
-                <strong>{selected === p3Task.answer ? "Верно!" : "Почти получилось"}</strong>
-                <p>{p3Task.explanation}</p>
+                <strong>{selected === textTask.answer ? "Верно!" : "Почти получилось"}</strong>
+                <p>{textTask.explanation}</p>
               </div>
-              <button className="primary" onClick={nextPart3Task}>
-                {stepIndex === p3Tasks.length - 1 ? "К чтению" : "Дальше"} <span>→</span>
+              <button className="primary" onClick={nextTextCourseTask}>
+                {stepIndex === textTasks.length - 1 ? "К чтению" : "Дальше"} <span>→</span>
               </button>
             </div>
           )}
         </section>
       )}
 
-      {view === "p3-reading" && part3 && (
+      {view === "text-reading" && textLesson && (
         <section className="study-view reading-view">
-          <div className="stage-label"><span>3</span>Чтение · {part3.book}</div>
+          <div className="stage-label">
+            <span>{textWords.length ? 3 : 1}</span>Чтение · {textLesson.book}
+          </div>
           <p className="instruction">
             Читайте вслух целиком. Если фрагмент не сложился — нажмите на него, и появится перевод.
           </p>
           <article className="reading-text">
-            <h3 lang="ar" dir="rtl">{part3.arabicTitle || part3.title}</h3>
-            <p className="story-title">{part3.title}</p>
-            {part3.fragments.map((line, lineIndex) => {
-              const id = `p3-${lineIndex}`;
+            <h3 lang="ar" dir="rtl">{textLesson.arabicTitle || textLesson.title}</h3>
+            <p className="story-title">{textLesson.title}</p>
+            {textLesson.fragments.map((line, lineIndex) => {
+              const id = `text-${lineIndex}`;
               const open = stepOpen.includes(id);
               return (
-                <div className={`reading-line ${open ? "is-open" : ""}`} key={id}>
+                <div
+                  className={`reading-line ${open ? "is-open" : ""} ${line.heading ? "is-heading" : ""}`}
+                  key={id}
+                >
                   <div className="reading-row">
                     <button
                       className="reading-arabic"
@@ -2045,24 +2223,27 @@ export default function Home() {
           </article>
           <div className="study-actions">
             <button className="secondary" onClick={() => setView("home")}>Вернуться позже</button>
-            <button className="primary" onClick={finishPart3}>Урок пройден <span>✓</span></button>
+            <button className="primary" onClick={finishTextCourse}>Урок пройден <span>✓</span></button>
           </div>
         </section>
       )}
 
-      {view === "p3-result" && part3 && (
+      {view === "text-result" && textLesson && (
         <section className="study-view result-view">
           <div className="result-mark">✓</div>
-          <h2>Урок {part3.id} пройден</h2>
-          <p className="result-score">{stepScore} из {p3Tasks.length}</p>
+          <h2>Урок {textLesson.id} пройден</h2>
+          {textWords.length > 0 && (
+            <p className="result-score">{stepScore} из {textTasks.length}</p>
+          )}
           <p className="instruction">
-            {plural(p3Words.length, "новое слово", "новых слова", "новых слов")} ушли в повторение —
-            они вернутся вместе со словами первых двух частей.
+            {textWords.length
+              ? `${plural(textWords.length, "новое слово", "новых слова", "новых слов")} ушли в повторение — они вернутся вместе со словами других частей.`
+              : "Новых слов этот урок не приносит — он весь в тексте, и текст прочитан."}
           </p>
           <div className="study-actions">
             <button className="secondary" onClick={() => setView("home")}>Вернуться к курсу</button>
-            {part3Summaries.some((item) => item.id === part3.id + 1) && (
-              <button className="primary" onClick={() => startPart3(part3.id + 1, "start")}>
+            {textCourse.summaries.some((item) => item.id === textLesson.id + 1) && (
+              <button className="primary" onClick={() => startTextCourse(textCourse.id, textLesson.id + 1, "start")}>
                 Следующий урок <span>→</span>
               </button>
             )}

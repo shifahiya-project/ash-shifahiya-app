@@ -1,6 +1,6 @@
-import type { Part3Lesson } from "../types";
+import type { TextCourseLesson } from "../types";
 
-export const part3LessonTwentySeven: Part3Lesson = {
+export const part3LessonTwentySeven: TextCourseLesson = {
   id: 27,
   book: "Шарх аль-‘Акаид аль-джадида",
   arabicTitle: "﴿لَيْسَ كَمِثْلِهِ شَيْءٌ﴾؛ وَالصِّفَاتُ لَا هِيَ هُوَ وَلَا هِيَ غَيْرُهُ",

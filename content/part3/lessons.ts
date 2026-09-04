@@ -1,20 +1,20 @@
 /// <reference types="vite/client" />
-import type { Part3Lesson } from "../types";
+import type { TextCourseLesson } from "../types";
 
 // One chunk per lesson, like the courses before it: the third course's words
 // and its text only reach the browser when that lesson is opened.
-const loaders = import.meta.glob<Record<string, Part3Lesson>>("./lesson-*.ts");
+const loaders = import.meta.glob<Record<string, TextCourseLesson>>("./lesson-*.ts");
 
-const byId = new Map<number, () => Promise<Record<string, Part3Lesson>>>();
+const byId = new Map<number, () => Promise<Record<string, TextCourseLesson>>>();
 for (const [path, loader] of Object.entries(loaders)) {
   const id = Number(path.match(/lesson-(\d+)\.ts$/)?.[1]);
   if (Number.isFinite(id)) byId.set(id, loader);
 }
 
-const cache = new Map<number, Part3Lesson>();
-const inFlight = new Map<number, Promise<Part3Lesson>>();
+const cache = new Map<number, TextCourseLesson>();
+const inFlight = new Map<number, Promise<TextCourseLesson>>();
 
-export function loadPart3Lesson(id: number): Promise<Part3Lesson> {
+export function loadPart3Lesson(id: number): Promise<TextCourseLesson> {
   const ready = cache.get(id);
   if (ready) return Promise.resolve(ready);
 
@@ -34,6 +34,6 @@ export function loadPart3Lesson(id: number): Promise<Part3Lesson> {
   return request;
 }
 
-export function loadPart3Lessons(ids: number[]): Promise<Part3Lesson[]> {
+export function loadPart3Lessons(ids: number[]): Promise<TextCourseLesson[]> {
   return Promise.all([...new Set(ids)].map(loadPart3Lesson));
 }
