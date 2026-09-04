@@ -45,9 +45,9 @@ test("every lesson brings words and the text they belong to", () => {
   }
 });
 
-// Каждая книга загружается своим импортом и нумеруется вслед за предыдущей.
-// Прогресс ученика хранится по номеру урока, поэтому книга обязана занимать
-// сплошной кусок нумерации, а сама нумерация — идти без дыр.
+// Each book is imported on its own and numbered after the one before it. A
+// learner's progress is stored under the lesson number, so a book has to hold
+// one unbroken run of them, and the numbering itself must have no gaps.
 test("the books lie one after another, numbered without gaps", () => {
   lessons.forEach((lesson, index) => {
     assert.equal(lesson.id, index + 1, `урок на месте ${index + 1} имеет номер ${lesson.id}`);
@@ -67,7 +67,8 @@ test("every word carries its meaning and the sentence it lives in", () => {
       assert.ok(kinds.has(word.kind), `урок ${lesson.id}: неизвестный тип ${word.kind}`);
       assert.match(word.contextArabic, /[ء-ي]/, `урок ${lesson.id}: ${word.arabic} без контекста`);
       assert.match(word.contextRussian, /[а-яА-ЯёЁ]/, `урок ${lesson.id}: ${word.arabic} без перевода контекста`);
-      // Форма для пропуска обязана стоять в самой фразе — иначе пропуск не встанет.
+      // The form the blank replaces has to stand in the sentence itself, or
+      // there is nowhere to put the blank.
       if (word.contextForm) {
         assert.ok(
           word.contextArabic.includes(word.contextForm),
@@ -97,7 +98,8 @@ test("a question is answerable, and only one answer fits", () => {
       );
       assert.ok(question.explanation.length > 0, `урок ${lesson.id}: «${question.prompt}» без разбора`);
 
-      // Вариант, отличающийся от ответа только огласовками, — второй верный ответ.
+      // An option differing from the answer only in vowel marks is a second
+      // right answer.
       const wrong = question.options.filter((option) => option !== question.answer);
       for (const option of wrong) {
         if (!/[ء-ي]/.test(option)) continue;
@@ -111,7 +113,7 @@ test("a question is answerable, and only one answer fits", () => {
   }
 });
 
-// Задание с пропуском — основная форма: слово проверяется там, где оно стоит.
+// The gap question is the main shape: the word is checked where it stands.
 test("a gap question hides the word and nothing else", () => {
   let gaps = 0;
   for (const lesson of lessons) {
@@ -126,7 +128,7 @@ test("a gap question hides the word and nothing else", () => {
         `урок ${lesson.id}: пропуск встал не на место`,
       );
       assert.ok(!question.prompt.includes(question.answer), `урок ${lesson.id}: ответ виден в вопросе`);
-      // Прочерк вместо всей фразы спрашивать не о чем.
+      // A blank standing in for the whole sentence asks nothing.
       assert.match(
         question.prompt.replace(BLANK, " "),
         /[ء-ي]/,
@@ -159,8 +161,8 @@ test("the manifest agrees with the lessons", () => {
   }
 });
 
-// Второй курс открывается по итоговой работе первого — и, как и первый,
-// никогда не отнимает уже пройденное.
+// The second course opens on the first one's final paper and, like the first,
+// never takes back ground already covered.
 test("the second course waits for the final paper, then runs in order", () => {
   const empty = { part2Scores: {}, part2Sessions: {}, cards: {} };
   assert.equal(unlockedPart2Ids(part2Summaries, empty, false).size, 0);
@@ -174,7 +176,7 @@ test("the second course waits for the final paper, then runs in order", () => {
   assert.equal(next.has(2), true);
   assert.equal(next.has(3), false);
 
-  // Урок, начатый когда-то раньше, остаётся открытым вместе со всем до него.
+  // A lesson started at some point stays open, and so does everything before it.
   const roaming = { ...empty, cards: { [part2CardId(5, 0, "ar-ru")]: {} } };
   const kept = unlockedPart2Ids(part2Summaries, roaming, true);
   for (const id of [1, 2, 3, 4, 5]) assert.equal(kept.has(id), true, `урок ${id} закрылся`);
@@ -185,7 +187,7 @@ test("a second-course card says which lesson it came from", () => {
   const cards = {
     "p2-lesson-3-word-0-ar-ru": {},
     "p2-lesson-9-word-4-ru-ar": {},
-    // Карточки первого курса живут в той же коробке и сюда не попадают.
+    // The first course's cards live in the same box and do not belong here.
     "lesson-3-deck-0-word-0-ar-ru": {},
   };
   assert.deepEqual(part2LessonIdsInCards(cards).sort((a, b) => a - b), [3, 9]);
