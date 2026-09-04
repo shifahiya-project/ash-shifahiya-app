@@ -12,6 +12,7 @@
     "build:static": "STATIC_BASE=./ npm run build && node scripts/build-static.mjs",
     "test": "npm run build && node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/*.test.mjs",
     "content:manifest": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/generate-manifest.mjs",
+    "part2:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part2.mjs",
     "part3:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part3.mjs",
     "part4:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part4.mjs",
     "podcasts:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-podcasts.mjs",

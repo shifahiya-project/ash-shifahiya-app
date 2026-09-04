@@ -192,3 +192,52 @@ test("a second-course card says which lesson it came from", () => {
   };
   assert.deepEqual(part2LessonIdsInCards(cards).sort((a, b) => a - b), [3, 9]);
 });
+
+// A teaching course gives its Arabic fully vowelled, and here the vowels come
+// from the export, so they are checked by machine rather than by eye. The end
+// of «Аль-Кыраа ар-рашида. Часть 2» — lessons 60 to 67 — once came in at 37%
+// against 99-100% everywhere else, and nothing in this file noticed: the suite
+// checked the shape of the data and never its vowels. It does now.
+//
+// The bar is the third and fourth courses' own 85%. The weakest lesson of this
+// course sits at 91%: these books leave the odd token bare — an abbreviation
+// like «ج» for a volume, «هـ» for a Hijri year — and that is the printed page,
+// not a stretch set differently.
+const VOWELLED_SHARE = 0.85;
+
+test("the Arabic of the course is vowelled", () => {
+  const harakat = /[ً-ْ]/;
+  for (const lesson of lessons) {
+    for (const word of lesson.words) {
+      assert.match(word.arabic, harakat, `урок ${lesson.id}: ${word.arabic} без огласовок`);
+      assert.match(word.contextArabic, harakat, `урок ${lesson.id}: контекст ${word.arabic} без огласовок`);
+    }
+
+    const tokens = lesson.stories.flatMap((story) =>
+      story.sentences.flatMap((line) => line.arabic.split(/\s+/)),
+    ).filter((token) => /[ء-ي]/.test(token));
+    const vowelled = tokens.filter((token) => harakat.test(token)).length;
+    assert.ok(
+      vowelled / tokens.length >= VOWELLED_SHARE,
+      `урок ${lesson.id}: огласовано ${Math.round((vowelled / tokens.length) * 100)}% слов текста`,
+    );
+  }
+});
+
+// The exports come out of markdown, and a backslash escaping a character that
+// markdown cares about is not part of the sentence: read to the learner, «\-»
+// is a stray mark in the middle of an Arabic line. The importer strips them, so
+// none should reach the lessons.
+test("no markdown escapes survive into the lessons", () => {
+  for (const lesson of lessons) {
+    for (const story of lesson.stories) {
+      for (const line of story.sentences) {
+        assert.ok(!line.arabic.includes("\\"), `урок ${lesson.id}: обратный слеш в арабском`);
+        assert.ok(!line.russian.includes("\\"), `урок ${lesson.id}: обратный слеш в переводе`);
+      }
+    }
+    for (const word of lesson.words) {
+      assert.ok(!word.contextArabic.includes("\\"), `урок ${lesson.id}: обратный слеш в контексте`);
+    }
+  }
+});

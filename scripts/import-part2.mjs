@@ -2,7 +2,12 @@
 // a cumulative glossary of the words each lesson introduces, and the lesson's
 // text as Frank-method sentence pairs.
 //
-//   node scripts/import-part2.mjs <glossary.json> <text.json>
+//   npm run part2:import -- <glossary.json> <text.json>
+//
+// Through npm, because reading the lessons already on disk means importing
+// .ts files: type stripping is only on by default from Node 22.18, and this
+// project supports 22.13 upward. The npm script carries the flag that the rest
+// of the project's tooling already runs with.
 //
 // One book at a time. The second course runs through six of them, each export
 // numbering its lessons from one, so an import reads the books already on disk
@@ -188,7 +193,7 @@ ${lesson.stories.map(renderStory).join("\n")}
 
 const [glossaryPath, textPath] = process.argv.slice(2);
 if (!glossaryPath || !textPath) {
-  console.error("usage: node scripts/import-part2.mjs <glossary.json> <text.json>");
+  console.error("usage: npm run part2:import -- <glossary.json> <text.json>");
   process.exit(1);
 }
 
@@ -235,8 +240,15 @@ const TITLE_TYPES = new Set([
 // Neither carries a sentence of its own.
 const MARKUP_TYPES = new Set(["subheading", "toc_item"]);
 
-// Markdown quotation the export sometimes carries over from its source.
-const unquote = (text) => (text ?? "").replace(/^\s*>+\s*/, "").trim();
+// Markdown the export carries over from its source and that is not text: the
+// quotation mark a line opens with, and the backslash that escapes a character
+// with a meaning in markdown. A dash written «\-» is a dash, and read to the
+// learner the backslash is a stray mark in the middle of an Arabic sentence.
+const unquote = (text) =>
+  (text ?? "")
+    .replace(/^\s*>+\s*/, "")
+    .replace(/\\([^\p{L}\p{N}\s])/gu, "$1")
+    .trim();
 
 const storiesByLesson = new Map();
 const dropped = [];
