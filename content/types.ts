@@ -119,8 +119,14 @@ export type Part3Word = {
 
 export type Part3Lesson = {
   id: number;
-  /** Which بَاب of the book the lesson belongs to: Иляхийят, Пророчества, Сам‘ийят. */
-  section: string;
+  /** Which book the lesson is taken from — the third course runs through more than one. */
+  book: string;
+  /**
+   * Which بَاب of the book the lesson belongs to: Иляхийят, Пророчества,
+   * Сам‘ийят. Only the first book divides itself that way; a book that runs
+   * straight through leaves this out rather than inventing a division.
+   */
+  section?: string;
   arabicTitle: string;
   title: string;
   words: Part3Word[];
@@ -134,7 +140,8 @@ export type Part3Lesson = {
 
 export type Part3Summary = {
   id: number;
-  section: string;
+  book: string;
+  section?: string;
   arabicTitle: string;
   title: string;
   wordCount: number;

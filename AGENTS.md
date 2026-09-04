@@ -14,7 +14,7 @@
 |---|---|
 | `content/manifest.ts` | `npm run content:manifest` |
 | `content/part2/manifest.ts` | `node scripts/import-part2.mjs <словарь.json> <текст.json>` |
-| `content/part3/manifest.ts` | `node scripts/import-part3.mjs <словарь.json> <текст.json>` |
+| `content/part3/manifest.ts` | `npm run part3:import -- <словарь.json> <текст.json>` |
 | `content/reading-manifest.ts` | `node scripts/import-reading.mjs <файл.json>` |
 | `content/podcasts/catalog.ts` | `YOUTUBE_API_KEY=… npm run podcasts:import` |
 

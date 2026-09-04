@@ -3,7 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { part3Questions } from "../content/part3/questions.ts";
-import { PART3_AUTHOR, PART3_BOOK, part3Summaries } from "../content/part3/manifest.ts";
+import { part3Summaries } from "../content/part3/manifest.ts";
 import { isPart3Open, part3CardId, part3LessonIdsInCards, unlockedPart3Ids } from "../app/part3-access.ts";
 
 const directory = new URL("../content/part3/", import.meta.url);
@@ -33,7 +33,11 @@ test("every lesson brings words and the text they belong to", () => {
     assert.ok(lesson.words.length > 0, `урок ${lesson.id}: нет слов`);
     assert.ok(lesson.fragments.length > 0, `урок ${lesson.id}: нет текста`);
     assert.ok(lesson.title.length > 0, `урок ${lesson.id}: без названия`);
-    assert.ok(lesson.section.length > 0, `урок ${lesson.id}: не указан раздел книги`);
+    assert.ok(lesson.book.length > 0, `урок ${lesson.id}: не указана книга`);
+    // Not every book carries a section: only the first divides itself into بَاب.
+    if (lesson.section !== undefined) {
+      assert.ok(lesson.section.length > 0, `урок ${lesson.id}: пустой раздел`);
+    }
     assert.match(lesson.arabicTitle, /[ء-ي]/, `урок ${lesson.id}: без арабского названия`);
 
     for (const line of lesson.fragments) {
@@ -43,16 +47,24 @@ test("every lesson brings words and the text they belong to", () => {
   }
 });
 
-// The book runs straight through and a learner's progress is stored under the
-// lesson number: the numbering has to be unbroken, and a بَاب must not be torn
-// into pieces.
-test("the lessons are numbered without gaps and the chapters hold together", () => {
+// Each book is imported on its own and numbered after the one before it. A
+// learner's progress is stored under the lesson number, so a book has to hold
+// one unbroken run of them, the numbering itself must have no gaps, and a بَاب
+// must not be torn into pieces either.
+test("the books lie one after another, numbered without gaps", () => {
   lessons.forEach((lesson, index) => {
     assert.equal(lesson.id, index + 1, `урок на месте ${index + 1} имеет номер ${lesson.id}`);
   });
 
+  const shelf = [];
+  for (const lesson of lessons) if (shelf.at(-1) !== lesson.book) shelf.push(lesson.book);
+  assert.equal(new Set(shelf).size, shelf.length, `книга разорвана на куски: ${shelf.join(" · ")}`);
+
   const chapters = [];
-  for (const lesson of lessons) if (chapters.at(-1) !== lesson.section) chapters.push(lesson.section);
+  for (const lesson of lessons) {
+    const named = lesson.section ?? `— ${lesson.book}`;
+    if (chapters.at(-1) !== named) chapters.push(named);
+  }
   assert.equal(new Set(chapters).size, chapters.length, `баб разорван: ${chapters.join(" · ")}`);
 });
 
@@ -120,13 +132,12 @@ test("the same paper comes out every time", () => {
 
 test("the manifest agrees with the lessons", () => {
   assert.equal(part3Summaries.length, lessons.length);
-  assert.ok(PART3_BOOK.length > 0);
-  assert.ok(PART3_AUTHOR.length > 0);
   for (const lesson of lessons) {
     const summary = part3Summaries.find((item) => item.id === lesson.id);
     assert.ok(summary, `урок ${lesson.id} отсутствует в манифесте`);
     assert.equal(summary.title, lesson.title);
     assert.equal(summary.arabicTitle, lesson.arabicTitle);
+    assert.equal(summary.book, lesson.book);
     assert.equal(summary.section, lesson.section);
     assert.equal(summary.wordCount, lesson.words.length);
     assert.equal(summary.fragmentCount, lesson.fragments.length);

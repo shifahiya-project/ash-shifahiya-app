@@ -2,12 +2,18 @@
 // a cumulative glossary of the words each lesson introduces, and the lesson's
 // text as Frank-method pairs.
 //
-//   node scripts/import-part3.mjs <glossary.json> <text.json>
+//   npm run part3:import -- <glossary.json> <text.json>
 //
-// Unlike the second course, this one is a single book: «Основы исламского
-// вероубеждения» in twenty lessons. There is no numbering to continue and no
-// shelf to keep in order — an import lays down the whole course at once and
-// clears whatever lesson files a longer earlier import left behind.
+// Through npm, because reading the lessons already on disk means importing
+// .ts files: type stripping is only on by default from Node 22.18, and this
+// project supports 22.13 upward. The npm script carries the flag that the rest
+// of the project's tooling already runs with.
+//
+// One book at a time, like the second course. An import reads the books already
+// on disk and continues the numbering after them, so the second book's lesson
+// one becomes lesson twenty-one of the course. A book already loaded is
+// re-imported onto its own numbers: a learner's progress is stored under them,
+// so they must not shift.
 //
 // The glossary carries no example sentences of its own («Контекстные примеры не
 // приводятся»), and this script does not invent any: a word of the third course
@@ -15,7 +21,7 @@
 // lesson's text. That is why nothing here looks for the word inside a sentence,
 // as the second course's importer does.
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const UNITS = [
   "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
@@ -40,10 +46,14 @@ function numberName(n) {
  * other divergence still stops the import.
  */
 const TITLE_FIXES = {
-  4: { glossary: "Сальбийские (отрицающие) атрибуты", text: "Отрицающие атрибуты (ас-сифат ас-сальбийя)" },
-  8: { glossary: "Тексты, создающие впечатление уподобления", text: "Тексты, внушающие мысль об уподоблении" },
-  11: { glossary: "Миссия пророков и посланников и их качества", text: "Направление пророков и посланников и их качества" },
-  20: { glossary: "Критерии такфира", text: "Правила такфира" },
+  // Keyed by book as well as by number: every book numbers its lessons from
+  // one, so a bare number would carry a fix from one book into another.
+  "Основы исламского вероубеждения": {
+    4: { glossary: "Сальбийские (отрицающие) атрибуты", text: "Отрицающие атрибуты (ас-сифат ас-сальбийя)" },
+    8: { glossary: "Тексты, создающие впечатление уподобления", text: "Тексты, внушающие мысль об уподоблении" },
+    11: { glossary: "Миссия пророков и посланников и их качества", text: "Направление пророков и посланников и их качества" },
+    20: { glossary: "Критерии такфира", text: "Правила такфира" },
+  },
 };
 
 /**
@@ -94,8 +104,18 @@ const KINDS = new Set([
   "verb", "noun", "masdar", "adjective", "expression", "term", "proper_name", "particle",
 ]);
 
+/**
+ * Fatha before shadda, not after. The two orders look identical on screen and
+ * are different sequences of code points, so an exact comparison — a lookup, a
+ * deduplication, a regex typed from one file and run against another — can
+ * quietly disagree with itself. NFC is that canonical order: shadda's combining
+ * class is 33 and a vowel's is 30, so normalising sorts the vowel first.
+ * Verified on this data that it reorders diacritics and changes nothing else.
+ */
+const nfc = (text) => (text ?? "").normalize("NFC");
+
 /** Markdown quotation the export sometimes carries over from its source. */
-const unquote = (text) => (text ?? "").replace(/^\s*>+\s*/, "").trim();
+const unquote = (text) => nfc(text ?? "").replace(/^\s*>+\s*/, "").trim();
 
 const quote = (value) => JSON.stringify(value);
 
@@ -112,7 +132,7 @@ function render(lesson) {
 
 export const part3Lesson${numberName(lesson.id)}: Part3Lesson = {
   id: ${lesson.id},
-  section: ${quote(lesson.section)},
+  book: ${quote(lesson.book)},${lesson.section ? `\n  section: ${quote(lesson.section)},` : ""}
   arabicTitle: ${quote(lesson.arabicTitle)},
   title: ${quote(lesson.title)},
   words: [
@@ -127,15 +147,18 @@ ${lesson.fragments.map(renderFragment).join("\n")}
 
 const [glossaryPath, textPath] = process.argv.slice(2);
 if (!glossaryPath || !textPath) {
-  console.error("usage: node scripts/import-part3.mjs <glossary.json> <text.json>");
+  console.error("usage: npm run part3:import -- <glossary.json> <text.json>");
   process.exit(1);
 }
+
+const directory = fileURLToPath(new URL("../content/part3/", import.meta.url));
+await mkdir(directory, { recursive: true });
 
 const glossary = JSON.parse(await readFile(glossaryPath, "utf8"));
 const text = JSON.parse(await readFile(textPath, "utf8"));
 
-const book = (text.title_ru ?? glossary.title_ru ?? "").trim();
-const author = (text.author_ru ?? glossary.author ?? "").trim();
+const book = nfc(text.title_ru ?? glossary.title_ru ?? "").trim();
+const author = nfc(text.author_ru ?? glossary.author ?? "").trim();
 if (!book) throw new Error("в выгрузке нет названия книги (title_ru)");
 
 // The text is one continuous treatise: its rows are pairs and nothing else.
@@ -182,7 +205,7 @@ const lessons = glossary.lessons.map((entry) => {
 
   const fromGlossary = entry.title_ru.trim();
   const fromText = named.ru.trim();
-  const fix = TITLE_FIXES[entry.number];
+  const fix = TITLE_FIXES[book]?.[entry.number];
   let title = fromText;
   if (fromGlossary !== fromText) {
     if (!fix || fix.glossary !== fromGlossary || fix.text !== fromText) {
@@ -206,19 +229,21 @@ const lessons = glossary.lessons.map((entry) => {
       russian = patch.russian.to;
       mended += 1;
     }
-    return { arabic: word.arabic.trim(), russian, kind: word.type };
+    return { arabic: nfc(word.arabic).trim(), russian: nfc(russian), kind: word.type };
   });
 
   return {
     id: entry.number,
-    // The بَاب comes from the glossary on purpose. The corrected text calls it
-    // «Часть первая», which is right for the book's own headings but not for
-    // this screen: the app already numbers its three courses «Часть 1…3», and
-    // the two would read as one scale. The book's own word — «Баб» — does not
-    // collide with anything.
-    section: (entry.section ?? named.section ?? "").trim(),
-    arabicTitle: (entry.title_ar ?? named.ar ?? "").trim(),
-    title,
+    book,
+    // The بَاب comes from the glossary on purpose. The first book's corrected
+    // text calls it «Часть первая», which is right for the book's own headings
+    // but not for this screen: the app already numbers its three courses
+    // «Часть 1…3», and the two would read as one scale. The book's own word —
+    // «Баб» — does not collide with anything. A book that runs straight through
+    // has no division, and none is invented for it.
+    section: nfc(entry.section ?? named.section ?? "").trim() || undefined,
+    arabicTitle: nfc(entry.title_ar ?? named.ar ?? "").trim(),
+    title: nfc(title),
     words,
     fragments: fragmentsByLesson.get(entry.number) ?? [],
   };
@@ -229,11 +254,44 @@ for (const lesson of lessons) {
   if (!lesson.fragments.length) throw new Error(`урок ${lesson.id} остался без текста`);
 }
 
-const directory = fileURLToPath(new URL("../content/part3/", import.meta.url));
-await mkdir(directory, { recursive: true });
-
 const fileName = (id) => `lesson-${String(id).padStart(2, "0")}.ts`;
-const wanted = new Set(lessons.map((lesson) => fileName(lesson.id)));
+
+/** The lessons of the books already imported, read back from what is on disk. */
+async function loadImported() {
+  const files = (await readdir(directory)).filter((file) => /^lesson-\d+\.ts$/.test(file));
+  const loaded = await Promise.all(
+    files.map(async (file) => {
+      const loaded = await import(pathToFileURL(`${directory}${file}`).href);
+      return { file, lesson: Object.values(loaded)[0] };
+    }),
+  );
+  return loaded.sort((a, b) => a.lesson.id - b.lesson.id);
+}
+
+const imported = await loadImported();
+const already = imported.filter(({ lesson }) => lesson.book === book);
+const lastId = imported.length ? imported.at(-1).lesson.id : 0;
+
+// A book already loaded keeps the numbers it has; a new one continues after the
+// last. Numbers are what a learner's progress is stored under, so a re-import
+// must not shift the books that follow: if it would, the import stops and says
+// which ones have to be laid down again after it.
+const offset = already.length ? already[0].lesson.id - 1 : lastId;
+if (already.length && already.at(-1).lesson.id !== lastId && lessons.length !== already.length) {
+  const following = [
+    ...new Set(
+      imported
+        .filter(({ lesson }) => lesson.id > already.at(-1).lesson.id)
+        .map(({ lesson }) => lesson.book),
+    ),
+  ];
+  throw new Error(
+    `«${book}» переимпортируется с другим числом уроков (${already.length} → ${lessons.length}), ` +
+      `а после неё уже загружены: ${following.join(", ")}. Перезалейте их следом за ней.`,
+  );
+}
+
+for (const lesson of lessons) lesson.id += offset;
 
 for (const lesson of lessons) {
   await writeFile(`${directory}${fileName(lesson.id)}`, render(lesson), "utf8");
@@ -241,16 +299,23 @@ for (const lesson of lessons) {
 
 // A book re-imported shorter than before leaves its last files behind, and the
 // glob that loads lessons would go on serving them.
-for (const file of await readdir(directory)) {
-  if (/^lesson-\d+\.ts$/.test(file) && !wanted.has(file)) await rm(`${directory}${file}`);
+for (const { lesson, file } of already) {
+  if (lesson.id > offset + lessons.length) await rm(`${directory}${file}`);
 }
 
-const summaries = lessons
+// The manifest is rebuilt over the whole course, not over this book alone.
+const course = [
+  ...imported.filter(({ lesson }) => lesson.book !== book).map(({ lesson }) => lesson),
+  ...lessons,
+].sort((a, b) => a.id - b.id);
+
+const summaries = course
   .map((lesson) =>
     [
       "  {",
       `    id: ${lesson.id},`,
-      `    section: ${quote(lesson.section)},`,
+      `    book: ${quote(lesson.book)},`,
+      ...(lesson.section ? [`    section: ${quote(lesson.section)},`] : []),
       `    arabicTitle: ${quote(lesson.arabicTitle)},`,
       `    title: ${quote(lesson.title)},`,
       `    wordCount: ${lesson.words.length},`,
@@ -268,10 +333,6 @@ await writeFile(
 // words, so the summaries ship in the entry chunk and the lessons load on demand.
 import type { Part3Summary } from "../types";
 
-/** The course is one book, so its name stands over the list rather than on each card. */
-export const PART3_BOOK = ${quote(book)};
-export const PART3_AUTHOR = ${quote(author)};
-
 export const part3Summaries: Part3Summary[] = [
 ${summaries}
 ];
@@ -279,11 +340,16 @@ ${summaries}
   "utf8",
 );
 
-const count = (pick) => lessons.reduce((total, lesson) => total + pick(lesson), 0);
+const count = (list, pick) => list.reduce((total, lesson) => total + pick(lesson), 0);
+const words = (lesson) => lesson.words.length;
+const fragments = (lesson) => lesson.fragments.length;
 console.log(
   `«${book}» (${author}): уроки ${lessons[0].id}–${lessons.at(-1).id} · ` +
-    `${count((lesson) => lesson.words.length)} слов · ` +
-    `${count((lesson) => lesson.fragments.length)} фрагментов текста`,
+    `${count(lessons, words)} слов · ${count(lessons, fragments)} фрагментов текста`,
+);
+console.log(
+  `вся третья часть: ${course.length} уроков · ${count(course, words)} слов · ` +
+    `${count(course, fragments)} фрагментов`,
 );
 if (patched) console.log(`правок текста применено: ${patched}`);
 if (retitled) console.log(`уроков переименовано по сверенному тексту: ${retitled}`);

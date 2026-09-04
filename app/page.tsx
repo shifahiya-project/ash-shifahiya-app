@@ -10,7 +10,7 @@ import { part2Summaries } from "../content/part2/manifest";
 import { loadPart2Lesson, loadPart2Lessons } from "../content/part2/lessons";
 import { BLANK, part2Questions } from "../content/part2/questions";
 import { part2CardId, part2LessonIdsInCards, unlockedPart2Ids } from "./part2-access";
-import { PART3_AUTHOR, PART3_BOOK, part3Summaries } from "../content/part3/manifest";
+import { part3Summaries } from "../content/part3/manifest";
 import { loadPart3Lesson, loadPart3Lessons } from "../content/part3/lessons";
 import { part3Questions } from "../content/part3/questions";
 import { isPart3Open, part3CardId, part3LessonIdsInCards, unlockedPart3Ids } from "./part3-access";
@@ -1467,12 +1467,6 @@ export default function Home() {
 
           {course === 3 && (
             <div className="lesson-list">
-              <div className="book-divider">
-                <strong>{PART3_BOOK}</strong>
-                <span>
-                  {PART3_AUTHOR} · {plural(part3Summaries.length, "урок", "урока", "уроков")}
-                </span>
-              </div>
               {!part3Ready && (
                 <div className="part2-gate">
                   <strong>Третья часть открывается по второй</strong>
@@ -1487,9 +1481,15 @@ export default function Home() {
                 const done = score !== undefined;
                 const parked = part3Sessions[item.id];
                 const locked = !unlockedPart3.has(item.id);
-                // The book is divided into chapters, and the list says where
-                // each one begins.
-                const opensSection = part3Summaries[index - 1]?.section !== item.section;
+                // The course runs through one book after another, so the list
+                // says where each one starts.
+                const opensBook = part3Summaries[index - 1]?.book !== item.book;
+                const shelf = part3Summaries.filter((other) => other.book === item.book);
+                // Only the first book divides itself into بَاب chapters; where a
+                // book has none, there is no divider to draw.
+                const opensSection =
+                  item.section !== undefined &&
+                  (opensBook || part3Summaries[index - 1]?.section !== item.section);
                 const chapter = part3Summaries.filter((other) => other.section === item.section);
                 const card = (
                   <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`p3-${item.id}`}>
@@ -1520,16 +1520,31 @@ export default function Home() {
                     {done && <div className="card-score">✓ {score}/{item.wordCount}</div>}
                   </div>
                 );
-                if (!opensSection) return [card];
+                if (!opensBook && !opensSection) return [card];
                 return [
-                  <div className="book-divider is-section" key={`section-${item.section}`}>
-                    <strong>{item.section}</strong>
-                    <span>
-                      {chapter.length > 1
-                        ? `уроки ${chapter[0].id}–${chapter[chapter.length - 1].id} · ${plural(chapter.length, "урок", "урока", "уроков")}`
-                        : `урок ${chapter[0].id}`}
-                    </span>
-                  </div>,
+                  ...(opensBook
+                    ? [
+                        <div className="book-divider" key={`p3-book-${item.book}`}>
+                          <strong>{item.book}</strong>
+                          <span>
+                            уроки {shelf[0].id}–{shelf[shelf.length - 1].id} ·{" "}
+                            {plural(shelf.length, "урок", "урока", "уроков")}
+                          </span>
+                        </div>,
+                      ]
+                    : []),
+                  ...(opensSection
+                    ? [
+                        <div className="book-divider is-section" key={`p3-section-${item.section}`}>
+                          <strong>{item.section}</strong>
+                          <span>
+                            {chapter.length > 1
+                              ? `уроки ${chapter[0].id}–${chapter[chapter.length - 1].id} · ${plural(chapter.length, "урок", "урока", "уроков")}`
+                              : `урок ${chapter[0].id}`}
+                          </span>
+                        </div>,
+                      ]
+                    : []),
                   card,
                 ];
               })}
@@ -1999,7 +2014,7 @@ export default function Home() {
 
       {view === "p3-reading" && part3 && (
         <section className="study-view reading-view">
-          <div className="stage-label"><span>3</span>Чтение · {PART3_BOOK}</div>
+          <div className="stage-label"><span>3</span>Чтение · {part3.book}</div>
           <p className="instruction">
             Читайте вслух целиком. Если фрагмент не сложился — нажмите на него, и появится перевод.
           </p>
