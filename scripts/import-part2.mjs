@@ -287,8 +287,8 @@ for (const raw of text.items) {
     if (!storiesByLesson.has(lesson)) storiesByLesson.set(lesson, []);
     storiesByLesson.get(lesson).push(current);
   }
-  // Строка без единой арабской буквы — след разметки исходника (номер
-  // страницы, потерявший заголовок, одинокая точка), а не предложение текста.
+  // A row without a single Arabic letter is a trace of the source's markup —
+  // a page number that lost its heading, a lone full stop — not a sentence.
   const arabic = unquote(item.ar);
   if (!/[ء-ي]/.test(arabic)) {
     dropped.push({ lesson, arabic, russian: unquote(item.ru) });

@@ -906,7 +906,7 @@ export default function Home() {
   }
 
   /**
-   * Опens the paper. An exam is a checkpoint, not a gate: it may be written
+   * Opens the paper. An exam is a checkpoint, not a gate: it may be written
    * again, and a weaker attempt never lowers what is already stored.
    */
   async function startExam(id: Exam["id"]) {
@@ -1487,7 +1487,8 @@ export default function Home() {
                 const done = score !== undefined;
                 const parked = part3Sessions[item.id];
                 const locked = !unlockedPart3.has(item.id);
-                // Книга делится на бабы, и список говорит, где начинается каждый.
+                // The book is divided into chapters, and the list says where
+                // each one begins.
                 const opensSection = part3Summaries[index - 1]?.section !== item.section;
                 const chapter = part3Summaries.filter((other) => other.section === item.section);
                 const card = (
