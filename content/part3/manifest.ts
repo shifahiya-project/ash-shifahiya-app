@@ -2,9 +2,9 @@
 //
 // The third course's home screen needs every lesson's card but none of its
 // words, so the summaries ship in the entry chunk and the lessons load on demand.
-import type { Part3Summary } from "../types";
+import type { TextCourseSummary } from "../types";
 
-export const part3Summaries: Part3Summary[] = [
+export const part3Summaries: TextCourseSummary[] = [
   {
     id: 1,
     book: "Основы исламского вероубеждения",

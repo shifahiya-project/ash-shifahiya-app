@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { part3Questions } from "../content/part3/questions.ts";
+import { textCourseQuestions } from "../content/text-course-questions.ts";
 import { part3Summaries } from "../content/part3/manifest.ts";
 import { isPart3Open, part3CardId, part3LessonIdsInCards, unlockedPart3Ids } from "../app/part3-access.ts";
 
@@ -85,7 +85,7 @@ test("every word carries its meaning and a kind the course knows", () => {
 // is asked by its meaning, and met whole inside a sentence at the reading step.
 test("a word is asked by its meaning, and the text is never cut up for a gap", () => {
   for (const lesson of lessons) {
-    const questions = part3Questions(lesson);
+    const questions = textCourseQuestions(lesson);
     assert.equal(questions.length, lesson.words.length, `урок ${lesson.id}`);
 
     questions.forEach((question, index) => {
@@ -99,7 +99,7 @@ test("a word is asked by its meaning, and the text is never cut up for a gap", (
 
 test("a question is answerable, and only one answer fits", () => {
   for (const lesson of lessons) {
-    for (const question of part3Questions(lesson)) {
+    for (const question of textCourseQuestions(lesson)) {
       assert.ok(question.options.includes(question.answer), `урок ${lesson.id}: «${question.prompt}»`);
       assert.equal(question.options.length, 3, `урок ${lesson.id}: «${question.prompt}»`);
       assert.equal(
@@ -126,7 +126,7 @@ test("a question is answerable, and only one answer fits", () => {
 
 test("the same paper comes out every time", () => {
   for (const lesson of lessons) {
-    assert.deepEqual(part3Questions(lesson), part3Questions(lesson), `урок ${lesson.id}`);
+    assert.deepEqual(textCourseQuestions(lesson), textCourseQuestions(lesson), `урок ${lesson.id}`);
   }
 });
 

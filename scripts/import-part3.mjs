@@ -128,9 +128,9 @@ function renderFragment(fragment) {
 }
 
 function render(lesson) {
-  return `import type { Part3Lesson } from "../types";
+  return `import type { TextCourseLesson } from "../types";
 
-export const part3Lesson${numberName(lesson.id)}: Part3Lesson = {
+export const part3Lesson${numberName(lesson.id)}: TextCourseLesson = {
   id: ${lesson.id},
   book: ${quote(lesson.book)},${lesson.section ? `\n  section: ${quote(lesson.section)},` : ""}
   arabicTitle: ${quote(lesson.arabicTitle)},
@@ -331,9 +331,9 @@ await writeFile(
 //
 // The third course's home screen needs every lesson's card but none of its
 // words, so the summaries ship in the entry chunk and the lessons load on demand.
-import type { Part3Summary } from "../types";
+import type { TextCourseSummary } from "../types";
 
-export const part3Summaries: Part3Summary[] = [
+export const part3Summaries: TextCourseSummary[] = [
 ${summaries}
 ];
 `,

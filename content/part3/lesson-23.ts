@@ -1,6 +1,6 @@
-import type { Part3Lesson } from "../types";
+import type { TextCourseLesson } from "../types";
 
-export const part3LessonTwentyThree: Part3Lesson = {
+export const part3LessonTwentyThree: TextCourseLesson = {
   id: 23,
   book: "Шарх аль-‘Акаид аль-джадида",
   arabicTitle: "الْعَقْلُ وَالْحَوَاسُّ وَالْخَبَرُ الصَّادِقُ، وَتَقْدِيمُ النَّقْلِ عَلَى الْعَقْلِ",

@@ -227,6 +227,8 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
     part2Sessions: mergeReadingSessions(mine.part2Sessions ?? {}, theirs.part2Sessions ?? {}),
     part3Scores: mergeScores(mine.part3Scores ?? {}, theirs.part3Scores ?? {}),
     part3Sessions: mergeReadingSessions(mine.part3Sessions ?? {}, theirs.part3Sessions ?? {}),
+    part4Scores: mergeScores(mine.part4Scores ?? {}, theirs.part4Scores ?? {}),
+    part4Sessions: mergeReadingSessions(mine.part4Sessions ?? {}, theirs.part4Sessions ?? {}),
     stats: mergeStats(mine.stats, theirs.stats),
   };
 }
@@ -246,6 +248,8 @@ export function normalizeProgress(value: Partial<Progress> | null | undefined): 
     part2Sessions: value?.part2Sessions ?? {},
     part3Scores: value?.part3Scores ?? {},
     part3Sessions: value?.part3Sessions ?? {},
+    part4Scores: value?.part4Scores ?? {},
+    part4Sessions: value?.part4Sessions ?? {},
     stats: {
       activeDates: [],
       totalSeconds: 0,

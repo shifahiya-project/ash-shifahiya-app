@@ -1,5 +1,5 @@
 // Drives the published site in a real browser and walks one lesson of the
-// third course from its first card to its stored result.
+// fourth course from its first card to its stored result.
 //
 //   npm run build:static && npm run smoke
 //
@@ -15,8 +15,9 @@
 // escaped hydration payload, and a miss there leaves a page that renders and
 // stays dead. Checking the Worker would step around exactly that.
 //
-// The third course is walked because it is the newest and the only one gated
-// behind another course; storage is seeded so the gate opens.
+// The fourth course is walked because it is the newest, and because the third
+// and fourth share one set of screens — walking the newer one exercises both.
+// Storage is seeded so the courses it waits on count as finished.
 //
 // A machine with no Chromium skips instead of failing: this check is not part
 // of `npm test`, and a missing browser is not a broken change.
@@ -182,17 +183,18 @@ try {
 
   await page.goto(origin, { waitUntil: "networkidle" });
 
-  // The third course opens once the second is finished, so the second course's
+  // Each course here opens on the one before it being finished, so those
   // results are seeded rather than played through.
   await page.evaluate(() => {
     localStorage.clear();
     for (let id = 1; id <= 105; id += 1) localStorage.setItem(`shifahiya-p2-lesson-${id}`, "10");
+    for (let id = 1; id <= 37; id += 1) localStorage.setItem(`shifahiya-p3-lesson-${id}`, "10");
   });
   await page.reload({ waitUntil: "networkidle" });
 
   // Clicking the tab is the first thing that needs React alive: a page that
   // rendered but never hydrated gets no further than this.
-  await page.getByRole("tab", { name: /Часть 3/ }).click();
+  await page.getByRole("tab", { name: /Часть 4/ }).click();
   const list = page.locator(".lesson-list");
   await list.getByRole("button", { name: /Начать урок/ }).first().click();
   await page.waitForSelector(".study-view", { timeout: 15_000 });
@@ -236,12 +238,30 @@ try {
   await page.waitForSelector(".result-view", { timeout: 15_000 });
 
   const stored = await page.evaluate(() => ({
-    score: localStorage.getItem("shifahiya-p3-lesson-1"),
+    score: localStorage.getItem("shifahiya-p4-lesson-1"),
     cards: Object.keys(JSON.parse(localStorage.getItem("shifahiya-card-progress-v1") ?? "{}"))
-      .filter((key) => key.startsWith("p3-")).length,
+      .filter((key) => key.startsWith("p4-")).length,
   }));
   if (stored.score === null) failures.push("результат урока не сохранился");
-  if (!stored.cards) failures.push("карточки третьей части не попали в коробку повторения");
+  if (!stored.cards) failures.push("карточки четвёртой части не попали в коробку повторения");
+
+  // A lesson that brings no new words has neither cards nor questions and is
+  // its text: it must open on the reading step, not on an empty card screen.
+  // Only the browser shows that, so the walk ends on one.
+  await page.evaluate(() => {
+    for (let id = 1; id <= 28; id += 1) localStorage.setItem(`shifahiya-p4-lesson-${id}`, "5");
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("tab", { name: /Часть 4/ }).click();
+  const wordless = page.locator(".lesson-card").filter({ hasText: "только чтение" }).first();
+  if (!(await wordless.count())) failures.push("урока без новых слов нет в списке");
+  else {
+    await wordless.getByRole("button", { name: /Начать урок/ }).click();
+    await page.waitForSelector(".study-view", { timeout: 15_000 });
+    if (!(await page.locator(".reading-view").count())) {
+      failures.push("урок без новых слов открылся не на чтении");
+    }
+  }
 
   if (failures.length) {
     console.error("Прогон не прошёл:");
@@ -249,8 +269,9 @@ try {
     process.exitCode = 1;
   } else {
     console.log(
-      `Опубликованный сайт живой. Урок третьей части пройден целиком: ${lesson}, ` +
-        `фрагментов ${fragments}, счёт ${stored.score}, карточек ${stored.cards}.`,
+      `Опубликованный сайт живой. Урок четвёртой части пройден целиком: ${lesson}, ` +
+        `фрагментов ${fragments}, счёт ${stored.score}, карточек ${stored.cards}. ` +
+        "Урок без новых слов открывается сразу на чтении.",
     );
   }
 } catch (error) {

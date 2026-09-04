@@ -1,5 +1,14 @@
-// Types only, like the gates for the courses before it, so the tests can import
-// this module without pulling in the browser-bound store.
+// The third course's gate. The rules it shares with the fourth — a card's
+// address, the lessons a learner holds cards for, how far a course opens — live
+// in text-course-access; what is written here is what belongs to this course
+// alone: what has to be finished before it starts.
+import {
+  isCourseFinished,
+  textCourseCardId,
+  textCourseLessonIdsInCards,
+  unlockedTextCourseIds,
+} from "./text-course-access.ts";
+import type { TextCourseProgress } from "./text-course-access.ts";
 import type { ReadingCourseSession } from "./progress-store.ts";
 
 /** What the third course needs to know about a learner. */
@@ -10,25 +19,16 @@ export type Part3Progress = {
   cards: Record<string, unknown>;
 };
 
-const CARD_LESSON = /^p3-lesson-(\d+)-word-/;
+/** Cards of the third course are addressed p3-lesson-… */
+const PREFIX = "p3";
 
-/**
- * A card of the third course. The box it lives in is the same one the other two
- * use — one daily queue for the whole language — but the address says which
- * course the word came from.
- */
 export function part3CardId(lessonId: number, wordIndex: number, direction: "ar-ru" | "ru-ar") {
-  return `p3-lesson-${lessonId}-word-${wordIndex}-${direction}`;
+  return textCourseCardId(PREFIX, lessonId, wordIndex, direction);
 }
 
 /** Third-course lessons the learner holds review cards for. */
 export function part3LessonIdsInCards(cards: Record<string, unknown>) {
-  const ids = new Set<number>();
-  for (const id of Object.keys(cards)) {
-    const match = id.match(CARD_LESSON);
-    if (match) ids.add(Number(match[1]));
-  }
-  return [...ids];
+  return textCourseLessonIdsInCards(PREFIX, cards);
 }
 
 /**
@@ -42,41 +42,19 @@ export function isPart3Open(
   part2Summaries: { id: number }[],
   part2Scores: Record<number, number>,
 ) {
-  return (
-    part2Summaries.length > 0 &&
-    part2Summaries.every((summary) => part2Scores[summary.id] !== undefined)
-  );
+  return isCourseFinished(part2Summaries, part2Scores);
 }
 
-/**
- * Which lessons of the third course are open. The book runs in order, like the
- * courses before it, and — as there too — ground already covered is never taken
- * back: everything up to the furthest lesson touched stays open.
- */
+/** Which lessons of the third course are open. */
 export function unlockedPart3Ids(
   summaries: { id: number }[],
   progress: Part3Progress,
   open: boolean,
 ): Set<number> {
-  if (!open) return new Set();
-
-  const touched = new Set<number>([
-    ...Object.keys(progress.part3Scores).map(Number),
-    ...Object.keys(progress.part3Sessions).map(Number),
-    ...part3LessonIdsInCards(progress.cards),
-  ]);
-
-  let reached = -1;
-  summaries.forEach((summary, index) => {
-    if (touched.has(summary.id)) reached = index;
-  });
-
-  const unlocked = new Set<number>();
-  summaries.forEach((summary, index) => {
-    const previous = summaries[index - 1];
-    if (!previous || index <= reached || progress.part3Scores[previous.id] !== undefined) {
-      unlocked.add(summary.id);
-    }
-  });
-  return unlocked;
+  const held: TextCourseProgress = {
+    scores: progress.part3Scores,
+    sessions: progress.part3Sessions,
+    cards: progress.cards,
+  };
+  return unlockedTextCourseIds(PREFIX, summaries, held, open);
 }
