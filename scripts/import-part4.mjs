@@ -62,13 +62,45 @@ const KINDS = new Set([
 ]);
 
 /**
- * The kinds of row the text export uses. A `pair` is a piece of the book with
- * its translation; a `section` is a heading the book prints inside a lesson,
- * and it is kept as a heading rather than read out as a sentence of the
- * argument. A kind nobody taught this script stops the import: slipping
- * through unnoticed, it would be read to the learner as text of the book.
+ * A piece of the book with its translation — the text itself.
  */
-const ROWS = new Set(["pair", "section"]);
+const TEXT_ROWS = new Set(["pair"]);
+
+/**
+ * A heading the book prints inside a lesson. It is kept as a heading rather
+ * than read out as a sentence of the argument. The export named it `section`
+ * in the first six books and `heading` in the ones after; both head a piece of
+ * text, so both open one.
+ */
+const HEADING_ROWS = new Set(["section", "heading"]);
+
+/**
+ * Rows that mark the text without belonging to it. A `divider` is a rule drawn
+ * on the page; a `note` is the translator's remark about the printed original,
+ * in Russian only. A `term` is an inline gloss of an Arabic term — the course
+ * teaches those from its own glossary, where nearly every one of them already
+ * stands, and on a reading screen the learner taps a line expecting its
+ * translation, not a dictionary entry. All three are skipped with a count.
+ */
+const SKIPPED_ROWS = new Set(["term", "note", "divider"]);
+
+/**
+ * A kind nobody taught this script stops the import: slipping through
+ * unnoticed, it would be read to the learner as text of the book.
+ */
+const KNOWN_ROWS = new Set([...TEXT_ROWS, ...HEADING_ROWS, ...SKIPPED_ROWS]);
+
+/**
+ * The text export comes in two shapes. The first one laid every row of the
+ * book in one `items` array, each row saying which lesson it belongs to; the
+ * ones after it nest the rows inside the lesson, as `lessons[].blocks[]`. The
+ * rows themselves are the same, so they are read into one list here.
+ */
+function rowsOf(text) {
+  if (Array.isArray(text.items)) return text.items;
+  return (text.lessons ?? []).flatMap((lesson) =>
+    (lesson.blocks ?? []).map((block) => ({ ...block, lesson: lesson.number })));
+}
 
 /**
  * Fatha before shadda, not after. The two orders look identical on screen and
@@ -132,11 +164,16 @@ if (!book) throw new Error("в выгрузке нет названия книг
 
 const fragmentsByLesson = new Map();
 const dropped = [];
+const skipped = [];
 let patched = 0;
 let headings = 0;
-for (const item of text.items) {
-  if (!ROWS.has(item.type)) {
+for (const item of rowsOf(text)) {
+  if (!KNOWN_ROWS.has(item.type)) {
     throw new Error(`неизвестный тип строки «${item.type}» (${item.id}) — научите импортёр, что это`);
+  }
+  if (SKIPPED_ROWS.has(item.type)) {
+    skipped.push(item.type);
+    continue;
   }
   const arabic = unquote(item.ar);
   let russian = unquote(item.ru);
@@ -154,7 +191,7 @@ for (const item of text.items) {
   }
   if (!fragmentsByLesson.has(item.lesson)) fragmentsByLesson.set(item.lesson, []);
   const fragment = { arabic, russian };
-  if (item.type === "section") {
+  if (HEADING_ROWS.has(item.type)) {
     fragment.heading = true;
     headings += 1;
   }
@@ -369,6 +406,11 @@ console.log(
 const wordless = course.filter((lesson) => !lesson.words.length).map((lesson) => lesson.id);
 if (wordless.length) console.log(`уроков без новых слов (только чтение): ${wordless.join(", ")}`);
 if (headings) console.log(`заголовков внутри уроков: ${headings}`);
+if (skipped.length) {
+  const counted = skipped.reduce((all, type) => ({ ...all, [type]: (all[type] ?? 0) + 1 }), {});
+  const named = Object.entries(counted).map(([type, n]) => `${type} — ${n}`).join(", ");
+  console.log(`пропущено строк разметки: ${skipped.length} (${named})`);
+}
 if (patched) console.log(`правок текста применено: ${patched}`);
 if (retitled) console.log(`уроков переименовано по сверенному тексту: ${retitled}`);
 if (mended) console.log(`правок словаря применено: ${mended}`);
