@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { textCourseQuestions } from "../content/text-course-questions.ts";
+import { textCourseNeedsMetWords, textCourseQuestions } from "../content/text-course-questions.ts";
 import { part4Summaries } from "../content/part4/manifest.ts";
 import { part4Glossary } from "../content/part4/glossary.ts";
 import { isPart4Open, part4CardId, part4LessonIdsInCards, unlockedPart4Ids } from "../app/part4-access.ts";
@@ -30,7 +30,9 @@ function skeleton(text) {
 
 /** The words of every lesson before this one, as the app hands them over. */
 function metBefore(lesson) {
-  return lesson.words.length >= 3 ? [] : part4Glossary.filter((entry) => entry.lesson < lesson.id);
+  return textCourseNeedsMetWords(lesson)
+    ? part4Glossary.filter((entry) => entry.lesson < lesson.id)
+    : [];
 }
 
 test("every lesson carries a text, and its words when it brings any", () => {

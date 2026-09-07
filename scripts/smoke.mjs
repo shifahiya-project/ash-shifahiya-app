@@ -194,7 +194,7 @@ try {
 
   // Clicking the tab is the first thing that needs React alive: a page that
   // rendered but never hydrated gets no further than this.
-  await page.getByRole("tab", { name: /Часть 4/ }).click();
+  await page.getByRole("tab", { name: /4 · Фикх/ }).click();
   const list = page.locator(".lesson-list");
   await list.getByRole("button", { name: /Начать урок/ }).first().click();
   await page.waitForSelector(".study-view", { timeout: 15_000 });
@@ -252,7 +252,7 @@ try {
     for (let id = 1; id <= 28; id += 1) localStorage.setItem(`shifahiya-p4-lesson-${id}`, "5");
   });
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByRole("tab", { name: /Часть 4/ }).click();
+  await page.getByRole("tab", { name: /4 · Фикх/ }).click();
   const wordless = page.locator(".lesson-card").filter({ hasText: "только чтение" }).first();
   if (!(await wordless.count())) failures.push("урока без новых слов нет в списке");
   else {

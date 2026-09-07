@@ -496,6 +496,8 @@ h1 em { color: var(--green); font-weight: inherit; }
    the cards do. */
 /* Three courses now, and the pill has to hold them on a narrow phone: equal
    columns and a shorter line rather than a switch that wraps onto three rows. */
+/* Five parts do not fit one row, so the strip wraps — and its corners are
+   rounded like a card rather than a pill: a two-row pill looks broken. */
 .course-switch {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -504,11 +506,12 @@ h1 em { color: var(--green); font-weight: inherit; }
   padding: 5px;
   background: rgba(255,255,255,.6);
   border: 1px solid var(--line);
-  border-radius: 99px;
+  border-radius: 22px;
 }
 
 .course-switch button {
   padding: 10px 8px;
+  white-space: nowrap;
   border: 0;
   border-radius: 99px;
   background: none;

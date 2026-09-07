@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import { textCourseNeedsMetWords } from "../text-course-questions.ts";
 import type { TextCourseLesson, TextCourseWord } from "../types";
 
 // One chunk per lesson, like the courses before it: the fourth course's words
@@ -39,12 +40,12 @@ export function loadPart4Lessons(ids: number[]): Promise<TextCourseLesson[]> {
 }
 
 /**
- * The words of the lessons before this one, for a lesson too short to fill
- * three options out of its own glossary. Its own chunk, and it is fetched only
- * by the lessons that need it — most of the course does not.
+ * The words of the lessons before this one, for a lesson that cannot fill three
+ * options out of its own glossary. Its own chunk, and it is fetched only by the
+ * lessons that need it — most of the course does not.
  */
 export async function loadPart4WordsMetBefore(lesson: TextCourseLesson): Promise<TextCourseWord[]> {
-  if (lesson.words.length >= 3) return [];
+  if (!textCourseNeedsMetWords(lesson)) return [];
   const { part4Glossary } = await import("./glossary.ts");
   return part4Glossary.filter((entry) => entry.lesson < lesson.id);
 }
