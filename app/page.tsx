@@ -16,6 +16,9 @@ import { isPart3Open, part3CardId, part3LessonIdsInCards, unlockedPart3Ids } fro
 import { part4Summaries } from "../content/part4/manifest";
 import { loadPart4Lesson, loadPart4Lessons, loadPart4WordsMetBefore } from "../content/part4/lessons";
 import { isPart4Open, part4CardId, part4LessonIdsInCards, unlockedPart4Ids } from "./part4-access";
+import { part5Summaries } from "../content/part5/manifest";
+import { loadPart5Lesson, loadPart5Lessons, loadPart5WordsMetBefore } from "../content/part5/lessons";
+import { isPart5Open, part5CardId, part5LessonIdsInCards, unlockedPart5Ids } from "./part5-access";
 import { textCourseQuestions } from "../content/text-course-questions";
 import { plural } from "../content/questions";
 import type {
@@ -202,13 +205,13 @@ function textCourseReviewCardsOf(
 }
 
 /** The two courses that teach a scholarly book: its glossary, then its text. */
-type TextCourseId = 3 | 4;
+type TextCourseId = 3 | 4 | 5;
 
 /**
- * All the third and fourth courses differ in. A lesson runs identically in
- * both — the new words, one question on each, then the text read whole — so one
- * set of screens serves them, and what is looked up here is the data, the card
- * addresses and the rows of the store.
+ * All the text courses differ in. A lesson runs identically in every one of
+ * them — the new words, one question on each, then the text read whole — so one
+ * set of screens serves them all, and what is looked up here is the data, the
+ * card addresses and the rows of the store.
  */
 const TEXT_COURSES = {
   3: {
@@ -230,7 +233,42 @@ const TEXT_COURSES = {
     saveSession: progressStore.savePart4Session,
     finishLesson: progressStore.finishPart4Lesson,
   },
+  5: {
+    label: "Часть 5",
+    summaries: part5Summaries,
+    loadLesson: loadPart5Lesson,
+    cardId: part5CardId,
+    wordsMetBefore: loadPart5WordsMetBefore,
+    saveSession: progressStore.savePart5Session,
+    finishLesson: progressStore.finishPart5Lesson,
+  },
 } as const;
+
+/**
+ * What each text course waits for. Every one of them opens on the course before
+ * it finished whole: there is no paper between them, only the reading that
+ * makes the next book readable.
+ */
+const TEXT_COURSE_GATES: Record<TextCourseId, { title: string; explains: string }> = {
+  3: {
+    title: "Третья часть открывается по второй",
+    explains:
+      "Пройдите все уроки второй части — и книга по акыде станет доступна. " +
+      "Научный текст читают после того, как рассказы читаются свободно.",
+  },
+  4: {
+    title: "Четвёртая часть открывается по третьей",
+    explains:
+      "Пройдите все уроки третьей части — и книга по фикху станет доступна. " +
+      "Разбор правовых вопросов читают после того, как читается научный текст.",
+  },
+  5: {
+    title: "Пятая часть открывается по четвёртой",
+    explains:
+      "Пройдите все уроки четвёртой части — и грамматика станет доступна. " +
+      "Сарф и нахв не учат языку заново, а называют то, что вы уже читаете.",
+  },
+};
 
 /** Lesson ids the learner has any card progress in, read off the stored keys. */
 function lessonIdsInProgress(progress: Record<string, CardProgress>) {
@@ -339,9 +377,10 @@ export default function Home() {
   const [openPart2, setOpenPart2] = useState<Record<number, Part2Lesson>>({});
   const [openPart3, setOpenPart3] = useState<Record<number, TextCourseLesson>>({});
   const [openPart4, setOpenPart4] = useState<Record<number, TextCourseLesson>>({});
+  const [openPart5, setOpenPart5] = useState<Record<number, TextCourseLesson>>({});
   const [reading, setReading] = useState<ReadingSection | null>(null);
   const [openLines, setOpenLines] = useState<string[]>([]);
-  const [course, setCourse] = useState<1 | 2 | 3 | 4>(1);
+  const [course, setCourse] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [part2, setPart2] = useState<Part2Lesson | null>(null);
   /** Which text course is on screen, and the lesson of it that is open. */
   const [textCourseId, setTextCourseId] = useState<TextCourseId>(3);
@@ -416,8 +455,9 @@ export default function Home() {
       ...Object.values(openPart2).flatMap(part2ReviewCardsOf),
       ...Object.values(openPart3).flatMap((item) => textCourseReviewCardsOf(item, part3CardId)),
       ...Object.values(openPart4).flatMap((item) => textCourseReviewCardsOf(item, part4CardId)),
+      ...Object.values(openPart5).flatMap((item) => textCourseReviewCardsOf(item, part5CardId)),
     ],
-    [openLessons, openPart2, openPart3, openPart4],
+    [openLessons, openPart2, openPart3, openPart4, openPart5],
   );
   const dueCards = useMemo(() => {
     const today = localDate();
@@ -448,12 +488,17 @@ export default function Home() {
   const part3Sessions = stored.part3Sessions;
   const part4Scores = stored.part4Scores;
   const part4Sessions = stored.part4Sessions;
+  const part5Scores = stored.part5Scores;
+  const part5Sessions = stored.part5Sessions;
   // The third course waits for the second one whole, not for a paper: a
   // treatise is what the hundred and five lessons of stories were reading for.
   const part3Ready = isPart3Open(part2Summaries, part2Scores);
   // And the fourth waits for the third on the same terms: a book of fiqh is
   // read once a scholarly page reads at all.
   const part4Ready = isPart4Open(part3Summaries, part3Scores);
+  // And the fifth waits for the fourth: grammar names what has been read, so it
+  // comes after the reading rather than before it.
+  const part5Ready = isPart5Open(part4Summaries, part4Scores);
   const unlockedPart3 = useMemo(
     () => unlockedPart3Ids(part3Summaries, stored, part3Ready),
     [stored, part3Ready],
@@ -462,25 +507,27 @@ export default function Home() {
     () => unlockedPart4Ids(part4Summaries, stored, part4Ready),
     [stored, part4Ready],
   );
+  const unlockedPart5 = useMemo(
+    () => unlockedPart5Ids(part5Summaries, stored, part5Ready),
+    [stored, part5Ready],
+  );
+  /** Where each text course keeps the learner's place, by course number. */
+  const textCourseProgress = useMemo(
+    () => ({
+      3: { scores: part3Scores, sessions: part3Sessions, unlocked: unlockedPart3, ready: part3Ready },
+      4: { scores: part4Scores, sessions: part4Sessions, unlocked: unlockedPart4, ready: part4Ready },
+      5: { scores: part5Scores, sessions: part5Sessions, unlocked: unlockedPart5, ready: part5Ready },
+    }),
+    [
+      part3Scores, part3Sessions, unlockedPart3, part3Ready,
+      part4Scores, part4Sessions, unlockedPart4, part4Ready,
+      part5Scores, part5Sessions, unlockedPart5, part5Ready,
+    ],
+  );
   /** The text course on screen: its data, and the learner's place in it. */
   const textCourse = useMemo(
-    () =>
-      textCourseId === 3
-        ? {
-            ...TEXT_COURSES[3],
-            id: 3 as const,
-            scores: part3Scores,
-            sessions: part3Sessions,
-            unlocked: unlockedPart3,
-          }
-        : {
-            ...TEXT_COURSES[4],
-            id: 4 as const,
-            scores: part4Scores,
-            sessions: part4Sessions,
-            unlocked: unlockedPart4,
-          },
-    [textCourseId, part3Scores, part3Sessions, unlockedPart3, part4Scores, part4Sessions, unlockedPart4],
+    () => ({ ...TEXT_COURSES[textCourseId], id: textCourseId, ...textCourseProgress[textCourseId] }),
+    [textCourseId, textCourseProgress],
   );
   const textWords = textLesson?.words ?? [];
   const textTasks = useMemo(
@@ -628,6 +675,15 @@ export default function Home() {
       .join(",");
   }, [cardProgress, part4Sessions]);
 
+  const wantedPart5Ids = useMemo(() => {
+    const resume = Object.values(part5Sessions).sort(
+      (a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId),
+    )[0];
+    return [...new Set([...part5LessonIdsInCards(cardProgress), ...(resume ? [resume.lessonId] : [])])]
+      .sort((a, b) => a - b)
+      .join(",");
+  }, [cardProgress, part5Sessions]);
+
   useEffect(() => {
     if (!wantedPart2Ids) return;
 
@@ -666,6 +722,19 @@ export default function Home() {
       cancelled = true;
     };
   }, [wantedPart4Ids]);
+
+  useEffect(() => {
+    if (!wantedPart5Ids) return;
+
+    let cancelled = false;
+    loadPart5Lessons(wantedPart5Ids.split(",").map(Number)).then((loaded) => {
+      if (cancelled) return;
+      setOpenPart5((items) => ({ ...items, ...Object.fromEntries(loaded.map((item) => [item.id, item])) }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wantedPart5Ids]);
 
   useEffect(() => {
     if (!wantedLessonIds) return;
@@ -942,11 +1011,12 @@ export default function Home() {
     from: "start" | "resume" = "resume",
   ) {
     const opening = TEXT_COURSES[courseId];
-    const unlocked = courseId === 3 ? unlockedPart3 : unlockedPart4;
+    const unlocked = textCourseProgress[courseId].unlocked;
     if (!unlocked.has(id)) return;
     const lesson = await opening.loadLesson(id);
     const met = await opening.wordsMetBefore(lesson);
-    (courseId === 3 ? setOpenPart3 : setOpenPart4)((items) => ({ ...items, [id]: lesson }));
+    const remember = { 3: setOpenPart3, 4: setOpenPart4, 5: setOpenPart5 }[courseId];
+    remember((items) => ({ ...items, [id]: lesson }));
     setTextCourseId(courseId);
     setTextLesson(lesson);
     setTextMet(met);
@@ -954,7 +1024,7 @@ export default function Home() {
     setRevealed(false);
     setStepOpen([]);
 
-    const sessions = courseId === 3 ? part3Sessions : part4Sessions;
+    const sessions = textCourseProgress[courseId].sessions;
     const parked = from === "resume" ? sessions[id] : undefined;
     setStepIndex(parked?.index ?? 0);
     setStepScore(parked?.score ?? 0);
@@ -1147,6 +1217,8 @@ export default function Home() {
       part3Sessions,
       part4Scores,
       part4Sessions,
+      part5Scores,
+      part5Sessions,
       stats: learningStats,
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
@@ -1190,9 +1262,11 @@ export default function Home() {
         // Backups written before the third course simply have none of it.
         part3Scores: payload.part3Scores ?? {},
         part3Sessions: payload.part3Sessions ?? {},
-        // And the same for the fourth.
+        // And the same for the fourth and the fifth.
         part4Scores: payload.part4Scores ?? {},
         part4Sessions: payload.part4Sessions ?? {},
+        part5Scores: payload.part5Scores ?? {},
+        part5Sessions: payload.part5Sessions ?? {},
         stats,
       });
       setBackupMessage("Прогресс восстановлен.");
@@ -1514,7 +1588,7 @@ export default function Home() {
               className={course === 1 ? "is-active" : ""}
               onClick={() => setCourse(1)}
             >
-              Часть 1 · Шифахия
+              1 · Шифахия
             </button>
             <button
               role="tab"
@@ -1522,7 +1596,7 @@ export default function Home() {
               className={course === 2 ? "is-active" : ""}
               onClick={() => setCourse(2)}
             >
-              Часть 2 · Чтение {part2Ready ? "" : "🔒"}
+              2 · Чтение {part2Ready ? "" : "🔒"}
             </button>
             <button
               role="tab"
@@ -1530,7 +1604,7 @@ export default function Home() {
               className={course === 3 ? "is-active" : ""}
               onClick={() => setCourse(3)}
             >
-              Часть 3 · Акыда {part3Ready ? "" : "🔒"}
+              3 · Акыда {part3Ready ? "" : "🔒"}
             </button>
             <button
               role="tab"
@@ -1538,7 +1612,15 @@ export default function Home() {
               className={course === 4 ? "is-active" : ""}
               onClick={() => setCourse(4)}
             >
-              Часть 4 · Фикх {part4Ready ? "" : "🔒"}
+              4 · Фикх {part4Ready ? "" : "🔒"}
+            </button>
+            <button
+              role="tab"
+              aria-selected={course === 5}
+              className={course === 5 ? "is-active" : ""}
+              onClick={() => setCourse(5)}
+            >
+              5 · Грамматика {part5Ready ? "" : "🔒"}
             </button>
           </div>
 
@@ -1607,33 +1689,16 @@ export default function Home() {
             </div>
           )}
 
-          {(course === 3 || course === 4) && (
+          {(course === 3 || course === 4 || course === 5) && (
             <div className="lesson-list">
-              {(course === 3 ? part3Ready : part4Ready) || (
+              {textCourseProgress[course].ready || (
                 <div className="part2-gate">
-                  {course === 3 ? (
-                    <>
-                      <strong>Третья часть открывается по второй</strong>
-                      <span>
-                        Пройдите все уроки второй части — и книга по акыде станет доступна.
-                        Научный текст читают после того, как рассказы читаются свободно.
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <strong>Четвёртая часть открывается по третьей</strong>
-                      <span>
-                        Пройдите все уроки третьей части — и книга по фикху станет доступна.
-                        Разбор правовых вопросов читают после того, как читается научный текст.
-                      </span>
-                    </>
-                  )}
+                  <strong>{TEXT_COURSE_GATES[course].title}</strong>
+                  <span>{TEXT_COURSE_GATES[course].explains}</span>
                 </div>
               )}
-              {(course === 3 ? part3Summaries : part4Summaries).flatMap((item, index, all) => {
-                const scores = course === 3 ? part3Scores : part4Scores;
-                const sessions = course === 3 ? part3Sessions : part4Sessions;
-                const unlocked = course === 3 ? unlockedPart3 : unlockedPart4;
+              {TEXT_COURSES[course].summaries.flatMap((item, index, all) => {
+                const { scores, sessions, unlocked } = textCourseProgress[course];
                 const score = scores[item.id];
                 const done = score !== undefined;
                 const parked = sessions[item.id];
