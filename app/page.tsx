@@ -67,7 +67,7 @@ type ReviewCard = {
 };
 
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
-const WORD_ACHIEVEMENTS = [10, 50, 100, 250, 500, 1000, 1500, 2000];
+const WORD_ACHIEVEMENTS = [100, 250, 500, 1000, 2500, 5000, 7500, 10000];
 const DAY_ACHIEVEMENTS = [7, 14, 30, 50, 100, 150, 250, 365];
 
 /** Google's mark, inline so the sign-in button pulls in no outside asset. */
