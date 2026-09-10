@@ -297,7 +297,7 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assert.match(page, /rateReviewCard\(true\)/);
   assert.match(page, /Сохранить копию/);
   assert.match(store, /shifahiya-learning-stats-v1/);
-  assert.match(page, /WORD_ACHIEVEMENTS = \[10, 50, 100, 250, 500, 1000, 1500, 2000\]/);
+  assert.match(page, /WORD_ACHIEVEMENTS = \[100, 250, 500, 1000, 2500, 5000, 7500, 10000\]/);
   assert.match(page, /Ваш путь в цифрах/);
   assert.match(page, /слов выучено/);
   assert.match(page, /рекорд без перерыва/);
