@@ -492,12 +492,12 @@ h1 em { color: var(--green); font-weight: inherit; }
 .grammar-view .stage-label span { background: var(--blue); font: 600 13px "Traditional Arabic", serif; }
 .grammar-view .repeat-badge.active { border-color: rgba(47,98,196,.22); background: var(--blue-soft); color: var(--blue); }
 
-/* Two courses live on one screen, so the list says which one is open before
-   the cards do. */
-/* Three courses now, and the pill has to hold them on a narrow phone: equal
-   columns and a shorter line rather than a switch that wraps onto three rows. */
-/* Five parts do not fit one row, so the strip wraps — and its corners are
-   rounded like a card rather than a pill: a two-row pill looks broken. */
+/* Seven courses live on one screen, so the strip says which one is open before
+   the cards do. It has long since stopped fitting one row, so it wraps, and its
+   corners are rounded like a card rather than a pill: a two-row pill looks
+   broken. Three columns, counted rather than fitted — the longest label
+   («5 · Грамматика») wants about 112px, and auto-fit with that minimum drops a
+   360px screen to two columns, which is one row more rather than less. */
 .course-switch {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
