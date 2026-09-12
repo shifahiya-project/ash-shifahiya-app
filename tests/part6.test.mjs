@@ -3,11 +3,11 @@ import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { textCourseNeedsMetWords, textCourseQuestions } from "../content/text-course-questions.ts";
-import { part5Summaries } from "../content/part5/manifest.ts";
-import { part5Glossary } from "../content/part5/glossary.ts";
-import { isPart5Open, part5CardId, part5LessonIdsInCards, unlockedPart5Ids } from "../app/part5-access.ts";
+import { part6Summaries } from "../content/part6/manifest.ts";
+import { part6Glossary } from "../content/part6/glossary.ts";
+import { isPart6Open, part6CardId, part6LessonIdsInCards, unlockedPart6Ids } from "../app/part6-access.ts";
 
-const directory = new URL("../content/part5/", import.meta.url);
+const directory = new URL("../content/part6/", import.meta.url);
 
 async function loadLessons() {
   const files = (await readdir(directory))
@@ -31,7 +31,7 @@ function skeleton(text) {
 /** The words of every lesson before this one, as the app hands them over. */
 function metBefore(lesson) {
   return textCourseNeedsMetWords(lesson)
-    ? part5Glossary.filter((entry) => entry.lesson < lesson.id)
+    ? part6Glossary.filter((entry) => entry.lesson < lesson.id)
     : [];
 }
 
@@ -55,12 +55,12 @@ test("every lesson carries a text, and its words when it brings any", () => {
 // The glossary of this course is cumulative against all three courses before
 // it, so a lesson deep into the book can meet nothing new. Such a lesson is its
 // text and is read, not drilled — and that is normal, not a hole in the data.
-test("a lesson may bring no new words, and it is then all text", () => {
-  const wordless = lessons.filter((lesson) => lesson.words.length === 0);
-  assert.ok(wordless.length > 0, "в этой книге такие уроки есть — проверка потеряла бы смысл");
-  for (const lesson of wordless) {
-    assert.ok(lesson.fragments.length > 0, `урок ${lesson.id}: ни слов, ни текста`);
-    assert.equal(textCourseQuestions(lesson, metBefore(lesson)).length, 0, `урок ${lesson.id}`);
+// Unlike the courses before it, every lesson of this book brings something new:
+// rhetoric names what it teaches. The rule that a lesson may bring nothing is
+// still the course's own — it is checked where such lessons exist.
+test("every lesson of this book brings words of its own", () => {
+  for (const lesson of lessons) {
+    assert.ok(lesson.words.length > 0, `урок ${lesson.id}: нет слов`);
   }
 });
 
@@ -176,9 +176,9 @@ test("the same paper comes out every time", () => {
 });
 
 test("the manifest agrees with the lessons", () => {
-  assert.equal(part5Summaries.length, lessons.length);
+  assert.equal(part6Summaries.length, lessons.length);
   for (const lesson of lessons) {
-    const summary = part5Summaries.find((item) => item.id === lesson.id);
+    const summary = part6Summaries.find((item) => item.id === lesson.id);
     assert.ok(summary, `урок ${lesson.id} отсутствует в манифесте`);
     assert.equal(summary.title, lesson.title);
     assert.equal(summary.arabicTitle, lesson.arabicTitle);
@@ -194,66 +194,66 @@ test("the glossary holds the whole course in lesson order", () => {
   const words = lessons.flatMap((lesson) =>
     lesson.words.map((word) => ({ lesson: lesson.id, ...word })),
   );
-  assert.deepEqual(part5Glossary, words);
+  assert.deepEqual(part6Glossary, words);
 });
 
-// The fifth course waits for the whole fourth one — the chain every course
-// here follows. Grammar comes last because it names what has been read.
-test("the fifth course waits for the whole fourth one", () => {
+// The sixth course waits for the whole fifth one — the chain every course here
+// follows, and the classical order besides: rhetoric after grammar.
+test("the sixth course waits for the whole fifth one", () => {
   const shelf = [{ id: 1 }, { id: 2 }, { id: 3 }];
-  assert.equal(isPart5Open(shelf, {}), false);
-  assert.equal(isPart5Open(shelf, { 1: 30, 2: 20 }), false);
-  assert.equal(isPart5Open(shelf, { 1: 30, 2: 20, 3: 10 }), true);
+  assert.equal(isPart6Open(shelf, {}), false);
+  assert.equal(isPart6Open(shelf, { 1: 30, 2: 20 }), false);
+  assert.equal(isPart6Open(shelf, { 1: 30, 2: 20, 3: 10 }), true);
   // An empty shelf is not "finished" — the course would then open by itself.
-  assert.equal(isPart5Open([], {}), false);
+  assert.equal(isPart6Open([], {}), false);
 });
 
-test("the fifth course runs in order and never takes ground back", () => {
-  const empty = { part5Scores: {}, part5Sessions: {}, cards: {} };
-  assert.equal(unlockedPart5Ids(part5Summaries, empty, false).size, 0);
+test("the sixth course runs in order and never takes ground back", () => {
+  const empty = { part6Scores: {}, part6Sessions: {}, cards: {} };
+  assert.equal(unlockedPart6Ids(part6Summaries, empty, false).size, 0);
 
-  const opened = unlockedPart5Ids(part5Summaries, empty, true);
+  const opened = unlockedPart6Ids(part6Summaries, empty, true);
   assert.equal(opened.has(1), true, "первый урок должен открыться");
   assert.equal(opened.has(2), false, "второй ждёт первого");
 
-  const oneDone = { ...empty, part5Scores: { 1: 29 } };
-  const next = unlockedPart5Ids(part5Summaries, oneDone, true);
+  const oneDone = { ...empty, part6Scores: { 1: 29 } };
+  const next = unlockedPart6Ids(part6Summaries, oneDone, true);
   assert.equal(next.has(2), true);
   assert.equal(next.has(3), false);
 
-  const roaming = { ...empty, cards: { [part5CardId(5, 0, "ar-ru")]: {} } };
-  const kept = unlockedPart5Ids(part5Summaries, roaming, true);
+  const roaming = { ...empty, cards: { [part6CardId(5, 0, "ar-ru")]: {} } };
+  const kept = unlockedPart6Ids(part6Summaries, roaming, true);
   for (const id of [1, 2, 3, 4, 5]) assert.equal(kept.has(id), true, `урок ${id} закрылся`);
 });
 
-test("a fifth-course card says which lesson it came from", () => {
-  assert.equal(part5CardId(7, 12, "ru-ar"), "p5-lesson-7-word-12-ru-ar");
+test("a sixth-course card says which lesson it came from", () => {
+  assert.equal(part6CardId(7, 12, "ru-ar"), "p6-lesson-7-word-12-ru-ar");
   const cards = {
+    "p6-lesson-3-word-0-ar-ru": {},
+    "p6-lesson-9-word-4-ru-ar": {},
+    // The five courses before this one share the box and do not belong here.
     "p5-lesson-3-word-0-ar-ru": {},
-    "p5-lesson-9-word-4-ru-ar": {},
-    // The four courses before this one share the box and do not belong here.
     "p4-lesson-3-word-0-ar-ru": {},
     "p3-lesson-3-word-0-ar-ru": {},
     "p2-lesson-3-word-0-ar-ru": {},
     "lesson-3-deck-0-word-0-ar-ru": {},
   };
-  assert.deepEqual(part5LessonIdsInCards(cards).sort((a, b) => a - b), [3, 9]);
+  assert.deepEqual(part6LessonIdsInCards(cards).sort((a, b) => a - b), [3, 9]);
 });
 
 // A teaching course gives its Arabic fully vowelled. Here the vowels came from
-// the export, so they are checked by machine rather than by eye. These two
-// books came in at a hundred percent — every word of every lesson — and the bar
-// stays at the one the third and fourth courses hold to, since all three are
-// read the same way and a later book need not be as immaculate as this one.
+// the export, so they are checked by machine rather than by eye. This book came
+// in at a hundred percent — every word of every lesson — and the bar stays at
+// the one the courses before it hold to: a later book need not be as immaculate
+// as this one.
 //
-// What is left bare is not a word: a grammar book labels its lists «أ», «ب»,
-// «ج» and separates an example's number from it with a tatweel. A line made of
-// nothing but such labels — «(أ) … (ب) … (ج)», three of them in this course —
-// has nothing to vowel, so the per-fragment check asks for vowels only where
-// there is a word of more than one letter to carry them.
+// The one-letter list label and the tatweel that separates an example's number
+// from its text carry no vowels anywhere, so neither is counted as a word — the
+// same rule the fifth course needs, kept here because these books are printed
+// alike.
 const VOWELLED_SHARE = 0.85;
-// The longest fragment of these books is 40 words: a grammar lesson argues in
-// examples. Much beyond a paragraph is read as a page instead.
+// The longest fragment of this book is 53 words: rhetoric argues in examples
+// and lines of verse. Much beyond a paragraph is read as a page instead.
 const MAX_FRAGMENT_WORDS = 180;
 
 /** True where a line holds a word long enough to be vowelled at all. */
@@ -317,17 +317,17 @@ test("a heading inside a lesson stays a heading", async () => {
 
 });
 
-// The fifth course's progress travels between devices and is stored under keys
+// The sixth course's progress travels between devices and is stored under keys
 // of its own; otherwise a merge or a backup would drop it in silence.
-test("the fifth course is carried by the store, the merge and the backup", async () => {
+test("the sixth course is carried by the store, the merge and the backup", async () => {
   const store = await readFile(new URL("../app/progress-store.ts", import.meta.url), "utf8");
   const merge = await readFile(new URL("../app/merge-progress.ts", import.meta.url), "utf8");
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(store, /shifahiya-p5-lesson-\$\{id\}/);
   assert.match(store, /shifahiya-p5-session-\$\{id\}/);
-  assert.match(store, /finishPart5Lesson/);
-  assert.match(merge, /part5Scores: mergeScores/);
-  assert.match(merge, /part5Sessions: mergeReadingSessions/);
-  assert.match(page, /part5Scores: payload\.part5Scores \?\? \{\}/);
+  assert.match(store, /finishPart6Lesson/);
+  assert.match(merge, /part6Scores: mergeScores/);
+  assert.match(merge, /part6Sessions: mergeReadingSessions/);
+  assert.match(page, /part6Scores: payload\.part6Scores \?\? \{\}/);
 });

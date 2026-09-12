@@ -147,10 +147,13 @@ test("a question always offers three answers, even in a lesson of one word", () 
       }
 
       // An option differing from the answer only in vowel marks is a second
-      // right answer.
+      // right answer. Only an Arabic option can be that: a Russian gloss may
+      // quote an Arabic particle — «соединение предложений союзом وَ» against
+      // «отказ от соединения предложений союзом وَ» — and the two are opposite
+      // in meaning however alike their Arabic looks.
       const wrong = question.options.filter((option) => option !== question.answer);
       for (const option of wrong) {
-        if (!/[ء-ي]/.test(option)) continue;
+        if (!/[ء-ي]/.test(option) || /[а-яА-ЯёЁ]/.test(option)) continue;
         assert.notEqual(
           skeleton(option),
           skeleton(question.answer),
