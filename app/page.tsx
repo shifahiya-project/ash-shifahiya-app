@@ -19,6 +19,9 @@ import { isPart4Open, part4CardId, part4LessonIdsInCards, unlockedPart4Ids } fro
 import { part5Summaries } from "../content/part5/manifest";
 import { loadPart5Lesson, loadPart5Lessons, loadPart5WordsMetBefore } from "../content/part5/lessons";
 import { isPart5Open, part5CardId, part5LessonIdsInCards, unlockedPart5Ids } from "./part5-access";
+import { part6Summaries } from "../content/part6/manifest";
+import { loadPart6Lesson, loadPart6Lessons, loadPart6WordsMetBefore } from "../content/part6/lessons";
+import { isPart6Open, part6CardId, part6LessonIdsInCards, unlockedPart6Ids } from "./part6-access";
 import { textCourseQuestions } from "../content/text-course-questions";
 import { plural } from "../content/questions";
 import type {
@@ -205,7 +208,7 @@ function textCourseReviewCardsOf(
 }
 
 /** The two courses that teach a scholarly book: its glossary, then its text. */
-type TextCourseId = 3 | 4 | 5;
+type TextCourseId = 3 | 4 | 5 | 6;
 
 /**
  * All the text courses differ in. A lesson runs identically in every one of
@@ -242,6 +245,15 @@ const TEXT_COURSES = {
     saveSession: progressStore.savePart5Session,
     finishLesson: progressStore.finishPart5Lesson,
   },
+  6: {
+    label: "Часть 6",
+    summaries: part6Summaries,
+    loadLesson: loadPart6Lesson,
+    cardId: part6CardId,
+    wordsMetBefore: loadPart6WordsMetBefore,
+    saveSession: progressStore.savePart6Session,
+    finishLesson: progressStore.finishPart6Lesson,
+  },
 } as const;
 
 /**
@@ -267,6 +279,12 @@ const TEXT_COURSE_GATES: Record<TextCourseId, { title: string; explains: string 
     explains:
       "Пройдите все уроки четвёртой части — и грамматика станет доступна. " +
       "Сарф и нахв не учат языку заново, а называют то, что вы уже читаете.",
+  },
+  6: {
+    title: "Шестая часть открывается по пятой",
+    explains:
+      "Пройдите все уроки пятой части — и балага станет доступна. " +
+      "Риторику читают после грамматики: она взвешивает фразу, которую та уже сделала правильной.",
   },
 };
 
@@ -378,9 +396,10 @@ export default function Home() {
   const [openPart3, setOpenPart3] = useState<Record<number, TextCourseLesson>>({});
   const [openPart4, setOpenPart4] = useState<Record<number, TextCourseLesson>>({});
   const [openPart5, setOpenPart5] = useState<Record<number, TextCourseLesson>>({});
+  const [openPart6, setOpenPart6] = useState<Record<number, TextCourseLesson>>({});
   const [reading, setReading] = useState<ReadingSection | null>(null);
   const [openLines, setOpenLines] = useState<string[]>([]);
-  const [course, setCourse] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [course, setCourse] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
   const [part2, setPart2] = useState<Part2Lesson | null>(null);
   /** Which text course is on screen, and the lesson of it that is open. */
   const [textCourseId, setTextCourseId] = useState<TextCourseId>(3);
@@ -456,8 +475,9 @@ export default function Home() {
       ...Object.values(openPart3).flatMap((item) => textCourseReviewCardsOf(item, part3CardId)),
       ...Object.values(openPart4).flatMap((item) => textCourseReviewCardsOf(item, part4CardId)),
       ...Object.values(openPart5).flatMap((item) => textCourseReviewCardsOf(item, part5CardId)),
+      ...Object.values(openPart6).flatMap((item) => textCourseReviewCardsOf(item, part6CardId)),
     ],
-    [openLessons, openPart2, openPart3, openPart4, openPart5],
+    [openLessons, openPart2, openPart3, openPart4, openPart5, openPart6],
   );
   const dueCards = useMemo(() => {
     const today = localDate();
@@ -490,6 +510,8 @@ export default function Home() {
   const part4Sessions = stored.part4Sessions;
   const part5Scores = stored.part5Scores;
   const part5Sessions = stored.part5Sessions;
+  const part6Scores = stored.part6Scores;
+  const part6Sessions = stored.part6Sessions;
   // The third course waits for the second one whole, not for a paper: a
   // treatise is what the hundred and five lessons of stories were reading for.
   const part3Ready = isPart3Open(part2Summaries, part2Scores);
@@ -499,6 +521,9 @@ export default function Home() {
   // And the fifth waits for the fourth: grammar names what has been read, so it
   // comes after the reading rather than before it.
   const part5Ready = isPart5Open(part4Summaries, part4Scores);
+  // And the sixth waits for the fifth — here it is also the classical order:
+  // rhetoric weighs a sentence that grammar has already made correct.
+  const part6Ready = isPart6Open(part5Summaries, part5Scores);
   const unlockedPart3 = useMemo(
     () => unlockedPart3Ids(part3Summaries, stored, part3Ready),
     [stored, part3Ready],
@@ -511,17 +536,23 @@ export default function Home() {
     () => unlockedPart5Ids(part5Summaries, stored, part5Ready),
     [stored, part5Ready],
   );
+  const unlockedPart6 = useMemo(
+    () => unlockedPart6Ids(part6Summaries, stored, part6Ready),
+    [stored, part6Ready],
+  );
   /** Where each text course keeps the learner's place, by course number. */
   const textCourseProgress = useMemo(
     () => ({
       3: { scores: part3Scores, sessions: part3Sessions, unlocked: unlockedPart3, ready: part3Ready },
       4: { scores: part4Scores, sessions: part4Sessions, unlocked: unlockedPart4, ready: part4Ready },
       5: { scores: part5Scores, sessions: part5Sessions, unlocked: unlockedPart5, ready: part5Ready },
+      6: { scores: part6Scores, sessions: part6Sessions, unlocked: unlockedPart6, ready: part6Ready },
     }),
     [
       part3Scores, part3Sessions, unlockedPart3, part3Ready,
       part4Scores, part4Sessions, unlockedPart4, part4Ready,
       part5Scores, part5Sessions, unlockedPart5, part5Ready,
+      part6Scores, part6Sessions, unlockedPart6, part6Ready,
     ],
   );
   /** The text course on screen: its data, and the learner's place in it. */
@@ -684,6 +715,15 @@ export default function Home() {
       .join(",");
   }, [cardProgress, part5Sessions]);
 
+  const wantedPart6Ids = useMemo(() => {
+    const resume = Object.values(part6Sessions).sort(
+      (a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId),
+    )[0];
+    return [...new Set([...part6LessonIdsInCards(cardProgress), ...(resume ? [resume.lessonId] : [])])]
+      .sort((a, b) => a - b)
+      .join(",");
+  }, [cardProgress, part6Sessions]);
+
   useEffect(() => {
     if (!wantedPart2Ids) return;
 
@@ -735,6 +775,19 @@ export default function Home() {
       cancelled = true;
     };
   }, [wantedPart5Ids]);
+
+  useEffect(() => {
+    if (!wantedPart6Ids) return;
+
+    let cancelled = false;
+    loadPart6Lessons(wantedPart6Ids.split(",").map(Number)).then((loaded) => {
+      if (cancelled) return;
+      setOpenPart6((items) => ({ ...items, ...Object.fromEntries(loaded.map((item) => [item.id, item])) }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wantedPart6Ids]);
 
   useEffect(() => {
     if (!wantedLessonIds) return;
@@ -1015,7 +1068,7 @@ export default function Home() {
     if (!unlocked.has(id)) return;
     const lesson = await opening.loadLesson(id);
     const met = await opening.wordsMetBefore(lesson);
-    const remember = { 3: setOpenPart3, 4: setOpenPart4, 5: setOpenPart5 }[courseId];
+    const remember = { 3: setOpenPart3, 4: setOpenPart4, 5: setOpenPart5, 6: setOpenPart6 }[courseId];
     remember((items) => ({ ...items, [id]: lesson }));
     setTextCourseId(courseId);
     setTextLesson(lesson);
@@ -1219,6 +1272,8 @@ export default function Home() {
       part4Sessions,
       part5Scores,
       part5Sessions,
+      part6Scores,
+      part6Sessions,
       stats: learningStats,
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
@@ -1267,6 +1322,8 @@ export default function Home() {
         part4Sessions: payload.part4Sessions ?? {},
         part5Scores: payload.part5Scores ?? {},
         part5Sessions: payload.part5Sessions ?? {},
+        part6Scores: payload.part6Scores ?? {},
+        part6Sessions: payload.part6Sessions ?? {},
         stats,
       });
       setBackupMessage("Прогресс восстановлен.");
@@ -1622,6 +1679,14 @@ export default function Home() {
             >
               5 · Грамматика {part5Ready ? "" : "🔒"}
             </button>
+            <button
+              role="tab"
+              aria-selected={course === 6}
+              className={course === 6 ? "is-active" : ""}
+              onClick={() => setCourse(6)}
+            >
+              6 · Балага {part6Ready ? "" : "🔒"}
+            </button>
           </div>
 
           {course === 2 && (
@@ -1689,7 +1754,7 @@ export default function Home() {
             </div>
           )}
 
-          {(course === 3 || course === 4 || course === 5) && (
+          {(course === 3 || course === 4 || course === 5 || course === 6) && (
             <div className="lesson-list">
               {textCourseProgress[course].ready || (
                 <div className="part2-gate">
