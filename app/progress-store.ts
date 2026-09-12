@@ -4,6 +4,7 @@ import { part3Summaries } from "../content/part3/manifest";
 import { part4Summaries } from "../content/part4/manifest";
 import { part5Summaries } from "../content/part5/manifest";
 import { part6Summaries } from "../content/part6/manifest";
+import { part7Summaries } from "../content/part7/manifest";
 import { GRAMMAR_ENABLED } from "./features.ts";
 
 export type SavedSession = {
@@ -43,6 +44,7 @@ export type Part3Session = ReadingCourseSession;
 export type Part4Session = ReadingCourseSession;
 export type Part5Session = ReadingCourseSession;
 export type Part6Session = ReadingCourseSession;
+export type Part7Session = ReadingCourseSession;
 
 export type CardProgress = {
   box: number;
@@ -123,6 +125,9 @@ export type Progress = {
   /** And the sixth. */
   part6Scores: Record<number, number>;
   part6Sessions: Record<number, Part6Session>;
+  /** And the seventh. */
+  part7Scores: Record<number, number>;
+  part7Sessions: Record<number, Part7Session>;
   stats: LearningStats;
 };
 
@@ -146,6 +151,8 @@ export const part5ScoreKey = (id: number | string) => `shifahiya-p5-lesson-${id}
 export const part5SessionKey = (id: number | string) => `shifahiya-p5-session-${id}`;
 export const part6ScoreKey = (id: number | string) => `shifahiya-p6-lesson-${id}`;
 export const part6SessionKey = (id: number | string) => `shifahiya-p6-session-${id}`;
+export const part7ScoreKey = (id: number | string) => `shifahiya-p7-lesson-${id}`;
+export const part7SessionKey = (id: number | string) => `shifahiya-p7-session-${id}`;
 
 export const EMPTY_STATS: LearningStats = { activeDates: [], totalSeconds: 0, masteredPhrases: [] };
 const EMPTY: Progress = {
@@ -167,6 +174,8 @@ const EMPTY: Progress = {
   part5Sessions: {},
   part6Scores: {},
   part6Sessions: {},
+  part7Scores: {},
+  part7Sessions: {},
   stats: EMPTY_STATS,
 };
 
@@ -250,6 +259,15 @@ function readProgress(): Progress {
     if (session && session.lessonId === summary.id) part6Sessions[summary.id] = session;
   }
 
+  const part7Scores: Record<number, number> = {};
+  const part7Sessions: Record<number, Part7Session> = {};
+  for (const summary of part7Summaries) {
+    const score = window.localStorage.getItem(part7ScoreKey(summary.id));
+    if (score !== null) part7Scores[summary.id] = Number(score);
+    const session = read<Part7Session | null>(part7SessionKey(summary.id), null);
+    if (session && session.lessonId === summary.id) part7Sessions[summary.id] = session;
+  }
+
   // A session interrupted mid-lesson is stored twice; the active copy wins.
   const active = read<SavedSession | null>(ACTIVE_SESSION_KEY, null);
   if (active && lessonSummaries.some((summary) => summary.id === active.lessonId)) {
@@ -286,6 +304,8 @@ function readProgress(): Progress {
     part5Sessions,
     part6Scores,
     part6Sessions,
+    part7Scores,
+    part7Sessions,
     examSession: read<ExamSession | null>(EXAM_SESSION_KEY, null),
     stats: { ...EMPTY_STATS, ...read<Partial<LearningStats>>(LEARNING_STATS_KEY, {}) },
   };
@@ -444,6 +464,20 @@ export const progressStore = {
     publish();
   },
 
+  savePart7Session(session: Omit<Part7Session, "updatedAt">) {
+    const stamped: Part7Session = { ...session, updatedAt: Date.now() };
+    window.localStorage.setItem(part7SessionKey(session.lessonId), JSON.stringify(stamped));
+    publish();
+  },
+
+  /** And for the seventh. */
+  finishPart7Lesson(lessonId: number, score: number) {
+    const earned = progressStore.getSnapshot().part7Scores[lessonId] ?? 0;
+    window.localStorage.setItem(part7ScoreKey(lessonId), String(Math.max(score, earned)));
+    window.localStorage.removeItem(part7SessionKey(lessonId));
+    publish();
+  },
+
   /** Like the lesson score: another attempt can only raise the stored result. */
   finishExam(examId: string, score: number, passed: boolean) {
     const stored = progressStore.getSnapshot().exams[examId];
@@ -509,6 +543,12 @@ export const progressStore = {
     }
     for (const [id, session] of Object.entries(progress.part6Sessions ?? {})) {
       window.localStorage.setItem(part6SessionKey(id), JSON.stringify(session));
+    }
+    for (const [id, score] of Object.entries(progress.part7Scores ?? {})) {
+      window.localStorage.setItem(part7ScoreKey(id), String(score));
+    }
+    for (const [id, session] of Object.entries(progress.part7Sessions ?? {})) {
+      window.localStorage.setItem(part7SessionKey(id), JSON.stringify(session));
     }
     window.localStorage.setItem(LEARNING_STATS_KEY, JSON.stringify(progress.stats));
     publish();
