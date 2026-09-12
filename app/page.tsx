@@ -1852,7 +1852,13 @@ export default function Home() {
                 const opensSection =
                   item.section !== undefined &&
                   (opensBook || all[index - 1]?.section !== item.section);
-                const chapter = all.filter((other) => other.section === item.section);
+                // Within its book: two books of one course can divide themselves
+                // into parts of the same name — both logic books open with
+                // «Введение и основы» — and a range spanning both would count
+                // lessons the divider does not head.
+                const chapter = all.filter(
+                  (other) => other.book === item.book && other.section === item.section,
+                );
                 const key = `p${course}`;
                 const card = (
                   <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`${key}-${item.id}`}>

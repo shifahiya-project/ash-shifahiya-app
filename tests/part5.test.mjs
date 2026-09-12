@@ -81,9 +81,12 @@ test("the books lie one after another, numbered without gaps", () => {
   // بَاب does not and may come round again — the book returns to a pair of
   // related chapters twice inside Книга намаза — so nothing is asserted of it
   // beyond belonging to the section it sits in.
+  // A section is one unbroken run inside its book — but two books of one
+  // course may divide themselves into parts of the same name, so the run is
+  // keyed by both.
   const chapters = [];
   for (const lesson of lessons) {
-    const named = lesson.section ?? `— ${lesson.book}`;
+    const named = `${lesson.book} · ${lesson.section ?? "—"}`;
     if (chapters.at(-1) !== named) chapters.push(named);
   }
   assert.equal(new Set(chapters).size, chapters.length, `раздел разорван: ${chapters.join(" · ")}`);

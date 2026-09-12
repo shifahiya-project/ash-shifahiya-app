@@ -71,7 +71,6 @@ await importTextCourse(
     directory: fileURLToPath(new URL("../content/part4/", import.meta.url)),
     title: "четвёртая часть",
     bookName: (text, glossary) => text.title_ru ?? glossary.title_ru ?? "",
-    titleOf: (named) => ({ ru: named.ru, ar: named.ar }),
     // The export carries the book's two levels in one field, joined by a
     // middot: «Книга очищения · Глава о хадасе». They are told apart here
     // because they behave differently — a كِتَاب is one unbroken run of lessons

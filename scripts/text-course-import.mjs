@@ -44,12 +44,22 @@ const unquote = (text) => nfc(text ?? "").replace(/^\s*>+\s*/, "").trim();
 const quote = (value) => JSON.stringify(value);
 
 /**
- * The text export has come in three shapes so far. The first laid every row of
+ * Which lesson an entry of the export belongs to. Every shape so far says it
+ * differently: a bare number under `lesson` or `number`, and — in the newest —
+ * the whole lesson header under `lesson`, its number inside.
+ */
+const lessonNumberOf = (entry) =>
+  (typeof entry.lesson === "object" && entry.lesson !== null ? entry.lesson.number : entry.lesson) ??
+  entry.number;
+
+/**
+ * The text export has come in four shapes so far. The first laid every row of
  * the book in one `items` array, each row saying which lesson it belongs to;
  * the next nested the rows inside the lesson as `lessons[].blocks[]`; the one
  * after that keeps the lesson headers apart from the rows and lists the rows as
- * `lesson_blocks[]`. The rows themselves are the same, so they are read into
- * one list here.
+ * `lesson_blocks[]`; the newest nests the header itself, as
+ * `lessons[].lesson.number`. The rows themselves are the same, so they are read
+ * into one list here.
  */
 function rowsOf(text) {
   if (Array.isArray(text.items)) return text.items;
@@ -57,8 +67,22 @@ function rowsOf(text) {
     ? text.lesson_blocks
     : (text.lessons ?? []).filter((lesson) => Array.isArray(lesson.blocks));
   return nested.flatMap((entry) =>
-    (entry.blocks ?? []).map((block) => ({ ...block, lesson: entry.lesson ?? entry.number })));
+    (entry.blocks ?? []).map((block) => ({ ...block, lesson: lessonNumberOf(entry) })));
 }
+
+/**
+ * The lesson headers — number, and the title in both languages. A shape that
+ * nests the header hands it over as it is; the rest already are one.
+ */
+const headersOf = (text) =>
+  (text.lessons ?? []).map((lesson) =>
+    typeof lesson.lesson === "object" && lesson.lesson !== null ? lesson.lesson : lesson);
+
+/** The lesson's printed title, under whichever pair of keys the export uses. */
+const printedTitle = (named) => ({
+  ru: named.ru ?? named.title_ru ?? "",
+  ar: named.ar ?? named.title_ar ?? "",
+});
 
 function renderWord(word) {
   return `    { arabic: ${quote(word.arabic)}, russian: ${quote(word.russian)}, kind: ${quote(word.kind)} },`;
@@ -99,7 +123,7 @@ ${lesson.fragments.map(renderFragment).join("\n")}
  * @param {string} course.title     «четвёртая часть», for the closing report
  * @param {(text: object, glossary: object) => string} course.bookName
  * @param {(entry: object, named: object, text: object) => {section?: string, chapter?: string}} course.divide
- * @param {(named: object) => {ru: string, ar: string}} course.titleOf
+ * @param {((named: object) => {ru: string, ar: string})=} course.titleOf
  * @param {Set<string>} course.headingRows  rows that head a piece of text
  * @param {Set<string>} course.skippedRows  rows that mark the text without being it
  * @param {object} course.fixes     TITLE_FIXES, TEXT_FIXES, GLOSSARY_FIXES
@@ -164,7 +188,7 @@ export async function importTextCourse(course, glossaryPath, textPath) {
   // lesson whose title has drifted from the text's is a sign the two files are
   // not from the same edition, and the course would then teach words for a
   // lesson the learner is not reading.
-  const titles = new Map(text.lessons.map((lesson) => [lesson.number, lesson]));
+  const titles = new Map(headersOf(text).map((lesson) => [lesson.number, lesson]));
 
   let retitled = 0;
   let mended = 0;
@@ -172,7 +196,7 @@ export async function importTextCourse(course, glossaryPath, textPath) {
   const lessons = glossary.lessons.map((entry) => {
     const named = titles.get(entry.number);
     if (!named) throw new Error(`урок ${entry.number} есть в словаре, но не в тексте`);
-    const printed = titleOf(named);
+    const printed = titleOf ? titleOf(named) : printedTitle(named);
 
     const fromGlossary = entry.title_ru.trim();
     const fromText = printed.ru.trim();

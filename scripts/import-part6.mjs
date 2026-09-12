@@ -46,7 +46,6 @@ await importTextCourse(
     directory: fileURLToPath(new URL("../content/part6/", import.meta.url)),
     title: "шестая часть",
     bookName: (text, glossary) => text.title_ru ?? glossary.title_ru ?? "",
-    titleOf: (named) => ({ ru: named.ru, ar: named.ar }),
     // The book divides itself into the three sciences of rhetoric, with an
     // introduction before them, and each is one unbroken run of lessons — so
     // each heads its piece of the list. A second level it does not have.
