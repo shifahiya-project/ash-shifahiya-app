@@ -78,3 +78,20 @@ export function unlockedTextCourseIds(
   });
   return unlocked;
 }
+
+/**
+ * The key React tells one divider of the lesson list from another. A section is
+ * named inside its book, and two books of one course can divide themselves into
+ * parts of the same name — both logic books open with «Введение и основы» — so
+ * the name alone is not an identity: React would then be handed two siblings
+ * claiming to be the same node.
+ */
+export function textCourseDividerKey(
+  course: number,
+  item: { book: string; section?: string },
+  kind: "book" | "section",
+) {
+  return kind === "book"
+    ? `p${course}-book-${item.book}`
+    : `p${course}-section-${item.book}-${item.section}`;
+}

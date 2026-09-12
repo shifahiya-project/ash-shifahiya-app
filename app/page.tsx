@@ -26,6 +26,7 @@ import { part7Summaries } from "../content/part7/manifest";
 import { loadPart7Lesson, loadPart7Lessons, loadPart7WordsMetBefore } from "../content/part7/lessons";
 import { isPart7Open, part7CardId, part7LessonIdsInCards, unlockedPart7Ids } from "./part7-access";
 import { textCourseQuestions } from "../content/text-course-questions";
+import { textCourseDividerKey } from "./text-course-access";
 import { plural } from "../content/questions";
 import type {
   Exam,
@@ -1907,7 +1908,7 @@ export default function Home() {
                 return [
                   ...(opensBook
                     ? [
-                        <div className="book-divider" key={`${key}-book-${item.book}`}>
+                        <div className="book-divider" key={textCourseDividerKey(course, item, "book")}>
                           <strong>{item.book}</strong>
                           <span>
                             уроки {shelf[0].id}–{shelf[shelf.length - 1].id} ·{" "}
@@ -1918,7 +1919,7 @@ export default function Home() {
                     : []),
                   ...(opensSection
                     ? [
-                        <div className="book-divider is-section" key={`${key}-section-${item.section}`}>
+                        <div className="book-divider is-section" key={textCourseDividerKey(course, item, "section")}>
                           <strong>{item.section}</strong>
                           <span>
                             {chapter.length > 1
