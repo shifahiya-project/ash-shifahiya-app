@@ -841,6 +841,8 @@ h1 em { color: var(--green); font-weight: inherit; }
   text-align: left;
 }
 .feedback.good { background: var(--mint); }
+/* Половина списка — не победа и не провал, и красный тут сказал бы неправду. */
+.feedback.plain { background: var(--cream); }
 .feedback.bad { background: #f8e7e5; }
 .feedback div { flex: 1; }
 .feedback strong { font-family: Georgia, serif; }
@@ -1158,3 +1160,168 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
 
 .note-actions { display: flex; align-items: center; gap: 12px; }
 .note-saved { color: var(--green); font-size: 12px; font-weight: 600; }
+
+/* ——— Темы наизусть ——— */
+
+.topic-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-bottom: 22px;
+  padding: 16px 18px;
+  border: 1px solid rgba(47,98,196,.3);
+  border-radius: 16px;
+  background: rgba(255,255,255,.82);
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.topic-link:hover { transform: translateY(-1px); box-shadow: 0 14px 32px rgba(24,60,51,.09); }
+.topic-link .daily-icon { flex: none; background: var(--blue); }
+.topic-link div { flex: 1; min-width: 0; }
+.topic-link strong, .topic-link small { display: block; }
+.topic-link strong { font: 500 17px Georgia, serif; }
+.topic-link small { margin-top: 3px; color: var(--ink-soft); font-size: 12px; }
+.topic-link > span:last-child { color: var(--green); font-size: 18px; }
+.topic-link .topic-badge {
+  flex: none;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.topic-view .back { display: inline-block; margin: 0 0 18px; }
+.topic-view h1 { margin: 0 0 12px; font: 500 clamp(30px, 5vw, 42px)/1.15 Georgia, serif; }
+.topic-source { margin: 4px 0 0 !important; color: var(--ink-soft); font-size: 11px !important; }
+.topic-card .lesson-number { font-size: 13px; }
+.chips span.is-due { background: var(--blue-soft); color: var(--blue); }
+
+.stats-grid.topic-stats { margin-bottom: 22px; }
+.daily-review.topic-due { border-color: rgba(47,98,196,.32); }
+.daily-review.topic-due .daily-icon { background: var(--blue); }
+.daily-review.topic-due strong { color: var(--blue); }
+
+.topic-exam .lesson-number { color: var(--gold); border-color: rgba(197,154,85,.6); }
+.topic-exam .locked span { margin-left: 8px; opacity: .7; }
+
+.topic-run { max-width: 760px; }
+.topic-prompt { min-height: 0; padding: 26px; }
+.topic-prompt > strong { margin-top: 10px; font: 500 22px/1.45 Georgia, serif; }
+.topic-prompt > em { display: block; margin-top: 10px; color: var(--ink-soft); font-size: 13px; }
+
+/* Свободный ответ: сначала вспомнить, потом открыть. */
+.topic-answer-card {
+  margin-top: 16px;
+  padding: 20px 22px;
+  border: 1px solid rgba(23,107,85,.28);
+  border-radius: 16px;
+  background: var(--mint);
+  text-align: left;
+}
+.topic-answer-card > p { margin: 0; font: 17px/1.6 Georgia, serif; }
+.topic-answer-card ul { margin: 12px 0 0; padding-left: 20px; }
+.topic-answer-card li { margin-bottom: 7px; line-height: 1.55; font-size: 14px; }
+.topic-answer-card li:last-child { margin-bottom: 0; }
+/* Специфичность важнее порядка: иначе правило ответа выше побеждает и заметка
+   становится неотличима от самого ответа. */
+.topic-answer-card > p.topic-note, .topic-note { margin: 12px 0 0; color: var(--ink-soft); font: 12.5px/1.6 Inter, "Segoe UI", Arial, sans-serif; }
+.topic-extra { margin: 14px 0 0; padding-top: 12px; border-top: 1px dashed rgba(23,107,85,.28); font-size: 14px; line-height: 1.6; }
+.topic-reference { margin-bottom: 14px; }
+.topic-reference:last-child { margin-bottom: 0; }
+
+/* Самооценка: три ответа, и каждый говорит, когда карточка вернётся. */
+.topic-grades { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 16px; }
+.topic-grades button {
+  padding: 13px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255,255,255,.8);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border .15s ease, transform .15s ease;
+}
+.topic-grades button small { display: block; margin-top: 4px; color: var(--ink-soft); font-size: 10px; font-weight: 500; }
+.topic-grades button:hover { transform: translateY(-1px); }
+.topic-grades .again { border-color: #dca09b; color: var(--red); }
+.topic-grades .hard { border-color: rgba(197,154,85,.6); color: var(--gold); }
+.topic-grades .good { border-color: rgba(23,107,85,.45); color: var(--green); }
+
+/* Список припоминается целиком, и отмечается то, что действительно названо. */
+.topic-list { display: grid; gap: 7px; margin-top: 14px; text-align: left; }
+.topic-list button {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255,255,255,.7);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+.topic-list button b { color: var(--ink-soft); font-size: 15px; line-height: 1.4; }
+.topic-list button.checked { border-color: rgba(23,107,85,.45); background: var(--mint); }
+.topic-list button.checked b { color: var(--green); }
+
+/* Разбор на две кучки: можно и нельзя. */
+.topic-sort { display: grid; gap: 8px; margin: 14px 0 16px; text-align: left; }
+.sort-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255,255,255,.7);
+  font-size: 14px;
+}
+.sort-row > div { display: flex; gap: 6px; }
+.sort-row button {
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 12px;
+  cursor: pointer;
+}
+.sort-row button.picked { border-color: var(--green); background: var(--mint); color: var(--green); }
+.sort-row small { grid-column: 1 / -1; color: var(--red); font-size: 11px; }
+.sort-row.is-right { border-color: rgba(23,107,85,.45); background: var(--mint); }
+.sort-row.is-wrong { border-color: #dca09b; background: #f8e7e5; }
+.sort-row.is-wrong button.picked { border-color: #dca09b; background: transparent; color: var(--red); }
+
+/* Расчёт вводится числом: выбирать тут не из чего. */
+.topic-answer { display: flex; gap: 9px; margin-top: 16px; }
+.topic-answer input {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,.8);
+  color: var(--ink);
+  font: inherit;
+}
+.topic-answer input:focus { outline: none; border-color: var(--green); }
+
+@media (max-width: 720px) {
+  .topic-grades { grid-template-columns: 1fr; }
+  .topic-grades button small { display: inline; margin-left: 6px; }
+  .sort-row { grid-template-columns: 1fr; }
+  .sort-row > div { justify-content: flex-start; }
+  .topic-answer { flex-direction: column; }
+  .topic-answer .primary { width: 100%; }
+  .stats-grid.topic-stats { grid-template-columns: repeat(2, 1fr); }
+}

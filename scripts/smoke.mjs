@@ -1,5 +1,6 @@
-// Drives the published site in a real browser and walks one lesson of the
-// fourth course from its first card to its stored result.
+// Drives the published site in a real browser: walks one lesson of the fourth
+// course from its first card to its stored result, then works through a step of
+// a memorised topic and one repeat from its queue.
 //
 //   npm run build:static && npm run smoke
 //
@@ -18,6 +19,11 @@
 // The fourth course is walked because it is the newest, and because the third
 // and fourth share one set of screens — walking the newer one exercises both.
 // Storage is seeded so the courses it waits on count as finished.
+//
+// The topics screen is walked too, and for the same reason the course is: its
+// forms of asking — choice, free recall, a checked list, a generated
+// calculation — are all client-side, and nothing but a browser can say whether
+// a grade actually reaches the schedule.
 //
 // A machine with no Chromium skips instead of failing: this check is not part
 // of `npm test`, and a missing browser is not a broken change.
@@ -263,6 +269,94 @@ try {
     }
   }
 
+  // ——— Тема наизусть: отдельный экран, отдельное хранилище ———
+
+  await page.goto(`${origin}topics/`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: /Начать|Продолжить/ }).first().click();
+  await page.waitForSelector(".topic-view h1", { timeout: 15_000 });
+
+  const examLocked = await page.locator(".topic-exam button.locked").count();
+  if (!examLocked) failures.push("зачёт открыт до того, как разобраны занятия");
+
+  await page.locator(".lesson-card").nth(0).getByRole("button", { name: "Разобрать" }).click();
+  await page.waitForSelector(".topic-run", { timeout: 15_000 });
+
+  /** Answers whatever form the current unit takes, and grades it. */
+  async function answerUnit() {
+    if (await page.getByRole("button", { name: "Открыть список" }).count()) {
+      await page.getByRole("button", { name: "Открыть список" }).click();
+      const items = page.locator(".topic-list button");
+      for (let index = 0; index < (await items.count()); index += 1) await items.nth(index).click();
+      await page.locator(".feedback button").click();
+      return "список";
+    }
+    if (await page.locator(".topic-sort").count()) {
+      const rows = page.locator(".sort-row");
+      for (let index = 0; index < (await rows.count()); index += 1) {
+        await rows.nth(index).locator("button").first().click();
+      }
+      await page.getByRole("button", { name: "Проверить" }).click();
+      await page.locator(".feedback button").click();
+      return "разбор";
+    }
+    if (await page.locator(".topic-answer input").count()) {
+      await page.locator(".topic-answer input").fill("0");
+      await page.getByRole("button", { name: "Проверить" }).click();
+      await page.locator(".feedback button").click();
+      return "расчёт";
+    }
+    if (await page.locator(".options button").count()) {
+      await page.locator(".options button").first().click();
+      await page.locator(".feedback button").click();
+      return "выбор";
+    }
+    await page.getByRole("button", { name: "Показать ответ" }).click();
+    await page.locator(".topic-grades .good").click();
+    return "припоминание";
+  }
+
+  const forms = new Set();
+  for (let step = 0; step < 80; step += 1) {
+    if (await page.locator(".result-view").count()) break;
+    forms.add(await answerUnit());
+  }
+  if (!(await page.locator(".result-view").count())) failures.push("занятие темы не дошло до итога");
+  if (!forms.has("припоминание")) failures.push("свободное припоминание ни разу не встретилось");
+  if (!forms.has("список")) failures.push("список ни разу не спросили целиком");
+
+  const topicStored = await page.evaluate(() => ({
+    cards: Object.keys(JSON.parse(localStorage.getItem("shifahiya-topic-cards-v1") ?? "{}")).length,
+    steps: Object.keys(JSON.parse(localStorage.getItem("shifahiya-topic-steps-v1") ?? "{}")),
+    // The course's own boxes must stay exactly as the lesson above left them.
+    courseCards: Object.keys(JSON.parse(localStorage.getItem("shifahiya-card-progress-v1") ?? "{}")).length,
+  }));
+  if (!topicStored.cards) failures.push("карточки темы не попали в расписание");
+  if (!topicStored.steps.length) failures.push("занятие темы не отмечено пройденным");
+  if (topicStored.courseCards !== stored.cards) {
+    failures.push("разбор темы изменил коробки повторения курса");
+  }
+
+  // A card whose day has come is asked again — with a generated calculation
+  // among them, which is the one form the first step does not carry.
+  await page.evaluate(() => {
+    const cards = JSON.parse(localStorage.getItem("shifahiya-topic-cards-v1") ?? "{}");
+    cards["zakat:drill-sheep"] = {
+      box: 1,
+      nextReview: "2020-01-01",
+      lastSeen: "2020-01-01",
+      reps: 1,
+      lapses: 0,
+    };
+    localStorage.setItem("shifahiya-topic-cards-v1", JSON.stringify(cards));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("button", { name: /Продолжить/ }).first().click();
+  await page.getByRole("button", { name: "Повторить" }).click();
+  await page.waitForSelector(".topic-run", { timeout: 15_000 });
+  const drillAsked = await page.locator(".topic-prompt").innerText();
+  if (!/овец/i.test(drillAsked)) failures.push(`из очереди пришло не то: ${drillAsked}`);
+  forms.add(await answerUnit());
+
   if (failures.length) {
     console.error("Прогон не прошёл:");
     for (const failure of failures) console.error(`  · ${failure}`);
@@ -271,7 +365,8 @@ try {
     console.log(
       `Опубликованный сайт живой. Урок четвёртой части пройден целиком: ${lesson}, ` +
         `фрагментов ${fragments}, счёт ${stored.score}, карточек ${stored.cards}. ` +
-        "Урок без новых слов открывается сразу на чтении.",
+        "Урок без новых слов открывается сразу на чтении. " +
+        `Занятие темы разобрано (${[...forms].join(", ")}), карточек в расписании ${topicStored.cards}.`,
     );
   }
 } catch (error) {

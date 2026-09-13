@@ -12,6 +12,7 @@ import type {
 } from "./progress-store";
 import type { PodcastWatch } from "./podcast-catalog";
 import type { DayPlan } from "./podcast-day";
+import type { TopicCard, TopicExamResult } from "./topic-schedule";
 
 // Two devices hold two independent histories, and neither is "the" truth: the
 // phone may know about yesterday's review while the laptop knows about today's
@@ -377,19 +378,115 @@ export function normalizePodcasts(value: Partial<SyncedPodcasts> | null | undefi
   };
 }
 
-/** Everything one device syncs: the course, and the habit beside it. */
-export type SyncedProgress = Progress & { podcasts: SyncedPodcasts };
+// The memorisation part travels too, and by the same rules as everything else:
+// the further-along side wins, and nothing a device did is undone by a device
+// that did not see it.
+
+export type SyncedTopics = {
+  cards: Record<string, TopicCard>;
+  /** `topicId:stepId` → the day the step was first worked through. */
+  steps: Record<string, string>;
+  exams: Record<string, TopicExamResult>;
+};
+
+export const EMPTY_TOPICS: SyncedTopics = { cards: {}, steps: {}, exams: {} };
+
+/**
+ * A card the learner graded later knows its real box. Ties fall through to the
+ * box and then to the number of answers behind it, so the winner never depends
+ * on which side was passed first.
+ */
+function laterTopicCard(mine: TopicCard, theirs: TopicCard) {
+  const rank = (card: TopicCard) => [card.lastSeen, card.box, card.reps];
+  const [mineRank, theirsRank] = [rank(mine), rank(theirs)];
+  for (let i = 0; i < mineRank.length; i += 1) {
+    if (mineRank[i] !== theirsRank[i]) return mineRank[i] > theirsRank[i] ? mine : theirs;
+  }
+  return mine;
+}
+
+function mergeTopicCards(mine: Record<string, TopicCard>, theirs: Record<string, TopicCard>) {
+  const merged: Record<string, TopicCard> = { ...mine };
+  for (const [id, card] of Object.entries(theirs)) {
+    const existing = merged[id];
+    // Forgetting is counted on whichever device saw it, so the count is the
+    // larger of the two rather than the winner's own.
+    merged[id] = existing
+      ? { ...laterTopicCard(existing, card), lapses: Math.max(existing.lapses, card.lapses) }
+      : card;
+  }
+  return merged;
+}
+
+/** A step worked through on either device is worked through, and it keeps the
+ *  earlier of the two dates: that is when the learner actually sat with it. */
+function mergeSteps(mine: Record<string, string>, theirs: Record<string, string>) {
+  const merged: Record<string, string> = { ...mine };
+  for (const [id, date] of Object.entries(theirs)) {
+    const existing = merged[id];
+    merged[id] = existing && existing < date ? existing : date;
+  }
+  return merged;
+}
+
+/** The same rule the course uses for its exams: the better paper stands, the
+ *  attempts are the larger count rather than the sum, and a pass keeps its date. */
+function mergeTopicExams(
+  mine: Record<string, TopicExamResult>,
+  theirs: Record<string, TopicExamResult>,
+) {
+  const merged: Record<string, TopicExamResult> = { ...mine };
+  for (const [id, result] of Object.entries(theirs)) {
+    const existing = merged[id];
+    if (!existing) {
+      merged[id] = result;
+      continue;
+    }
+    const passed = [existing.passedAt, result.passedAt].filter(Boolean).sort();
+    merged[id] = {
+      best: Math.max(existing.best, result.best),
+      total: Math.max(existing.total, result.total),
+      attempts: Math.max(existing.attempts, result.attempts),
+      lastAt: existing.lastAt > result.lastAt ? existing.lastAt : result.lastAt,
+      ...(passed[0] ? { passedAt: passed[0] } : {}),
+    };
+  }
+  return merged;
+}
+
+export function mergeTopics(mine: SyncedTopics, theirs: SyncedTopics): SyncedTopics {
+  return {
+    cards: mergeTopicCards(mine.cards, theirs.cards),
+    steps: mergeSteps(mine.steps, theirs.steps),
+    exams: mergeTopicExams(mine.exams, theirs.exams),
+  };
+}
+
+export function normalizeTopics(value: Partial<SyncedTopics> | null | undefined): SyncedTopics {
+  return { cards: value?.cards ?? {}, steps: value?.steps ?? {}, exams: value?.exams ?? {} };
+}
+
+/** Everything one device syncs: the course, and the two habits beside it. */
+export type SyncedProgress = Progress & { podcasts: SyncedPodcasts; topics: SyncedTopics };
 
 export function mergeSynced(mine: SyncedProgress, theirs: SyncedProgress): SyncedProgress {
   return {
     ...mergeProgress(mine, theirs),
     podcasts: mergePodcasts(mine.podcasts, theirs.podcasts),
+    topics: mergeTopics(mine.topics, theirs.topics),
   };
 }
 
-/** A payload written before podcasts synced simply has none of them. */
+/** A payload written before podcasts or topics synced simply has none of them. */
 export function normalizeSynced(
-  value: (Partial<Progress> & { podcasts?: Partial<SyncedPodcasts> }) | null | undefined,
+  value:
+    | (Partial<Progress> & { podcasts?: Partial<SyncedPodcasts>; topics?: Partial<SyncedTopics> })
+    | null
+    | undefined,
 ): SyncedProgress {
-  return { ...normalizeProgress(value), podcasts: normalizePodcasts(value?.podcasts) };
+  return {
+    ...normalizeProgress(value),
+    podcasts: normalizePodcasts(value?.podcasts),
+    topics: normalizeTopics(value?.topics),
+  };
 }

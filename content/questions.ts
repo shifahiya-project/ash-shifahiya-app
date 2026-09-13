@@ -136,14 +136,19 @@ export function buildOptions(answer: string, candidates: Candidate[], deckIndex:
   return [answer, ...picked];
 }
 
-/** Russian counts agree with the noun: 1 форма, 2 формы, 5 форм. */
-export function plural(count: number, one: string, few: string, many: string) {
+/** The form the noun takes after a count: 1 форма, 2 формы, 5 форм. */
+export function nounForm(count: number, one: string, few: string, many: string) {
   const tens = count % 100;
   const ones = count % 10;
-  if (tens >= 11 && tens <= 14) return `${count} ${many}`;
-  if (ones === 1) return `${count} ${one}`;
-  if (ones >= 2 && ones <= 4) return `${count} ${few}`;
-  return `${count} ${many}`;
+  if (tens >= 11 && tens <= 14) return many;
+  if (ones === 1) return one;
+  if (ones >= 2 && ones <= 4) return few;
+  return many;
+}
+
+/** Russian counts agree with the noun: 1 форма, 2 формы, 5 форм. */
+export function plural(count: number, one: string, few: string, many: string) {
+  return `${count} ${nounForm(count, one, few, many)}`;
 }
 
 /**

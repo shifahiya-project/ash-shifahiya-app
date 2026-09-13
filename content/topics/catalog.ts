@@ -1,0 +1,50 @@
+/**
+ * Every topic the memorisation part carries.
+ *
+ * Loaded outright rather than lazily, and deliberately: there is one topic, the
+ * screen that lists them is the screen that opens them, and a loader for a
+ * single file is more code than the kilobytes it saves. The whole part lives on
+ * its own route, so nothing of this reaches the course's entry chunk. When the
+ * shelf grows enough for the weight to be felt, this is the one file that
+ * changes.
+ */
+import { zakatTopic } from "./zakat.ts";
+import { topicAtoms, topicDrills, topicUnits, type Topic } from "./types.ts";
+
+export const TOPICS: Topic[] = [zakatTopic];
+
+export function topicById(id: string) {
+  return TOPICS.find((topic) => topic.id === id);
+}
+
+export type TopicSummary = {
+  id: string;
+  title: string;
+  subtitle: string;
+  source: Topic["source"];
+  steps: number;
+  facts: number;
+  drills: number;
+  /** Every unit of the topic, in course order — the schedule's whole world. */
+  unitIds: string[];
+};
+
+/**
+ * Counted from the topic itself rather than written beside it: a number typed
+ * by hand goes stale at the first correction, and this one is read off the
+ * same data the lessons are built from.
+ */
+export function summarize(topic: Topic): TopicSummary {
+  return {
+    id: topic.id,
+    title: topic.title,
+    subtitle: topic.subtitle,
+    source: topic.source,
+    steps: topic.steps.length,
+    facts: topicAtoms(topic).length,
+    drills: topicDrills(topic).length,
+    unitIds: topicUnits(topic).map((unit) => unit.id),
+  };
+}
+
+export const TOPIC_SUMMARIES = TOPICS.map(summarize);
