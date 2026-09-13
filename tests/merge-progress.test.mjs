@@ -5,9 +5,11 @@ import {
   mergePodcasts,
   mergeProgress,
   mergeSynced,
+  mergeTopics,
   normalizePodcasts,
   normalizeProgress,
   normalizeSynced,
+  normalizeTopics,
 } from "../app/merge-progress.ts";
 
 function card(overrides = {}) {
@@ -145,6 +147,10 @@ function podcasts(overrides = {}) {
   return normalizePodcasts(overrides);
 }
 
+function topicCard(overrides = {}) {
+  return { box: 2, nextReview: "2026-09-16", lastSeen: "2026-09-13", reps: 3, lapses: 0, ...overrides };
+}
+
 test("a podcast watched on either device is watched", () => {
   const phone = podcasts({ watches: [watch("a", "2026-08-25", 100)] });
   const laptop = podcasts({ watches: [watch("b", "2026-08-26", 200)] });
@@ -207,18 +213,66 @@ test("merging podcasts does not depend on which device synced first", () => {
   assert.deepEqual(mergePodcasts(phone, laptop), mergePodcasts(laptop, phone));
 });
 
-test("the course and the habit travel together, and old payloads still load", () => {
-  const mine = { ...progress({ scores: { 1: 20 } }), podcasts: podcasts({ watches: [watch("a", "2026-08-25", 100)] }) };
-  const theirs = { ...progress({ scores: { 2: 30 } }), podcasts: podcasts({ watches: [watch("b", "2026-08-26", 200)] }) };
+test("a topic keeps the further-along side, and a step done is done", () => {
+  const phone = normalizeTopics({
+    cards: {
+      "zakat:rate": topicCard({ box: 3, lastSeen: "2026-09-13", reps: 5 }),
+      "zakat:sheep": topicCard({ box: 1, lastSeen: "2026-09-10", reps: 2, lapses: 2 }),
+    },
+    steps: { "zakat:fitr": "2026-09-12" },
+    exams: { zakat: { best: 19, total: 27, attempts: 1, lastAt: "2026-09-12" } },
+  });
+  const laptop = normalizeTopics({
+    cards: {
+      // The same card, answered earlier there — and forgotten once on the way.
+      "zakat:rate": topicCard({ box: 1, lastSeen: "2026-09-11", reps: 4, lapses: 1 }),
+      "zakat:camels": topicCard({ box: 0, lastSeen: "2026-09-13", reps: 1 }),
+    },
+    steps: { "zakat:fitr": "2026-09-09", "zakat:ponyatie": "2026-09-13" },
+    exams: { zakat: { best: 23, total: 27, attempts: 1, lastAt: "2026-09-13", passedAt: "2026-09-13" } },
+  });
+
+  const merged = mergeTopics(phone, laptop);
+  assert.equal(merged.cards["zakat:rate"].box, 3, "позже отвеченная карточка знает свою коробку");
+  assert.equal(merged.cards["zakat:rate"].lapses, 1, "потеря засчитана тем устройством, что её видело");
+  assert.equal(merged.cards["zakat:camels"].reps, 1, "карточка, которой второе устройство не знало");
+  assert.equal(merged.steps["zakat:fitr"], "2026-09-09", "занятие датируется первым разбором");
+  assert.deepEqual(merged.exams.zakat, {
+    best: 23,
+    total: 27,
+    attempts: 1,
+    lastAt: "2026-09-13",
+    passedAt: "2026-09-13",
+  });
+
+  assert.deepEqual(mergeTopics(phone, laptop), mergeTopics(laptop, phone));
+});
+
+test("the course and the habits travel together, and old payloads still load", () => {
+  const mine = {
+    ...progress({ scores: { 1: 20 } }),
+    podcasts: podcasts({ watches: [watch("a", "2026-08-25", 100)] }),
+    topics: normalizeTopics({ cards: { "zakat:rate": topicCard() } }),
+  };
+  const theirs = {
+    ...progress({ scores: { 2: 30 } }),
+    podcasts: podcasts({ watches: [watch("b", "2026-08-26", 200)] }),
+    topics: normalizeTopics({ steps: { "zakat:fitr": "2026-09-10" } }),
+  };
 
   const merged = mergeSynced(mine, theirs);
   assert.deepEqual(merged.scores, { 1: 20, 2: 30 });
   assert.equal(merged.watches, undefined, "the habit must not leak into the course");
+  assert.equal(merged.cards["zakat:rate"], undefined, "the topics must not leak into the course either");
   assert.deepEqual(merged.podcasts.watches.map((item) => item.videoId), ["a", "b"]);
+  assert.deepEqual(Object.keys(merged.topics.cards), ["zakat:rate"]);
+  assert.deepEqual(merged.topics.steps, { "zakat:fitr": "2026-09-10" });
   assert.deepEqual(mergeSynced(mine, theirs), mergeSynced(theirs, mine));
 
-  // A payload written before podcasts synced simply has none of them.
+  // A payload written before podcasts or topics synced simply has none of them.
   const old = normalizeSynced({ scores: { 3: 10 } });
   assert.deepEqual(old.podcasts, { watches: [], plans: {}, sources: [] });
+  assert.deepEqual(old.topics, { cards: {}, steps: {}, exams: {} });
   assert.deepEqual(normalizeSynced(null).podcasts, { watches: [], plans: {}, sources: [] });
+  assert.deepEqual(normalizeSynced(null).topics, { cards: {}, steps: {}, exams: {} });
 });

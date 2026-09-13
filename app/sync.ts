@@ -1,5 +1,6 @@
 import { mergeSynced, normalizeSynced, type SyncedProgress } from "./merge-progress";
 import { podcastStore } from "./podcast-store";
+import { topicStore } from "./topic-store";
 import { progressStore } from "./progress-store";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSyncConfigured } from "./supabase-config";
 
@@ -31,12 +32,17 @@ const MAX_WAIT_MS = 60_000;
 const OFF: SyncState = { status: "off", email: null, message: null, syncedAt: null };
 
 /**
- * Everything this device would send: the course, and the podcast habit beside
- * it. They live in separate stores because they are separate things, and they
- * travel together because they belong to the same learner.
+ * Everything this device would send: the course, the podcast habit and the
+ * topics being memorised. They live in separate stores because they are
+ * separate things, and they travel together because they belong to the same
+ * learner.
  */
 function localPayload(): SyncedProgress {
-  return { ...progressStore.getSnapshot(), podcasts: podcastStore.syncedSnapshot() };
+  return {
+    ...progressStore.getSnapshot(),
+    podcasts: podcastStore.syncedSnapshot(),
+    topics: topicStore.syncedSnapshot(),
+  };
 }
 
 const listeners = new Set<() => void>();
@@ -120,6 +126,7 @@ async function reconcile() {
   // push of what is about to be pushed here anyway.
   progressStore.replaceAll(merged);
   podcastStore.applySynced(merged.podcasts);
+  topicStore.applySynced(merged.topics);
   reconciling = false;
   cancelPending();
 
@@ -209,6 +216,9 @@ export function startSync() {
   // A podcast watched is progress too, and it has to reach the other device
   // before tomorrow, or the streak breaks on a day that was not missed.
   podcastStore.subscribe(queue);
+  // A topic reviewed on the phone must not come back due on the laptop: the
+  // whole point of the schedule is that the day it names is the right one.
+  topicStore.subscribe(queue);
 
   // Closing the tab mid-lesson must not drop the last few answers.
   window.addEventListener("pagehide", () => {

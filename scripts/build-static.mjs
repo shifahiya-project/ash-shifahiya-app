@@ -14,14 +14,15 @@ const WORKER_ONLY = [".assetsignore", "_headers", ".vite"];
 
 // Every page the site has. `depth` is how many directories deep the file sits,
 // which decides what an absolute URL has to be rewritten to: the course sits at
-// the root and reaches assets through ./, the podcast screen lives one level
-// down and reaches the same assets through ../.
+// the root and reaches assets through ./, the podcast and topic screens live one
+// level down and reach the same assets through ../.
 // `path` is asked of the Worker and `file` is where the answer is written:
 // Next normalises a trailing slash with a redirect, so the page has to be
 // requested without one and still saved as the directory's index.
 const PAGES = [
   { path: "/", file: "index.html", depth: 0 },
   { path: "/podcasts", file: "podcasts/index.html", depth: 1 },
+  { path: "/topics", file: "topics/index.html", depth: 1 },
 ];
 
 const root = new URL("../", import.meta.url);

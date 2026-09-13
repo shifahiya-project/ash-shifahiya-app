@@ -27,6 +27,10 @@ import { loadPart7Lesson, loadPart7Lessons, loadPart7WordsMetBefore } from "../c
 import { isPart7Open, part7CardId, part7LessonIdsInCards, unlockedPart7Ids } from "./part7-access";
 import { textCourseQuestions } from "../content/text-course-questions";
 import { textCourseDividerKey } from "./text-course-access";
+// Only the schedule and the store, never a topic's content: the memorisation
+// part lives on its own route, and the course page needs one number from it.
+import { dueCardCount } from "./topic-schedule";
+import { topicStore } from "./topic-store";
 import { plural } from "../content/questions";
 import type {
   Exam,
@@ -460,6 +464,15 @@ export default function Home() {
   const learningStats = stored.stats;
 
   const sync = useSyncExternalStore(syncStore.subscribe, syncStore.getSnapshot, syncStore.getServerSnapshot);
+
+  // How many questions of the memorised topics are due today — the reminder on
+  // the link below, and the only thing the course knows about that part.
+  const topicCards = useSyncExternalStore(
+    topicStore.subscribe,
+    topicStore.getSnapshot,
+    topicStore.getServerSnapshot,
+  );
+  const topicsDue = dueCardCount(topicCards.cards, localDate());
 
   const lesson = openLessons[lessonId];
   const parts = useMemo(() => (lesson ? visibleParts(lessonParts(lesson)) : []), [lesson]);
@@ -1606,6 +1619,19 @@ export default function Home() {
               <strong>Подкаст дня</strong>
               <small>Один выпуск на арабском в день — своя серия и свой календарь</small>
             </div>
+            <span>→</span>
+          </a>
+
+          {/* И третья дверь рядом: тема из своей книги, разобранная до фактов.
+              Счётчик — только напоминание; повторение темы не входит ни в счёт
+              урока, ни в коробки Лейтнера, ни в статистику курса. */}
+          <a className="topic-link" href="/topics/">
+            <span className="daily-icon">ح</span>
+            <div>
+              <strong>Темы наизусть</strong>
+              <small>Разбор темы по вашей книге: припоминание, расчёты и расписание</small>
+            </div>
+            {topicsDue > 0 && <span className="topic-badge">{topicsDue}</span>}
             <span>→</span>
           </a>
 
