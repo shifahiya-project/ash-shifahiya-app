@@ -98,20 +98,42 @@ export type MoneyDrill = {
   page: number;
 };
 
-/** Two buckets and things to put in them: allowed against forbidden. */
+/**
+ * Buckets and things to put in them: allowed against forbidden, or a ruling
+ * against the two rulings it is confused with. Two or three — fiqh sorts by
+ * three often enough (фард, ваджиб, сунна) that a pair would force the same
+ * material into two half-drills.
+ */
 export type SortDrill = {
   id: string;
   kind: "sort";
   title: string;
   prompt: string;
-  buckets: [string, string];
-  items: { label: string; bucket: 0 | 1; note?: string }[];
+  buckets: string[];
+  items: { label: string; bucket: number; note?: string }[];
   /** How many of the items one task offers. */
   size: number;
   page: number;
 };
 
-export type Drill = StepsDrill | ShareDrill | MoneyDrill | SortDrill;
+/**
+ * A rite is a sequence, and knowing its parts is not knowing their order.
+ * The whole order is stored; a task asks for a window of it, so the same
+ * sequence is drilled from a different place each time.
+ */
+export type OrderDrill = {
+  id: string;
+  kind: "order";
+  title: string;
+  prompt: string;
+  /** The steps in the order they are performed. */
+  items: string[];
+  /** How many consecutive steps one task offers. */
+  size: number;
+  page: number;
+};
+
+export type Drill = StepsDrill | ShareDrill | MoneyDrill | SortDrill | OrderDrill;
 
 /**
  * One sitting: pages to read in the book, the theses that hold them together,

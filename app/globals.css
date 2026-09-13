@@ -1286,7 +1286,7 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   background: rgba(255,255,255,.7);
   font-size: 14px;
 }
-.sort-row > div { display: flex; gap: 6px; }
+.sort-row > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .sort-row button {
   padding: 7px 12px;
   border: 1px solid var(--line);
@@ -1301,6 +1301,45 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
 .sort-row.is-right { border-color: rgba(23,107,85,.45); background: var(--mint); }
 .sort-row.is-wrong { border-color: #dca09b; background: #f8e7e5; }
 .sort-row.is-wrong button.picked { border-color: #dca09b; background: transparent; color: var(--red); }
+
+/* Порядок обрядов: нажатием выстраивается очередь, номер слева — её место. */
+.topic-order { display: grid; gap: 7px; margin: 14px 0 16px; text-align: left; }
+.order-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255,255,255,.7);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+.order-row b {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--cream);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.order-row.picked { border-color: rgba(23,107,85,.45); background: var(--mint); }
+.order-row.picked b { background: var(--green); color: white; }
+.order-row.is-right { border-color: rgba(23,107,85,.45); background: var(--mint); }
+.order-row.is-right b { background: var(--green); color: white; }
+.order-row.is-wrong { border-color: #dca09b; background: #f8e7e5; }
+.order-row.is-wrong b { background: var(--red); color: white; }
+/* Номера здесь и есть ответ, а сброс Tailwind их снимает. */
+.topic-order-answer { margin-top: 16px; padding-left: 42px; list-style: decimal; }
+.topic-order-answer::marker, .topic-order-answer li::marker { color: var(--green); }
+.topic-order-answer li { margin-bottom: 7px; font: 15px/1.5 Georgia, serif; }
+.topic-order-answer li:last-child { margin-bottom: 0; }
 
 /* Расчёт вводится числом: выбирать тут не из чего. */
 .topic-answer { display: flex; gap: 9px; margin-top: 16px; }

@@ -23,24 +23,28 @@ import {
 } from "../app/topic-schedule.ts";
 
 const zakat = topicById("zakat");
+const hajj = topicById("hajj");
 
 // ——— Материал темы ———
 
 test("a topic is a book section broken into steps, and every unit says where it came from", () => {
-  assert.ok(zakat, "пилотная тема на месте");
-  const [from, to] = zakat.source.pages.split("–").map(Number);
-  assert.ok(from < to);
+  assert.ok(zakat && hajj, "обе темы на месте");
 
-  for (const step of zakat.steps) {
-    assert.ok(step.pages, `${step.id}: страницы книги обязательны`);
-    assert.ok(step.brief.length >= 2, `${step.id}: без тезисов шаг ничего не держит`);
-    assert.ok(step.atoms.length >= 1);
+  for (const topic of TOPICS) {
+    const [from, to] = topic.source.pages.split("–").map(Number);
+    assert.ok(from < to, `${topic.id}: страницы раздела`);
 
-    // The text stays in the learner's own book, so the pages are the only way
-    // back to it: a unit that cannot be checked against the source is a unit
-    // the learner has to take on trust.
-    for (const unit of stepUnits(step)) {
-      assert.ok(unit.page >= from && unit.page <= to, `${unit.id}: страница ${unit.page} вне раздела`);
+    for (const step of topic.steps) {
+      assert.ok(step.pages, `${step.id}: страницы книги обязательны`);
+      assert.ok(step.brief.length >= 2, `${step.id}: без тезисов шаг ничего не держит`);
+      assert.ok(step.atoms.length >= 1);
+
+      // The text stays in the learner's own book, so the pages are the only way
+      // back to it: a unit that cannot be checked against the source is a unit
+      // the learner has to take on trust.
+      for (const unit of stepUnits(step)) {
+        assert.ok(unit.page >= from && unit.page <= to, `${unit.id}: страница ${unit.page} вне раздела`);
+      }
     }
   }
 });
@@ -53,7 +57,7 @@ test("every unit of a topic has its own address", () => {
 });
 
 test("a fact asks and answers, a list comes with the items it is checked by", () => {
-  for (const atom of topicAtoms(zakat)) {
+  for (const atom of TOPICS.flatMap(topicAtoms)) {
     assert.match(atom.question, /\S/);
     assert.match(atom.answer, /\S/);
     if (atom.kind === "list") {
@@ -65,7 +69,7 @@ test("a fact asks and answers, a list comes with the items it is checked by", ()
 });
 
 test("hand-written options are alternatives, never a second right answer", () => {
-  for (const atom of topicAtoms(zakat)) {
+  for (const atom of TOPICS.flatMap(topicAtoms)) {
     if (!atom.options) continue;
     assert.ok(atom.options.length >= 2, `${atom.id}: одного неверного варианта мало`);
     assert.equal(new Set(atom.options).size, atom.options.length, `${atom.id}: варианты повторяются`);
@@ -75,29 +79,40 @@ test("hand-written options are alternatives, never a second right answer", () =>
 });
 
 test("the exam is the book's own review list, answered from the atoms themselves", () => {
-  const ids = new Set(topicAtoms(zakat).map((atom) => atom.id));
-  assert.equal(zakat.exam.questions.length, 27, "все вопросы раздела");
+  for (const topic of TOPICS) {
+    const ids = new Set(topicAtoms(topic).map((atom) => atom.id));
+    const numbers = topic.exam.questions.map((question) => Number(question.id));
+    assert.deepEqual(
+      numbers,
+      Array.from({ length: numbers.length }, (_, index) => index + 1),
+      `${topic.id}: нумерация книги`,
+    );
 
-  const numbers = zakat.exam.questions.map((question) => Number(question.id));
-  assert.deepEqual(numbers, Array.from({ length: 27 }, (_, index) => index + 1), "нумерация книги");
-
-  for (const question of zakat.exam.questions) {
-    assert.ok(question.atoms.length >= 1, `вопрос ${question.id} ни на что не опирается`);
-    for (const atom of question.atoms) {
-      assert.ok(ids.has(atom), `вопрос ${question.id} ссылается на несуществующий факт ${atom}`);
+    for (const question of topic.exam.questions) {
+      assert.ok(question.atoms.length >= 1, `вопрос ${question.id} ни на что не опирается`);
+      for (const atom of question.atoms) {
+        assert.ok(ids.has(atom), `${topic.id}, вопрос ${question.id}: нет факта ${atom}`);
+      }
     }
   }
 
+  // Все вопросы раздела, сколько бы их ни было в книге.
+  assert.equal(zakat.exam.questions.length, 27);
+  assert.equal(hajj.exam.questions.length, 70);
+
   // Three quarters and one answer more, the same line the course's exams draw.
   assert.equal(examPassMark(27), 22);
+  assert.equal(examPassMark(70), 54);
 });
 
 test("the summary is counted off the topic rather than typed beside it", () => {
-  const summary = summarize(zakat);
-  assert.equal(summary.steps, zakat.steps.length);
-  assert.equal(summary.facts, topicAtoms(zakat).length);
-  assert.equal(summary.drills, topicDrills(zakat).length);
-  assert.equal(summary.unitIds.length, summary.facts + summary.drills);
+  for (const topic of TOPICS) {
+    const summary = summarize(topic);
+    assert.equal(summary.steps, topic.steps.length);
+    assert.equal(summary.facts, topicAtoms(topic).length);
+    assert.equal(summary.drills, topicDrills(topic).length);
+    assert.equal(summary.unitIds.length, summary.facts + summary.drills);
+  }
   assert.deepEqual(TOPIC_SUMMARIES.map((item) => item.id), TOPICS.map((item) => item.id));
 });
 
@@ -204,6 +219,7 @@ test("a list is graded by what actually came back", () => {
 // ——— Расчёты ———
 
 const drills = Object.fromEntries(topicDrills(zakat).map((drill) => [drill.id, drill]));
+const hajjDrills = Object.fromEntries(topicDrills(hajj).map((drill) => [drill.id, drill]));
 
 test("the tables answer the book's own questions", () => {
   // Вопросы 11–13 раздела, слово в слово из книги.
@@ -292,17 +308,93 @@ test("money is weighed against the nisab before any percentage is taken", () => 
   assert.ok(due > 0);
 });
 
-test("sorting always offers both buckets, or it teaches answering without reading", () => {
-  for (const id of ["drill-relatives", "drill-recipients"]) {
-    const drill = drills[id];
-    for (let seed = 1; seed <= 80; seed += 1) {
-      const task = buildTask(drill, seed);
-      assert.equal(task.kind, "sort");
-      assert.equal(task.items.length, drill.size);
-      assert.equal(new Set(task.items.map((item) => item.label)).size, drill.size, "повтор в задании");
-      assert.equal(new Set(task.items.map((item) => item.bucket)).size, 2, `${id}: одна кучка на всё задание`);
+test("sorting offers every bucket it has, or it teaches answering without reading", () => {
+  for (const topic of TOPICS) {
+    for (const drill of topicDrills(topic).filter((item) => item.kind === "sort")) {
+      assert.ok(drill.buckets.length >= 2, `${drill.id}: одной кучки мало`);
+      for (const bucket of drill.buckets.keys()) {
+        assert.ok(
+          drill.items.some((item) => item.bucket === bucket),
+          `${drill.id}: кучка «${drill.buckets[bucket]}» пуста`,
+        );
+      }
+      for (const item of drill.items) {
+        assert.ok(item.bucket < drill.buckets.length, `${drill.id}: у «${item.label}» несуществующая кучка`);
+      }
+
+      // Задание, где все ответы совпадают, учит отвечать не читая; задание,
+      // тихо потерявшее третью кучку, учит, что кучек две.
+      const expected = Math.min(drill.buckets.length, drill.size);
+      for (let seed = 1; seed <= 80; seed += 1) {
+        const task = buildTask(drill, seed);
+        assert.equal(task.kind, "sort");
+        assert.equal(task.items.length, drill.size);
+        assert.equal(new Set(task.items.map((item) => item.label)).size, drill.size, "повтор в задании");
+        assert.equal(
+          new Set(task.items.map((item) => item.bucket)).size,
+          expected,
+          `${drill.id}: в задании не все кучки`,
+        );
+      }
     }
   }
+});
+
+test("the order drill asks a window of the rite, and never one already solved", () => {
+  const drill = hajjDrills["drill-order"];
+  assert.equal(new Set(drill.items).size, drill.items.length, "шаг обряда повторяется");
+  assert.equal(drill.items[0], "Одевание ихрама в микате");
+  assert.equal(drill.items.at(-1), "Прощальный таваф");
+
+  const windows = new Set();
+  for (let seed = 1; seed <= 200; seed += 1) {
+    const task = buildTask(drill, seed);
+    assert.equal(task.kind, "order");
+    assert.equal(task.answer.length, drill.size);
+
+    // Окно — подряд идущие шаги обряда, а не любая их выборка.
+    const start = drill.items.indexOf(task.answer[0]);
+    assert.deepEqual(task.answer, drill.items.slice(start, start + drill.size));
+    assert.deepEqual([...task.items].sort(), [...task.answer].sort(), "предложены не те шаги");
+    assert.notDeepEqual(task.items, task.answer, "задание пришло уже решённым");
+    windows.add(start);
+  }
+  assert.ok(windows.size > 3, "окно почти не двигается по обряду");
+});
+
+test("the pilgrimage sorts the way the book answers its own question 4", () => {
+  const drill = hajjDrills["drill-fard-wajib"];
+  const bucket = Object.fromEntries(drill.items.map((item) => [item.label, drill.buckets[item.bucket]]));
+  assert.equal(bucket["Одевание ихрама"], "Фард");
+  assert.equal(bucket["Стояние на Арафате"], "Фард");
+  assert.equal(bucket["Совершение таваф аз-зияра"], "Фард");
+  assert.equal(bucket["Бросание камней"], "Ваджиб");
+  assert.equal(bucket["Бег между холмами Сафа и Марва"], "Ваджиб");
+  assert.equal(bucket["Стояние в Муздалифе после утренней молитвы"], "Ваджиб");
+  assert.equal(bucket["Прощальный таваф для прибывшего издалека"], "Ваджиб");
+  assert.equal(bucket["Таваф прибытия"], "Сунна");
+  // Стояние на Арафате — фард, а стояние до захода солнца — ваджиб: ровно та
+  // пара, ради которой разбор и заведён.
+  assert.equal(bucket["Стояние в Арафате до захода солнца"], "Ваджиб");
+
+  const atoms = Object.fromEntries(topicAtoms(hajj).map((atom) => [atom.id, atom]));
+  assert.equal(atoms.fardy.items.length, 3);
+  assert.equal(atoms.vadzhiby.items.length, 11);
+  assert.equal(atoms.sunnaty.items.length, 7);
+});
+
+test("the ladder of expiations keeps its three rungs", () => {
+  const drill = hajjDrills["drill-kaffara"];
+  const bucket = Object.fromEntries(drill.items.map((item) => [item.label, drill.buckets[item.bucket]]));
+  assert.deepEqual(drill.buckets, ["Жертвоприношение", "Садака фитр", "Горсть пшеницы"]);
+  // Одно и то же нарушение, три меры времени — три разных искупления.
+  assert.equal(bucket["Шитая одежда в течение дня или ночи"], "Жертвоприношение");
+  assert.equal(bucket["Шитая одежда меньше дня, но больше часа"], "Садака фитр");
+  assert.equal(bucket["Шитая одежда меньше часа"], "Горсть пшеницы");
+  // И то же самое по площади ткани.
+  assert.equal(bucket["Благовониями обработано больше квадратной пяди одежды"], "Жертвоприношение");
+  assert.equal(bucket["Благовониями обработана ровно квадратная пядь одежды"], "Садака фитр");
+  assert.equal(bucket["Благовониями обработано меньше квадратной пяди одежды"], "Горсть пшеницы");
 });
 
 test("the relatives drill follows the vertical of the family tree", () => {

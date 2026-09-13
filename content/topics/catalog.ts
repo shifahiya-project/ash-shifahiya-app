@@ -8,10 +8,12 @@
  * shelf grows enough for the weight to be felt, this is the one file that
  * changes.
  */
+import { hajjTopic } from "./hajj.ts";
 import { zakatTopic } from "./zakat.ts";
 import { topicAtoms, topicDrills, topicUnits, type Topic } from "./types.ts";
 
-export const TOPICS: Topic[] = [zakatTopic];
+// В порядке книги: темы идут так же, как разделы в ней.
+export const TOPICS: Topic[] = [zakatTopic, hajjTopic];
 
 export function topicById(id: string) {
   return TOPICS.find((topic) => topic.id === id);
