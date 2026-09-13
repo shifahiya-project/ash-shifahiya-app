@@ -528,7 +528,8 @@ function UnitRunner({
   const [chosen, setChosen] = useState<string | null>(null);
   const [checked, setChecked] = useState<number[]>([]);
   const [typed, setTyped] = useState("");
-  const [sorted, setSorted] = useState<Record<number, 0 | 1>>({});
+  const [sorted, setSorted] = useState<Record<number, number>>({});
+  const [picked, setPicked] = useState<number[]>([]);
 
   const seed = taskSeed(unit.id, today, card?.reps ?? 0);
   const task = useMemo(() => (isDrill(unit) ? buildTask(unit, seed) : null), [unit, seed]);
@@ -631,6 +632,76 @@ function UnitRunner({
       );
     }
 
+    if (task.kind === "order") {
+      const chosen = picked.map((index) => task.items[index]);
+      const right = chosen.filter((item, index) => item === task.answer[index]).length;
+      return (
+        <>
+          <p className="instruction">{task.prompt}</p>
+          <div className="topic-order">
+            {task.items.map((item, index) => {
+              const place = picked.indexOf(index);
+              const state = revealed
+                ? place >= 0 && task.answer[place] === item
+                  ? " is-right"
+                  : " is-wrong"
+                : place >= 0
+                  ? " picked"
+                  : "";
+              return (
+                <button
+                  key={item}
+                  className={`order-row${state}`}
+                  disabled={revealed}
+                  onClick={() =>
+                    setPicked(
+                      place >= 0
+                        ? picked.filter((value) => value !== index)
+                        : [...picked, index],
+                    )
+                  }
+                >
+                  <b>{place >= 0 ? place + 1 : "·"}</b>
+                  <span>{item}</span>
+                </button>
+              );
+            })}
+          </div>
+          {!revealed ? (
+            <button
+              className="primary wide"
+              disabled={picked.length !== task.items.length}
+              onClick={() => setRevealed(true)}
+            >
+              Проверить
+            </button>
+          ) : (
+            <>
+              <ol className="topic-answer-card topic-order-answer">
+                {task.answer.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ol>
+              <div className={`feedback ${toneOf(gradeFromRecall(right, task.answer.length))}`}>
+                <div>
+                  <strong>
+                    {right} из {task.answer.length} на своём месте
+                  </strong>
+                  <p>Книга, с. {task.page}</p>
+                </div>
+                <button
+                  className="primary"
+                  onClick={() => onGrade(gradeFromRecall(right, task.answer.length))}
+                >
+                  Дальше <span>→</span>
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      );
+    }
+
     const answered = Object.keys(sorted).length === task.items.length;
     const right = task.items.filter((item, index) => sorted[index] === item.bucket).length;
     return (
@@ -650,7 +721,7 @@ function UnitRunner({
                       key={bucket}
                       className={picked === bucketIndex ? "picked" : ""}
                       disabled={revealed}
-                      onClick={() => setSorted({ ...sorted, [index]: bucketIndex as 0 | 1 })}
+                      onClick={() => setSorted({ ...sorted, [index]: bucketIndex })}
                     >
                       {bucket}
                     </button>

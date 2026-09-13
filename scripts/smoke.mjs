@@ -290,6 +290,13 @@ try {
       await page.locator(".feedback button").click();
       return "список";
     }
+    if (await page.locator(".topic-order").count()) {
+      const rows = page.locator(".order-row");
+      for (let index = 0; index < (await rows.count()); index += 1) await rows.nth(index).click();
+      await page.getByRole("button", { name: "Проверить" }).click();
+      await page.locator(".feedback button").click();
+      return "порядок";
+    }
     if (await page.locator(".topic-sort").count()) {
       const rows = page.locator(".sort-row");
       for (let index = 0; index < (await rows.count()); index += 1) {
@@ -356,6 +363,37 @@ try {
   const drillAsked = await page.locator(".topic-prompt").innerText();
   if (!/овец/i.test(drillAsked)) failures.push(`из очереди пришло не то: ${drillAsked}`);
   forms.add(await answerUnit());
+
+  // Вторая тема спрашивает обряд порядком, и эта форма есть только у неё:
+  // расставить шаги можно лишь в браузере, и только он скажет, доходит ли
+  // оценка до расписания.
+  await page.evaluate(() => {
+    const cards = JSON.parse(localStorage.getItem("shifahiya-topic-cards-v1") ?? "{}");
+    cards["hajj:drill-order"] = {
+      box: 1,
+      nextReview: "2020-01-01",
+      lastSeen: "2020-01-01",
+      reps: 1,
+      lapses: 0,
+    };
+    localStorage.setItem("shifahiya-topic-cards-v1", JSON.stringify(cards));
+  });
+  await page.goto(`${origin}topics/`, { waitUntil: "networkidle" });
+  const pilgrimage = page.locator(".lesson-card").filter({ hasText: "Паломничество" }).first();
+  if (!(await pilgrimage.count())) failures.push("второй темы нет в списке");
+  else {
+    await pilgrimage.getByRole("button", { name: /Начать|Продолжить/ }).click();
+    await page.getByRole("button", { name: "Повторить" }).click();
+    await page.waitForSelector(".topic-run", { timeout: 15_000 });
+    if (!(await page.locator(".topic-order").count())) failures.push("порядок обрядов не открылся");
+    else {
+      forms.add(await answerUnit());
+      const ordered = await page.evaluate(
+        () => JSON.parse(localStorage.getItem("shifahiya-topic-cards-v1") ?? "{}")["hajj:drill-order"],
+      );
+      if (!ordered || ordered.nextReview === "2020-01-01") failures.push("оценка за порядок не дошла до расписания");
+    }
+  }
 
   if (failures.length) {
     console.error("Прогон не прошёл:");

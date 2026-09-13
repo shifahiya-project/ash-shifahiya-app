@@ -10,7 +10,7 @@
  * rendered identically wherever it is built.
  */
 import { nounForm, plural, seededShuffle } from "../content/questions.ts";
-import type { Drill, MoneyDrill, ShareDrill, SortDrill, StepsDrill } from "../content/topics/types.ts";
+import type { Drill, MoneyDrill, OrderDrill, ShareDrill, SortDrill, StepsDrill } from "../content/topics/types.ts";
 
 /** Feminine numerals, which is what the counted animals here need. */
 const NUMERALS = ["", "одна", "две", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять", "десять"];
@@ -72,12 +72,24 @@ export type SortTask = {
   kind: "sort";
   title: string;
   prompt: string;
-  buckets: [string, string];
-  items: { label: string; bucket: 0 | 1; note?: string }[];
+  buckets: string[];
+  items: { label: string; bucket: number; note?: string }[];
   page: number;
 };
 
-export type DrillTask = ChoiceTask | NumberTask | SortTask;
+export type OrderTask = {
+  drillId: string;
+  kind: "order";
+  title: string;
+  prompt: string;
+  /** The steps as they are offered, shuffled. */
+  items: string[];
+  /** The same steps in the order they are performed. */
+  answer: string[];
+  page: number;
+};
+
+export type DrillTask = ChoiceTask | NumberTask | SortTask | OrderTask;
 
 /** A number that differs every time a drill comes up, and never at random. */
 export function taskSeed(unitId: string, date: string, reps: number) {
@@ -173,15 +185,23 @@ function moneyTask(drill: MoneyDrill, seed: number): NumberTask {
 }
 
 /**
- * A handful of the items, always with both buckets represented: a task where
- * every answer is «нельзя» teaches the learner to answer without reading.
+ * A handful of the items, with every bucket represented as long as the task
+ * has room for them: a task where each answer is «нельзя» teaches the learner
+ * to answer without reading, and one that quietly drops the third ruling
+ * teaches that there are two.
  */
 function sortTask(drill: SortDrill, seed: number): SortTask {
   const shuffled = seededShuffle(drill.items, seed);
-  const items = shuffled.slice(0, drill.size);
-  if (items.every((item) => item.bucket === items[0].bucket)) {
-    const other = shuffled.find((item) => item.bucket !== items[0].bucket);
-    if (other) items[items.length - 1] = other;
+  const items: typeof shuffled = [];
+  // One from each bucket first, in the shuffled order, then fill up.
+  for (const bucket of drill.buckets.keys()) {
+    if (items.length >= drill.size) break;
+    const found = shuffled.find((item) => item.bucket === bucket);
+    if (found) items.push(found);
+  }
+  for (const item of shuffled) {
+    if (items.length >= drill.size) break;
+    if (!items.includes(item)) items.push(item);
   }
   return {
     drillId: drill.id,
@@ -190,6 +210,35 @@ function sortTask(drill: SortDrill, seed: number): SortTask {
     prompt: drill.prompt,
     buckets: drill.buckets,
     items: seededShuffle(items, seed + 1),
+    page: drill.page,
+  };
+}
+
+/**
+ * A window of the sequence, offered out of order.
+ *
+ * A window rather than the whole rite: the point is to know what follows what,
+ * and that is asked better five times from five places than once from the
+ * beginning. A shuffle that happens to come out already solved is reshuffled —
+ * a task whose answer is the question checks nothing.
+ */
+function orderTask(drill: OrderDrill, seed: number): OrderTask {
+  const size = Math.min(drill.size, drill.items.length);
+  const start = seed % (drill.items.length - size + 1);
+  const answer = drill.items.slice(start, start + size);
+
+  let items = seededShuffle(answer, seed + 1);
+  for (let attempt = 2; attempt < 8 && items.every((item, index) => item === answer[index]); attempt += 1) {
+    items = seededShuffle(answer, seed + attempt);
+  }
+
+  return {
+    drillId: drill.id,
+    kind: "order",
+    title: drill.title,
+    prompt: drill.prompt,
+    items,
+    answer,
     page: drill.page,
   };
 }
@@ -204,5 +253,7 @@ export function buildTask(drill: Drill, seed: number): DrillTask {
       return moneyTask(drill, seed);
     case "sort":
       return sortTask(drill, seed);
+    case "order":
+      return orderTask(drill, seed);
   }
 }
