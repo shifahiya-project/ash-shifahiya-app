@@ -417,7 +417,11 @@ test("a topic can be written a chapter at a time, and the book is named on its s
   // Адрес карточки — `тема:единица`, а не её место в списке, поэтому дописанная
   // глава ничего не сдвигает у того, кто уже начал тему.
   assert.ok(mirath, "третья тема на месте");
-  assert.match(mirath.source.section, /Глав[аы] I/);
+  // Что именно разобрано, тема говорит сама — формулировка меняется с каждой
+  // дописанной главой, поэтому проверяется не она, а что раздел назван и что
+  // издание с оговорками есть у каждой темы.
+  assert.ok(mirath.source.section.trim(), "не сказано, какая часть книги разобрана");
+  assert.match(mirath.source.note ?? "", /Казань/, "издание не названо");
   for (const topic of TOPICS) {
     assert.ok(topic.source.note, `${topic.id}: издание и оговорки некому показать`);
   }
