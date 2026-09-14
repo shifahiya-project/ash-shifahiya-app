@@ -1214,6 +1214,7 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
 .topic-card .lesson-number { font-size: 13px; }
 .chips span.is-due { background: var(--blue-soft); color: var(--blue); }
 
+.topic-imprint { max-width: 62ch; margin: -4px 0 22px; }
 .stats-grid.topic-stats { margin-bottom: 22px; }
 .daily-review.topic-due { border-color: rgba(47,98,196,.32); }
 .daily-review.topic-due .daily-icon { background: var(--blue); }

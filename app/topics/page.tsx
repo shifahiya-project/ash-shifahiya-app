@@ -262,6 +262,9 @@ export default function TopicsPage() {
             </p>
             <h1>{topic.title}</h1>
             <p className="lead">{topic.intro}</p>
+            {/* Книга, издание и то, чем эта тема не является: строка стоит здесь,
+                а не на карточке списка, где нужно только имя книги. */}
+            {topic.source.note && <p className="topic-note topic-imprint">{topic.source.note}</p>}
 
             <div className="stats-grid topic-stats">
               <div>

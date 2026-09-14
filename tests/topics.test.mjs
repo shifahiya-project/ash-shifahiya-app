@@ -24,6 +24,7 @@ import {
 
 const zakat = topicById("zakat");
 const hajj = topicById("hajj");
+const mirath = topicById("mirath");
 
 // ——— Материал темы ———
 
@@ -220,6 +221,7 @@ test("a list is graded by what actually came back", () => {
 
 const drills = Object.fromEntries(topicDrills(zakat).map((drill) => [drill.id, drill]));
 const hajjDrills = Object.fromEntries(topicDrills(hajj).map((drill) => [drill.id, drill]));
+const mirathDrills = Object.fromEntries(topicDrills(mirath).map((drill) => [drill.id, drill]));
 
 test("the tables answer the book's own questions", () => {
   // Вопросы 11–13 раздела, слово в слово из книги.
@@ -409,6 +411,48 @@ test("the relatives drill follows the vertical of the family tree", () => {
   assert.equal(byLabel["Сын"], 1);
   assert.equal(byLabel["Родная сестра"], 0);
   assert.equal(byLabel["Внук"], 1);
+});
+
+test("a topic can be written a chapter at a time, and the book is named on its screen", () => {
+  // Адрес карточки — `тема:единица`, а не её место в списке, поэтому дописанная
+  // глава ничего не сдвигает у того, кто уже начал тему.
+  assert.ok(mirath, "третья тема на месте");
+  assert.match(mirath.source.section, /Глава I\b/);
+  for (const topic of TOPICS) {
+    assert.ok(topic.source.note, `${topic.id}: издание и оговорки некому показать`);
+  }
+
+  // Первая глава — понятия, и расчётов в ней ещё нет: доли начинаются дальше.
+  const kinds = new Set(topicDrills(mirath).map((drill) => drill.kind));
+  assert.deepEqual([...kinds].sort(), ["order", "sort"]);
+});
+
+test("the madhhabs are sorted by what each of them actually says", () => {
+  const drill = mirathDrills["drill-madhhab"];
+  assert.deepEqual(drill.buckets, ["Ханафиты", "Маликиты", "Шафииты", "Ханбалиты"]);
+  // По одному ответу на мазхаб: разногласие здесь не в самом убийстве, а в его видах.
+  assert.equal(drill.items.length, drill.buckets.length);
+  assert.equal(new Set(drill.items.map((item) => item.bucket)).size, drill.buckets.length);
+  assert.equal(drill.size, drill.buckets.length, "иначе мазхаб выпадет из задания");
+
+  const bucket = Object.fromEntries(drill.items.map((item) => [drill.buckets[item.bucket], item.label]));
+  assert.match(bucket["Ханафиты"], /кысас|каффара/);
+  assert.match(bucket["Шафииты"], /любой вид/i);
+  assert.match(bucket["Ханбалиты"], /кроме правомерного/);
+});
+
+test("what is paid out of the estate keeps its order", () => {
+  const actions = mirathDrills["drill-order-actions"].items;
+  assert.equal(actions.length, 4);
+  assert.match(actions[0], /похорон/i);
+  assert.match(actions[1], /долг/i);
+  assert.match(actions[2], /завещани/i);
+  assert.match(actions[3], /Наследование/);
+
+  const debts = mirathDrills["drill-order-debts"].items;
+  assert.equal(debts.length, 4);
+  assert.match(debts[1], /Всевышним/, "долг перед Аллахом — второй вид");
+  assert.match(debts[3], /предсмертной болезни/);
 });
 
 // ——— Решения, а не код ———
