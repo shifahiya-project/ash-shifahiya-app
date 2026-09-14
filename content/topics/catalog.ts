@@ -10,12 +10,13 @@
  */
 import { hajjTopic } from "./hajj.ts";
 import { mirathTopic } from "./mirath.ts";
+import { salahQuduriTopic } from "./salah-quduri.ts";
 import { taharahQuduriTopic } from "./taharah-quduri.ts";
 import { zakatTopic } from "./zakat.ts";
 import { topicAtoms, topicDrills, topicUnits, type Topic } from "./types.ts";
 
 // Existing shelf order stays stable; each newly authored book section is appended.
-export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQuduriTopic];
+export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQuduriTopic, salahQuduriTopic];
 
 export function topicById(id: string) {
   return TOPICS.find((topic) => topic.id === id);
