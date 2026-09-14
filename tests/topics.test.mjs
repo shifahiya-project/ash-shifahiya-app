@@ -107,6 +107,39 @@ test("the exam is the book's own review list, answered from the atoms themselves
   assert.equal(examPassMark(70), 54);
 });
 
+test("a place where the book does not add up is marked, not settled here", () => {
+  // Тема говорит то, что говорит книга; несходящееся место она помечает знаком
+  // «?» и называет, что именно не сошлось, — решает это автор темы по оригиналу.
+  const marks = [];
+  for (const topic of TOPICS) {
+    for (const atom of topicAtoms(topic)) {
+      if (!atom.check) continue;
+      marks.push(`${topic.id}:${atom.id}`);
+      assert.match(atom.check, /\S/, `${atom.id}: пометка ничего не говорит`);
+      assert.match(atom.check, /с\. \d/, `${atom.id}: не сказано, на какой странице сверять`);
+      assert.ok(!/учител|додумыв/i.test(atom.check), `${atom.id}: пометка советует, а не сообщает`);
+    }
+    for (const question of topic.exam.questions) {
+      if (!question.check) continue;
+      marks.push(`${topic.id}:вопрос ${question.id}`);
+      assert.match(question.check, /с\. \d/, `вопрос ${question.id}: не сказано, где сверять`);
+    }
+  }
+
+  // Мест, которые ждут сверки, сейчас восемь — список закреплён, чтобы новое
+  // расхождение попадало сюда осознанно, а старое не исчезало молча.
+  assert.deepEqual(marks.sort(), [
+    "hajj:late-actions",
+    "mirath:c2-daughter-evidence",
+    "mirath:c2-maternal-siblings-cases",
+    "mirath:c2-mudmira",
+    "mirath:c2-sisters-son-error",
+    "mirath:вопрос 64",
+    "taharah-quduri:tq-clean-bird-droppings",
+    "taharah-quduri:tq-menstruation-colors",
+  ]);
+});
+
 test("the summary is counted off the topic rather than typed beside it", () => {
   for (const topic of TOPICS) {
     const summary = summarize(topic);

@@ -465,6 +465,39 @@ try {
     }
   }
 
+  // Место, где книга не сошлась, помечено знаком «?», и замечание открывается по
+  // нажатию: сказать, доходит ли оно до экрана, может только браузер.
+  await page.evaluate(() => {
+    const cards = JSON.parse(localStorage.getItem("shifahiya-topic-cards-v1") ?? "{}");
+    cards["mirath:c2-daughter-evidence"] = {
+      box: 1,
+      nextReview: "2020-01-01",
+      lastSeen: "2020-01-01",
+      reps: 1,
+      lapses: 0,
+    };
+    localStorage.setItem("shifahiya-topic-cards-v1", JSON.stringify(cards));
+  });
+  await page.goto(`${origin}topics/`, { waitUntil: "networkidle" });
+  const flagged = page.locator(".lesson-card").filter({ hasText: "Наследственное право" }).first();
+  await flagged.getByRole("button", { name: /Начать|Продолжить/ }).click();
+  await page.getByRole("button", { name: "Повторить" }).click();
+  await page.waitForSelector(".topic-run", { timeout: 15_000 });
+  const flaggedAsk = await page.locator(".topic-prompt").innerText();
+  if (!/доводом книга подтверждает наследование дочери/.test(flaggedAsk)) {
+    failures.push(`помеченный вопрос не открылся: ${flaggedAsk}`);
+  } else {
+    await page.getByRole("button", { name: "Показать ответ" }).click();
+    const mark = page.locator(".topic-check > button");
+    if (!(await mark.count())) failures.push("знака «?» на помеченном ответе нет");
+    else {
+      await mark.first().click();
+      const remark = await page.locator(".topic-check-text").innerText();
+      if (!/4:11/.test(remark)) failures.push(`замечание не открылось: ${remark}`);
+      else forms.add("замечание по книге");
+    }
+  }
+
   if (failures.length) {
     console.error("Прогон не прошёл:");
     for (const failure of failures) console.error(`  · ${failure}`);

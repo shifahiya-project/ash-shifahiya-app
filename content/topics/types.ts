@@ -29,6 +29,15 @@ export type Atom = {
   answer: string;
   items?: string[];
   note?: string;
+  /**
+   * What did not add up when the topic was checked against the book: a rule the
+   * book states twice and differently, a number it prints two ways, a question
+   * it asks about what it never listed. The card keeps what the book says and
+   * carries the remark behind a «?», for the author to settle against the
+   * original — the alternative is deciding it here, which is not this file's
+   * call to make.
+   */
+  check?: string;
   evidence?: Evidence;
   /**
    * Wrong answers for the recognition step, written by hand where the
@@ -219,6 +228,8 @@ export type TopicExamQuestion = {
   atoms: string[];
   /** Said only where the question asks for something no atom carries. */
   extra?: string;
+  /** As on an atom: what did not add up, kept behind a «?». */
+  check?: string;
 };
 
 export type Topic = {
