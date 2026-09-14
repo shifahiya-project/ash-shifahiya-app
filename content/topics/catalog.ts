@@ -1,9 +1,9 @@
 /**
  * Every topic the memorisation part carries.
  *
- * Loaded outright rather than lazily, and deliberately: there is one topic, the
- * screen that lists them is the screen that opens them, and a loader for a
- * single file is more code than the kilobytes it saves. The whole part lives on
+ * Loaded outright rather than lazily, and deliberately: the screen that lists
+ * the topics is the screen that opens them, and a loader for a handful of files
+ * is more code than the kilobytes it saves. The whole part lives on
  * its own route, so nothing of this reaches the course's entry chunk. When the
  * shelf grows enough for the weight to be felt, this is the one file that
  * changes.
