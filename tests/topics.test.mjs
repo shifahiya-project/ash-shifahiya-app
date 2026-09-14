@@ -107,6 +107,39 @@ test("the exam is the book's own review list, answered from the atoms themselves
   assert.equal(examPassMark(70), 54);
 });
 
+test("a place where the book does not add up is marked, not settled here", () => {
+  // Тема говорит то, что говорит книга; несходящееся место она помечает знаком
+  // «?» и называет, что именно не сошлось, — решает это автор темы по оригиналу.
+  const marks = [];
+  for (const topic of TOPICS) {
+    for (const atom of topicAtoms(topic)) {
+      if (!atom.check) continue;
+      marks.push(`${topic.id}:${atom.id}`);
+      assert.match(atom.check, /\S/, `${atom.id}: пометка ничего не говорит`);
+      assert.match(atom.check, /с\. \d/, `${atom.id}: не сказано, на какой странице сверять`);
+      assert.ok(!/учител|додумыв/i.test(atom.check), `${atom.id}: пометка советует, а не сообщает`);
+    }
+    for (const question of topic.exam.questions) {
+      if (!question.check) continue;
+      marks.push(`${topic.id}:вопрос ${question.id}`);
+      assert.match(question.check, /с\. \d/, `вопрос ${question.id}: не сказано, где сверять`);
+    }
+  }
+
+  // Мест, которые ждут сверки, сейчас восемь — список закреплён, чтобы новое
+  // расхождение попадало сюда осознанно, а старое не исчезало молча.
+  assert.deepEqual(marks.sort(), [
+    "hajj:late-actions",
+    "mirath:c2-daughter-evidence",
+    "mirath:c2-maternal-siblings-cases",
+    "mirath:c2-mudmira",
+    "mirath:c2-sisters-son-error",
+    "mirath:вопрос 64",
+    "taharah-quduri:tq-clean-bird-droppings",
+    "taharah-quduri:tq-menstruation-colors",
+  ]);
+});
+
 test("the summary is counted off the topic rather than typed beside it", () => {
   for (const topic of TOPICS) {
     const summary = summarize(topic);
@@ -439,9 +472,11 @@ test("a topic can be written a chapter at a time, and the book is named on its s
 test("очищение по аль-Кудури спрашивается всем контрольным списком книги", () => {
   assert.ok(taharah, "четвёртая тема на месте");
 
-  // Книга закрывает раздел своим списком вопросов, и зачёт взят из него целиком.
+  // Книга закрывает раздел своим списком вопросов, и зачёт взят из него целиком:
+  // все 101 сверены с с. 84–90 издания, которое названо в оговорке темы.
   assert.equal(taharah.exam.questions.length, 101);
   assert.equal(examPassMark(101), 77);
+  assert.match(taharah.source.note ?? "", /Казань: РИИ, 2016/, "издание не названо");
 
   // Расчётов этот раздел не даёт: его таблицы — это разбор по кучкам (объём
   // вычерпывания, виды нечистоты) и порядок действий.
@@ -456,14 +491,6 @@ test("очищение по аль-Кудури спрашивается все�
       assert.ok(unit.page >= from && unit.page <= (to ?? from), `${unit.id}: страница ${unit.page} вне занятия ${step.pages}`);
     }
   }
-
-  // Общее правило о помёте съедобных птиц и список тяжёлой нечистоты стоят на
-  // одной странице, и курица с гусем попадают в оба: правило, не назвавшее их
-  // исключением, учит неверному ответу на собственный список темы.
-  const heavy = topicAtoms(taharah).find((atom) => atom.id === "tq-heavy-najasa");
-  const pure = topicAtoms(taharah).find((atom) => atom.id === "tq-clean-bird-droppings");
-  assert.match(heavy.items.join(" "), /курицы/);
-  assert.match(pure.answer, /курицы/, "исключение из правила не названо");
 });
 
 /**

@@ -1171,6 +1171,18 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .calendar-grid { gap: 4px; }
 }
 
+/* Расхождение в книге: знак рядом с ответом, замечание — по нажатию. */
+.topic-check { display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.topic-check > button {
+  width: 20px; height: 20px; padding: 0; flex: none;
+  border: 1px solid var(--line); border-radius: 50%;
+  background: var(--white); color: var(--ink-soft);
+  font-size: 13px; font-weight: 700; line-height: 1; cursor: pointer;
+}
+.topic-check > button:hover { color: var(--ink); border-color: var(--ink-soft); }
+.topic-check > button[aria-expanded="true"] { background: var(--ink); border-color: var(--ink); color: var(--white); }
+.topic-check-text { flex: 1 1 220px; font-size: 13px; font-weight: 400; color: var(--ink-soft); }
+
 .note-actions { display: flex; align-items: center; gap: 12px; }
 .note-saved { color: var(--green); font-size: 12px; font-weight: 600; }
 

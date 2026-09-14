@@ -28,6 +28,22 @@ const GRADES: { grade: TopicGrade; label: string; className: string }[] = [
 ];
 
 /** The colour a grade is shown in: half a list is neither a win nor a loss. */
+/**
+ * A place where the book did not add up, kept out of the way until asked for:
+ * the answer stays the book's, and the remark waits behind a «?».
+ */
+function CheckMark({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="topic-check">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} title="Расхождение в книге">
+        ?
+      </button>
+      {open && <span className="topic-check-text">{text}</span>}
+    </span>
+  );
+}
+
 function toneOf(grade: TopicGrade) {
   return grade === "good" ? "good" : grade === "hard" ? "plain" : "bad";
 }
@@ -464,6 +480,7 @@ export default function TopicsPage() {
               prompt={question.prompt}
               atoms={question.atoms.map((id) => atomById(topic, id)).filter((atom): atom is Atom => !!atom)}
               extra={question.extra}
+              check={question.check}
               onMark={(mark) => markExam(topic, mark)}
             />
           </section>
@@ -787,7 +804,10 @@ function UnitRunner({
         {chosen && (
           <div className={`feedback ${chosen === atom.answer ? "good" : "bad"}`}>
             <div>
-              <strong>{chosen === atom.answer ? "Верно" : atom.answer}</strong>
+              <strong>
+                {chosen === atom.answer ? "Верно" : atom.answer}
+                {atom.check && <CheckMark text={atom.check} />}
+              </strong>
               {atom.note && <p>{atom.note}</p>}
               {atom.evidence && (
                 <p>
@@ -843,6 +863,7 @@ function UnitRunner({
                 </button>
               ))}
             </div>
+            {atom.check && <CheckMark text={atom.check} />}
             {atom.note && <p className="topic-note">{atom.note}</p>}
             {atom.evidence && (
               <p className="topic-note">
@@ -892,6 +913,7 @@ function UnitRunner({
                 ))}
               </ul>
             )}
+            {atom.check && <CheckMark text={atom.check} />}
             {atom.note && <p className="topic-note">{atom.note}</p>}
             {atom.evidence && (
               <p className="topic-note">
@@ -931,6 +953,7 @@ function ExamQuestionCard({
   prompt: string;
   atoms: Atom[];
   extra?: string;
+  check?: string;
   onMark: (mark: ExamMark) => void;
 }) {
   const [revealed, setRevealed] = useState(false);
@@ -949,7 +972,10 @@ function ExamQuestionCard({
           <div className="topic-answer-card">
             {atoms.map((atom) => (
               <div key={atom.id} className="topic-reference">
-                <p>{atom.answer}</p>
+                <p>
+                  {atom.answer}
+                  {atom.check && <CheckMark text={atom.check} />}
+                </p>
                 {atom.items && (
                   <ul>
                     {atom.items.map((item) => (
@@ -965,6 +991,7 @@ function ExamQuestionCard({
               </div>
             ))}
             {extra && <p className="topic-extra">{extra}</p>}
+            {check && <p className="topic-extra">Сверка с книгой <CheckMark text={check} /></p>}
           </div>
           <div className="topic-grades">
             <button className="again" onClick={() => onMark("none")}>
