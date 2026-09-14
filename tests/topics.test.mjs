@@ -25,6 +25,7 @@ import {
 const zakat = topicById("zakat");
 const hajj = topicById("hajj");
 const mirath = topicById("mirath");
+const taharah = topicById("taharah-quduri");
 
 // ——— Материал темы ———
 
@@ -433,6 +434,36 @@ test("a topic can be written a chapter at a time, and the book is named on its s
   for (const drill of topicDrills(mirath)) {
     if (drill.kind === "estate") assert.ok(drill.page >= 97, `${drill.id}: расчёты начинаются с третьей главы`);
   }
+});
+
+test("очищение по аль-Кудури спрашивается всем контрольным списком книги", () => {
+  assert.ok(taharah, "четвёртая тема на месте");
+
+  // Книга закрывает раздел своим списком вопросов, и зачёт взят из него целиком.
+  assert.equal(taharah.exam.questions.length, 101);
+  assert.equal(examPassMark(101), 77);
+
+  // Расчётов этот раздел не даёт: его таблицы — это разбор по кучкам (объём
+  // вычерпывания, виды нечистоты) и порядок действий.
+  const kinds = new Set(topicDrills(taharah).map((drill) => drill.kind));
+  assert.deepEqual([...kinds].sort(), ["order", "sort"]);
+
+  // Занятие отсылает к своим же страницам: здесь ни один вопрос не написан по
+  // соседней главе, и расхождение значило бы опечатку в странице.
+  for (const step of taharah.steps) {
+    const [from, to] = step.pages.split("–").map(Number);
+    for (const unit of stepUnits(step)) {
+      assert.ok(unit.page >= from && unit.page <= (to ?? from), `${unit.id}: страница ${unit.page} вне занятия ${step.pages}`);
+    }
+  }
+
+  // Общее правило о помёте съедобных птиц и список тяжёлой нечистоты стоят на
+  // одной странице, и курица с гусем попадают в оба: правило, не назвавшее их
+  // исключением, учит неверному ответу на собственный список темы.
+  const heavy = topicAtoms(taharah).find((atom) => atom.id === "tq-heavy-najasa");
+  const pure = topicAtoms(taharah).find((atom) => atom.id === "tq-clean-bird-droppings");
+  assert.match(heavy.items.join(" "), /курицы/);
+  assert.match(pure.answer, /курицы/, "исключение из правила не названо");
 });
 
 /**
