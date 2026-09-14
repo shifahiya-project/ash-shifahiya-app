@@ -417,14 +417,152 @@ test("a topic can be written a chapter at a time, and the book is named on its s
   // Адрес карточки — `тема:единица`, а не её место в списке, поэтому дописанная
   // глава ничего не сдвигает у того, кто уже начал тему.
   assert.ok(mirath, "третья тема на месте");
-  assert.match(mirath.source.section, /Глава I\b/);
+  assert.match(mirath.source.section, /Глав[аы] I/);
   for (const topic of TOPICS) {
     assert.ok(topic.source.note, `${topic.id}: издание и оговорки некому показать`);
   }
 
-  // Первая глава — понятия, и расчётов в ней ещё нет: доли начинаются дальше.
+  // Понятия и наследники разбираются кучками и порядками, а расчёты пришли
+  // вместе с третьей главой — до неё в теме не было ни одного.
   const kinds = new Set(topicDrills(mirath).map((drill) => drill.kind));
-  assert.deepEqual([...kinds].sort(), ["order", "sort"]);
+  assert.deepEqual([...kinds].sort(), ["estate", "order", "sort"]);
+  for (const drill of topicDrills(mirath)) {
+    if (drill.kind === "estate") assert.ok(drill.page >= 97, `${drill.id}: расчёты начинаются с третьей главы`);
+  }
+});
+
+/**
+ * Раздел наследства сверяется с собственными примерами книги: там, где она
+ * сама довела расчёт до рублей, тренажёр обязан дать те же рубли. Случай
+ * задаётся набором наследников, а сумма выбирается генератором, поэтому
+ * сверяется доля от суммы — в ней и сидит вся арифметика.
+ */
+function estateMoney(heirs, label, total) {
+  const drill = {
+    id: "t",
+    kind: "estate",
+    title: "t",
+    currency: "₽",
+    cases: [{ heirs, note: "" }],
+    values: [1],
+    page: 97,
+  };
+  for (let seed = 1; seed <= 300; seed += 1) {
+    const task = buildTask(drill, seed);
+    const who = task.prompt.match(/Сколько наследует (.+?)(?: — каждый из них)?\?/)[1];
+    if (who !== label) continue;
+    const generated = Number(task.prompt.match(/имевшего ([\d\s  ]+)/)[1].replace(/\D/g, ""));
+    assert.ok(Number.isInteger(task.answer), `${label}: ответ обязан быть целыми деньгами`);
+    // Генератор выбирает сумму сам, поэтому доля пересчитывается на сумму книги.
+    const scaled = (task.answer * total) / generated;
+    assert.ok(Math.abs(scaled - Math.round(scaled)) < 1e-6, `${label}: доля от суммы книги вышла не целой`);
+    return Math.round(scaled);
+  }
+  throw new Error(`${label}: генератор ни разу не спросил об этом наследнике`);
+}
+
+const WIFE = { label: "жена", count: 1, fard: [1, 8], spouse: true };
+
+test("the estate drill divides an estate the way the book divides it", () => {
+  // с. 102, пример 3: 120 000 между женой, отцом, матерью и сыном.
+  const first = [
+    WIFE,
+    { label: "отец", count: 1, fard: [1, 6] },
+    { label: "мать", count: 1, fard: [1, 6] },
+    { label: "сын", count: 1, residue: 2 },
+  ];
+  assert.equal(estateMoney(first, "жена", 120000), 15000);
+  assert.equal(estateMoney(first, "отец", 120000), 20000);
+  assert.equal(estateMoney(first, "мать", 120000), 20000);
+  assert.equal(estateMoney(first, "сын", 120000), 65000);
+
+  // с. 103, пример 4: 90 000 между мужем, матерью и родным братом — вопрос 97.
+  const second = [
+    { label: "муж", count: 1, fard: [1, 2], spouse: true },
+    { label: "мать", count: 1, fard: [1, 3] },
+    { label: "родной брат", count: 1, residue: 2 },
+  ];
+  assert.equal(estateMoney(second, "муж", 90000), 45000);
+  assert.equal(estateMoney(second, "мать", 90000), 30000);
+  assert.equal(estateMoney(second, "родной брат", 90000), 15000);
+});
+
+test("a residue between heirs of both sexes goes two to one, and the barred get nothing", () => {
+  // с. 103, пример 5: 400 000 — вопрос 94 самой книги, с недопущенной внучкой.
+  const heirs = [
+    WIFE,
+    { label: "два сына", count: 2, residue: 2 },
+    { label: "дочь", count: 1, residue: 1 },
+    { label: "дочь сына", count: 1, blocked: "не допущена сыновьями" },
+  ];
+  assert.equal(estateMoney(heirs, "жена", 400000), 50000);
+  assert.equal(estateMoney(heirs, "два сына", 400000), 140000, "каждому сыну — доля двух дочерей");
+  assert.equal(estateMoney(heirs, "дочь", 400000), 70000);
+  assert.equal(estateMoney(heirs, "дочь сына", 400000), 0, "недопущенная не получает ничего");
+});
+
+test("the shares overrunning the base reduce every heir alike", () => {
+  // с. 107, пример 1: 700 000 между мужем и двумя родными сёстрами — основа 6, новая 7.
+  const sisters = [
+    { label: "муж", count: 1, fard: [1, 2], spouse: true },
+    { label: "две родные сестры", count: 2, fard: [2, 3] },
+  ];
+  assert.equal(estateMoney(sisters, "муж", 700000), 300000);
+  assert.equal(estateMoney(sisters, "две родные сестры", 700000), 200000);
+
+  // с. 109, пример 3: 270 000 — основа 24, новая 27; вопрос 95 книги с одной женой.
+  const family = [
+    WIFE,
+    { label: "отец", count: 1, fard: [1, 6] },
+    { label: "мать", count: 1, fard: [1, 6] },
+    { label: "две дочери", count: 2, fard: [2, 3] },
+  ];
+  assert.equal(estateMoney(family, "жена", 270000), 30000);
+  assert.equal(estateMoney(family, "отец", 270000), 40000, "остатка уже нет, отцу только его шестая");
+  assert.equal(estateMoney(family, "мать", 270000), 40000);
+  assert.equal(estateMoney(family, "две дочери", 270000), 80000);
+});
+
+test("a remainder with no residuary heir is returned, and never to a spouse", () => {
+  // с. 111, пример 1: 800 000 между дочерью и матерью — основа 6, новая 4.
+  const pair = [
+    { label: "дочь", count: 1, fard: [1, 2] },
+    { label: "мать", count: 1, fard: [1, 6] },
+  ];
+  assert.equal(estateMoney(pair, "дочь", 800000), 600000);
+  assert.equal(estateMoney(pair, "мать", 800000), 200000);
+
+  // с. 112, пример 2: тот же случай с мужем — вопрос 96. Муж берёт свою четверть
+  // от всего, и только остальное приращивается: супруг в радде не участвует.
+  const withHusband = [...pair, { label: "муж", count: 1, fard: [1, 4], spouse: true }];
+  assert.equal(estateMoney(withHusband, "муж", 800000), 200000);
+  assert.equal(estateMoney(withHusband, "дочь", 800000), 450000);
+  assert.equal(estateMoney(withHusband, "мать", 800000), 150000);
+});
+
+test("every estate case of the topic pays out in whole money, whatever the seed", () => {
+  for (const drill of topicDrills(mirath).filter((item) => item.kind === "estate")) {
+    for (let seed = 1; seed <= 120; seed += 1) {
+      const task = buildTask(drill, seed);
+      assert.ok(Number.isInteger(task.answer), `${drill.id}: доля вышла не целой при сиде ${seed}`);
+      assert.ok(task.answer >= 0, `${drill.id}: отрицательная доля при сиде ${seed}`);
+      assert.match(task.prompt, /Сколько наследует /);
+      assert.ok(task.note.includes("Основа долей"), `${drill.id}: разбор не называет основу долей`);
+    }
+  }
+});
+
+test("the donkey case leaves the full brother with nothing, as the hanafis hold", () => {
+  const heirs = [
+    { label: "муж", count: 1, fard: [1, 2], spouse: true },
+    { label: "мать", count: 1, fard: [1, 6] },
+    { label: "два единоутробных брата", count: 2, fard: [1, 3] },
+    { label: "родной брат", count: 1, residue: 2 },
+  ];
+  assert.equal(estateMoney(heirs, "родной брат", 600000), 0);
+  assert.equal(estateMoney(heirs, "муж", 600000), 300000);
+  assert.equal(estateMoney(heirs, "мать", 600000), 100000);
+  assert.equal(estateMoney(heirs, "два единоутробных брата", 600000), 100000);
 });
 
 test("the madhhabs are sorted by what each of them actually says", () => {
