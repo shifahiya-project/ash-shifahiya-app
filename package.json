@@ -19,6 +19,7 @@
     "part6:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part6.mjs",
     "part7:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part7.mjs",
     "part8:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part8.mjs",
+    "part9:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part9.mjs",
     "podcasts:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-podcasts.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .static-site",
     "smoke": "node scripts/smoke.mjs"
