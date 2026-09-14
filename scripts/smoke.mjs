@@ -239,9 +239,13 @@ try {
   for (let index = 0; index < fragments; index += 1) await lines.nth(index).click();
 
   // Presentation-form glyphs are what a broken font leaves behind; the ornate
-  // Qur'anic brackets and the ligatures below are the legitimate ones.
+  // Qur'anic brackets and the ligatures below are the legitimate ones. The last
+  // two are the blessings a book of hadith prints after a companion's name —
+  // «عَائِشَةَ ﵂», «أَبِي هُرَيْرَةَ ﵁» — and they are as much a part of the text as ﷺ.
+  // Listed one by one rather than by range: a broken font lands in the same
+  // block, so a new honorific is one character added here, not a widened net.
   const damaged = await page.evaluate(() => {
-    const allowed = new Set([..."﴿﴾ﷺﷻ﷽ﷲ"]);
+    const allowed = new Set([..."﴿﴾ﷺﷻ﷽ﷲ﵁﵂"]);
     let count = 0;
     for (const character of document.body.innerText) {
       const code = character.codePointAt(0);
@@ -281,6 +285,21 @@ try {
       failures.push("урок без новых слов открылся не на чтении");
     }
   }
+
+  // The ninth course opens on the eighth finished whole, and the tab is where a
+  // learner meets that. The walk has just filled the eighth in, so the tab must
+  // now be open — and the walk before it left the eighth unfinished, so a tab
+  // that reads open in both states is not testing the gate.
+  // The walk is standing inside a lesson; the tabs live on the home screen.
+  await page.reload({ waitUntil: "networkidle" });
+  const locked = await page.getByRole("tab", { name: /9 · Усуль/ }).innerText();
+  if (!locked.includes("🔒")) failures.push("девятая часть открыта до того, как пройдена восьмая");
+  await page.evaluate(() => {
+    for (let id = 1; id <= 77; id += 1) localStorage.setItem(`shifahiya-p8-lesson-${id}`, "5");
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  const opened = await page.getByRole("tab", { name: /9 · Усуль/ }).innerText();
+  if (opened.includes("🔒")) failures.push("девятая часть не открылась по пройденной восьмой");
 
   // ——— Тема наизусть: отдельный экран, отдельное хранилище ———
 

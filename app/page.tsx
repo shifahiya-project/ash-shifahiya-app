@@ -28,6 +28,9 @@ import { isPart7Open, part7CardId, part7LessonIdsInCards, unlockedPart7Ids } fro
 import { part8Summaries } from "../content/part8/manifest";
 import { loadPart8Lesson, loadPart8Lessons, loadPart8WordsMetBefore } from "../content/part8/lessons";
 import { isPart8Open, part8CardId, part8LessonIdsInCards, unlockedPart8Ids } from "./part8-access";
+import { part9Summaries } from "../content/part9/manifest";
+import { loadPart9Lesson, loadPart9Lessons, loadPart9WordsMetBefore } from "../content/part9/lessons";
+import { isPart9Open, part9CardId, part9LessonIdsInCards, unlockedPart9Ids } from "./part9-access";
 import { textCourseQuestions } from "../content/text-course-questions";
 import { textCourseDividerKey } from "./text-course-access";
 // Only the schedule and the store, never a topic's content: the memorisation
@@ -219,7 +222,7 @@ function textCourseReviewCardsOf(
 }
 
 /** The courses that teach a scholarly book: its glossary, then its text. */
-type TextCourseId = 3 | 4 | 5 | 6 | 7 | 8;
+type TextCourseId = 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 /**
  * Every course from the third on is one of them. A predicate rather than a
@@ -290,6 +293,15 @@ const TEXT_COURSES = {
     saveSession: progressStore.savePart8Session,
     finishLesson: progressStore.finishPart8Lesson,
   },
+  9: {
+    label: "Часть 9",
+    summaries: part9Summaries,
+    loadLesson: loadPart9Lesson,
+    cardId: part9CardId,
+    wordsMetBefore: loadPart9WordsMetBefore,
+    saveSession: progressStore.savePart9Session,
+    finishLesson: progressStore.finishPart9Lesson,
+  },
 } as const;
 
 /**
@@ -333,6 +345,12 @@ const TEXT_COURSE_GATES: Record<TextCourseId, { title: string; explains: string 
     explains:
       "Пройдите все уроки седьмой части — и хадисоведение станет доступно. " +
       "Мусталах взвешивает не довод, а цепочку, по которой сообщение дошло.",
+  },
+  9: {
+    title: "Девятая часть открывается по восьмой",
+    explains:
+      "Пройдите все уроки восьмой части — и усуль аль-фикх станет доступен. " +
+      "Он спрашивает, откуда берётся решение, и опирается сразу на всё прочитанное.",
   },
 };
 
@@ -447,6 +465,7 @@ export default function Home() {
   const [openPart6, setOpenPart6] = useState<Record<number, TextCourseLesson>>({});
   const [openPart7, setOpenPart7] = useState<Record<number, TextCourseLesson>>({});
   const [openPart8, setOpenPart8] = useState<Record<number, TextCourseLesson>>({});
+  const [openPart9, setOpenPart9] = useState<Record<number, TextCourseLesson>>({});
   const [reading, setReading] = useState<ReadingSection | null>(null);
   const [openLines, setOpenLines] = useState<string[]>([]);
   const [course, setCourse] = useState<1 | 2 | TextCourseId>(1);
@@ -537,8 +556,9 @@ export default function Home() {
       ...Object.values(openPart6).flatMap((item) => textCourseReviewCardsOf(item, part6CardId)),
       ...Object.values(openPart7).flatMap((item) => textCourseReviewCardsOf(item, part7CardId)),
       ...Object.values(openPart8).flatMap((item) => textCourseReviewCardsOf(item, part8CardId)),
+      ...Object.values(openPart9).flatMap((item) => textCourseReviewCardsOf(item, part9CardId)),
     ],
-    [openLessons, openPart2, openPart3, openPart4, openPart5, openPart6, openPart7, openPart8],
+    [openLessons, openPart2, openPart3, openPart4, openPart5, openPart6, openPart7, openPart8, openPart9],
   );
   const dueCards = useMemo(() => {
     const today = localDate();
@@ -577,6 +597,8 @@ export default function Home() {
   const part7Sessions = stored.part7Sessions;
   const part8Scores = stored.part8Scores;
   const part8Sessions = stored.part8Sessions;
+  const part9Scores = stored.part9Scores;
+  const part9Sessions = stored.part9Sessions;
   // The third course waits for the second one whole, not for a paper: a
   // treatise is what the hundred and five lessons of stories were reading for.
   const part3Ready = isPart3Open(part2Summaries, part2Scores);
@@ -593,6 +615,7 @@ export default function Home() {
   // a sentence, and the books before it are the arguments to weigh.
   const part7Ready = isPart7Open(part6Summaries, part6Scores);
   const part8Ready = isPart8Open(part7Summaries, part7Scores);
+  const part9Ready = isPart9Open(part8Summaries, part8Scores);
   const unlockedPart3 = useMemo(
     () => unlockedPart3Ids(part3Summaries, stored, part3Ready),
     [stored, part3Ready],
@@ -608,6 +631,10 @@ export default function Home() {
   const unlockedPart6 = useMemo(
     () => unlockedPart6Ids(part6Summaries, stored, part6Ready),
     [stored, part6Ready],
+  );
+  const unlockedPart9 = useMemo(
+    () => unlockedPart9Ids(part9Summaries, stored, part9Ready),
+    [stored, part9Ready],
   );
   const unlockedPart8 = useMemo(
     () => unlockedPart8Ids(part8Summaries, stored, part8Ready),
@@ -626,6 +653,7 @@ export default function Home() {
       6: { scores: part6Scores, sessions: part6Sessions, unlocked: unlockedPart6, ready: part6Ready },
       7: { scores: part7Scores, sessions: part7Sessions, unlocked: unlockedPart7, ready: part7Ready },
       8: { scores: part8Scores, sessions: part8Sessions, unlocked: unlockedPart8, ready: part8Ready },
+      9: { scores: part9Scores, sessions: part9Sessions, unlocked: unlockedPart9, ready: part9Ready },
     }),
     [
       part3Scores, part3Sessions, unlockedPart3, part3Ready,
@@ -634,6 +662,7 @@ export default function Home() {
       part6Scores, part6Sessions, unlockedPart6, part6Ready,
       part7Scores, part7Sessions, unlockedPart7, part7Ready,
       part8Scores, part8Sessions, unlockedPart8, part8Ready,
+      part9Scores, part9Sessions, unlockedPart9, part9Ready,
     ],
   );
   /** The text course on screen: its data, and the learner's place in it. */
@@ -823,6 +852,15 @@ export default function Home() {
       .join(",");
   }, [cardProgress, part8Sessions]);
 
+  const wantedPart9Ids = useMemo(() => {
+    const resume = Object.values(part9Sessions).sort(
+      (a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId),
+    )[0];
+    return [...new Set([...part9LessonIdsInCards(cardProgress), ...(resume ? [resume.lessonId] : [])])]
+      .sort((a, b) => a - b)
+      .join(",");
+  }, [cardProgress, part9Sessions]);
+
   useEffect(() => {
     if (!wantedPart2Ids) return;
 
@@ -913,6 +951,19 @@ export default function Home() {
       cancelled = true;
     };
   }, [wantedPart8Ids]);
+
+  useEffect(() => {
+    if (!wantedPart9Ids) return;
+
+    let cancelled = false;
+    loadPart9Lessons(wantedPart9Ids.split(",").map(Number)).then((loaded) => {
+      if (cancelled) return;
+      setOpenPart9((items) => ({ ...items, ...Object.fromEntries(loaded.map((item) => [item.id, item])) }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wantedPart9Ids]);
 
   useEffect(() => {
     if (!wantedLessonIds) return;
@@ -1195,7 +1246,7 @@ export default function Home() {
     const met = await opening.wordsMetBefore(lesson);
     const remember = {
       3: setOpenPart3, 4: setOpenPart4, 5: setOpenPart5, 6: setOpenPart6, 7: setOpenPart7,
-      8: setOpenPart8,
+      8: setOpenPart8, 9: setOpenPart9,
     }[courseId];
     remember((items) => ({ ...items, [id]: lesson }));
     setTextCourseId(courseId);
@@ -1406,6 +1457,8 @@ export default function Home() {
       part7Sessions,
       part8Scores,
       part8Sessions,
+      part9Scores,
+      part9Sessions,
       stats: learningStats,
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
@@ -1460,6 +1513,8 @@ export default function Home() {
         part7Sessions: payload.part7Sessions ?? {},
         part8Scores: payload.part8Scores ?? {},
         part8Sessions: payload.part8Sessions ?? {},
+        part9Scores: payload.part9Scores ?? {},
+        part9Sessions: payload.part9Sessions ?? {},
         stats,
       });
       setBackupMessage("Прогресс восстановлен.");
@@ -1851,6 +1906,14 @@ export default function Home() {
               onClick={() => setCourse(8)}
             >
               8 · Хадис {part8Ready ? "" : "🔒"}
+            </button>
+            <button
+              role="tab"
+              aria-selected={course === 9}
+              className={course === 9 ? "is-active" : ""}
+              onClick={() => setCourse(9)}
+            >
+              9 · Усуль {part9Ready ? "" : "🔒"}
             </button>
           </div>
 
