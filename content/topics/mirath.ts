@@ -2993,7 +2993,7 @@ export const mirathTopic: Topic = {
             {
               heirs: [
                 { label: "жена", count: 1, fard: [1, 8], spouse: true },
-                { label: "два сына", count: 2, residue: 2 },
+                { label: "два сына", count: 2, each: "каждый из двух сыновей", residue: 2 },
                 { label: "дочь", count: 1, residue: 1 },
               ],
               note: "Остаток делится на пять: каждый сын считается за двоих, дочь за одного.",
@@ -3001,7 +3001,7 @@ export const mirathTopic: Topic = {
             {
               heirs: [
                 { label: "жена", count: 1, fard: [1, 8], spouse: true },
-                { label: "два сына", count: 2, residue: 2 },
+                { label: "два сына", count: 2, each: "каждый из двух сыновей", residue: 2 },
                 { label: "дочь", count: 1, residue: 1 },
                 { label: "дочь сына", count: 1, blocked: "не допущена сыновьями" },
               ],
@@ -3020,7 +3020,7 @@ export const mirathTopic: Topic = {
               heirs: [
                 { label: "муж", count: 1, fard: [1, 2], spouse: true },
                 { label: "мать", count: 1, fard: [1, 6] },
-                { label: "два единоутробных брата", count: 2, fard: [1, 3] },
+                { label: "два единоутробных брата", count: 2, each: "каждый из двух единоутробных братьев", fard: [1, 3] },
                 { label: "родной брат", count: 1, residue: 2 },
               ],
               note:
@@ -3099,14 +3099,14 @@ export const mirathTopic: Topic = {
             {
               heirs: [
                 { label: "муж", count: 1, fard: [1, 2], spouse: true },
-                { label: "две родные сестры", count: 2, fard: [2, 3] },
+                { label: "две родные сестры", count: 2, each: "каждая из двух родных сестёр", fard: [2, 3] },
               ],
               note: "Долей вышло 7 против основы 6 — новая основа семь.",
             },
             {
               heirs: [
                 { label: "муж", count: 1, fard: [1, 4], spouse: true },
-                { label: "две дочери", count: 2, fard: [2, 3] },
+                { label: "две дочери", count: 2, each: "каждая из двух дочерей", fard: [2, 3] },
                 { label: "отец", count: 1, fard: [1, 6] },
               ],
               note:
@@ -3114,10 +3114,10 @@ export const mirathTopic: Topic = {
             },
             {
               heirs: [
-                { label: "три жены", count: 3, fard: [1, 8], spouse: true },
+                { label: "три жены", count: 3, each: "каждая из трёх жён", fard: [1, 8], spouse: true },
                 { label: "отец", count: 1, fard: [1, 6] },
                 { label: "мать", count: 1, fard: [1, 6] },
-                { label: "две дочери", count: 2, fard: [2, 3] },
+                { label: "две дочери", count: 2, each: "каждая из двух дочерей", fard: [2, 3] },
               ],
               note: "Долей вышло 27 против основы 24 — новая основа двадцать семь; жёны делят свои доли поровну.",
             },
@@ -3126,7 +3126,7 @@ export const mirathTopic: Topic = {
                 { label: "жена", count: 1, fard: [1, 8], spouse: true },
                 { label: "отец", count: 1, fard: [1, 6] },
                 { label: "мать", count: 1, fard: [1, 6] },
-                { label: "две дочери", count: 2, fard: [2, 3] },
+                { label: "две дочери", count: 2, each: "каждая из двух дочерей", fard: [2, 3] },
               ],
               note: "Тот же случай с одной женой — вопрос 8 самой книги: 270 000 между женой, отцом, матерью и двумя дочерьми.",
             },
@@ -3250,7 +3250,7 @@ export const mirathTopic: Topic = {
             },
             {
               heirs: [
-                { label: "две дочери", count: 2, fard: [2, 3] },
+                { label: "две дочери", count: 2, each: "каждая из двух дочерей", fard: [2, 3] },
                 { label: "мать", count: 1, fard: [1, 6] },
               ],
               note: "Долей вышло 5 против основы 6 — новая основа пять.",
@@ -3751,7 +3751,7 @@ export const mirathTopic: Topic = {
             },
             {
               heirs: [
-                { label: "две дочери родной сестры", count: 2, residue: 1 },
+                { label: "две дочери родной сестры", count: 2, each: "каждая из двух дочерей родной сестры", residue: 1 },
                 { label: "сын родной сестры", count: 1, residue: 2 },
               ],
               note: "Разнополые наследники материнского родства делят два к одному — пример самой книги.",

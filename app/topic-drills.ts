@@ -342,9 +342,10 @@ function estateNote(drill: EstateDrill, item: EstateCase, asked: Share, total: n
         ? `Долей вышло меньше основы (${claimed} против ${base}), а наследника конечной доли нет, поэтому остаток возвращается: это приращение долей. `
         : "";
   const value = total / newBase;
+  const who = asked.heir.count > 1 ? (asked.heir.each ?? asked.heir.label) : asked.heir.label;
   const own = asked.heir.blocked
     ? `${capitalize(asked.heir.label)} не наследует: ${asked.heir.blocked}.`
-    : `${capitalize(asked.heir.label)} — ${money((asked.num / asked.den) * total)}${asked.heir.count > 1 ? " каждому" : ""}.`;
+    : `${capitalize(who)} — ${money((asked.num / asked.den) * total)}.`;
   return (
     `Основа долей — ${base}. ${correction}` +
     (mode === "radd" ? "" : `Стоимость доли — ${money(total)} ÷ ${newBase} = ${money(value)}. `) +
@@ -367,7 +368,7 @@ function estateTask(drill: EstateDrill, seed: number): NumberTask {
     title: drill.title,
     prompt:
       `После наследодателя, имевшего ${formatMoney(total, drill.currency)}, остались: ${roll}. ` +
-      `Сколько наследует ${asked.heir.label}${asked.heir.count > 1 ? " — каждый из них" : ""}? ` +
+      `Сколько наследует ${asked.heir.count > 1 ? (asked.heir.each ?? asked.heir.label) : asked.heir.label}? ` +
       `Если не наследует — ответ 0.`,
     answer,
     answerLabel: answer === 0 ? "Не наследует" : formatMoney(answer, drill.currency),

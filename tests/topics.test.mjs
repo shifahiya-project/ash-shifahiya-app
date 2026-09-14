@@ -556,6 +556,27 @@ test("every estate case of the topic pays out in whole money, whatever the seed"
   }
 });
 
+test("a task about a row of several people asks for one of them, in Russian that parses", () => {
+  for (const drill of topicDrills(mirath).filter((item) => item.kind === "estate")) {
+    for (const item of drill.cases) {
+      for (const heir of item.heirs) {
+        if (heir.count > 1) {
+          assert.ok(heir.each, `${drill.id}: «${heir.label}» — не сказано, как назвать одного из них`);
+          assert.match(heir.each, /^кажд(ый|ая) из /, `${drill.id}: «${heir.each}» не называет одного человека`);
+        }
+      }
+    }
+    // Собранная фраза не должна досказывать род за строку: «три жены — каждый
+    // из них» и читалось бы как вопрос про долю всей группы, и было бы неверно
+    // по-русски, а ответ здесь — доля одного человека.
+    for (let seed = 1; seed <= 80; seed += 1) {
+      const task = buildTask(drill, seed);
+      assert.doesNotMatch(task.prompt, /— каждый из них/, `${drill.id}: род досказан за строку`);
+      assert.doesNotMatch(task.note, /каждому\./, `${drill.id}: разбор досказывает род за строку`);
+    }
+  }
+});
+
 test("the donkey case leaves the full brother with nothing, as the hanafis hold", () => {
   const heirs = [
     { label: "муж", count: 1, fard: [1, 2], spouse: true },

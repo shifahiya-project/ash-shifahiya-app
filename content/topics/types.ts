@@ -143,6 +143,13 @@ export type EstateHeir = {
   label: string;
   /** How many people share the row; the task asks about one of them. */
   count: number;
+  /**
+   * How to name one person of the row, when the row holds several: «каждая из
+   * трёх жён». Written out because Russian declines it and a generated «три
+   * жены — каждый из них» is both ungrammatical and ambiguous — it reads as a
+   * question about the group's total, which is not what the answer is.
+   */
+  each?: string;
   /** The fixed share (фард) of the whole, as [numerator, denominator]. */
   fard?: [number, number];
   /** A residuary's weight per person: 2 for a man, 1 for a woman. */
@@ -174,7 +181,11 @@ export type EstateDrill = {
   title: string;
   currency: string;
   cases: EstateCase[];
-  /** What one share may be worth, so the estate always divides exactly. */
+  /**
+   * Sizes the estate: the sum offered is one of these times the smallest
+   * factor that leaves every heir whole money. It is therefore not the value
+   * of a share — that follows from the base, and a correction can change it.
+   */
   values: number[];
   page: number;
 };
