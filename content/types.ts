@@ -125,8 +125,13 @@ export type TextCourseWord = {
  * One aligned piece of the lesson's text. A heading the book prints inside a
  * lesson is marked as one rather than passed off as a sentence of the argument:
  * it is read differently, and the reading screen sets it apart.
+ *
+ * A بَيْت of verse is marked for the same reason. A commentary explains a poem
+ * line by line, and the line it explains is not one more sentence of the
+ * explanation: the book prints it apart, and a reader who cannot tell the مَتْن
+ * from the شَرْح has lost the shape of the book.
  */
-export type TextCourseFragment = ReadingSentence & { heading?: true };
+export type TextCourseFragment = ReadingSentence & { heading?: true; verse?: true };
 
 export type TextCourseLesson = {
   id: number;

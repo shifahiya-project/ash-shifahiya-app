@@ -193,14 +193,21 @@ try {
   // results are seeded rather than played through.
   await page.evaluate(() => {
     localStorage.clear();
-    for (let id = 1; id <= 105; id += 1) localStorage.setItem(`shifahiya-p2-lesson-${id}`, "10");
-    for (let id = 1; id <= 37; id += 1) localStorage.setItem(`shifahiya-p3-lesson-${id}`, "10");
+    const finish = (part, last) => {
+      for (let id = 1; id <= last; id += 1) localStorage.setItem(`shifahiya-${part}-lesson-${id}`, "10");
+    };
+    finish("p2", 105);
+    finish("p3", 37);
+    finish("p4", 145);
+    finish("p5", 105);
+    finish("p6", 43);
+    finish("p7", 48);
   });
   await page.reload({ waitUntil: "networkidle" });
 
   // Clicking the tab is the first thing that needs React alive: a page that
   // rendered but never hydrated gets no further than this.
-  await page.getByRole("tab", { name: /4 · Фикх/ }).click();
+  await page.getByRole("tab", { name: /8 · Хадис/ }).click();
   const list = page.locator(".lesson-list");
   await list.getByRole("button", { name: /Начать урок/ }).first().click();
   await page.waitForSelector(".study-view", { timeout: 15_000 });
@@ -220,6 +227,12 @@ try {
 
   const fragments = await page.locator(".reading-line").count();
   if (fragments === 0) failures.push("экран чтения без фрагментов");
+
+  // The first book of this course is a commentary on a poem, and the بَيْت it
+  // explains is set apart from the prose that unfolds it. Only the browser says
+  // whether the mark reached the screen.
+  const verses = await page.locator(".reading-line.is-verse").count();
+  if (verses === 0) failures.push("бейт не набран стихом на экране чтения");
 
   // Every translation opened at once, so the check reads the whole lesson.
   const lines = page.locator(".reading-arabic");
@@ -244,21 +257,21 @@ try {
   await page.waitForSelector(".result-view", { timeout: 15_000 });
 
   const stored = await page.evaluate(() => ({
-    score: localStorage.getItem("shifahiya-p4-lesson-1"),
+    score: localStorage.getItem("shifahiya-p8-lesson-1"),
     cards: Object.keys(JSON.parse(localStorage.getItem("shifahiya-card-progress-v1") ?? "{}"))
-      .filter((key) => key.startsWith("p4-")).length,
+      .filter((key) => key.startsWith("p8-")).length,
   }));
   if (stored.score === null) failures.push("результат урока не сохранился");
-  if (!stored.cards) failures.push("карточки четвёртой части не попали в коробку повторения");
+  if (!stored.cards) failures.push("карточки восьмой части не попали в коробку повторения");
 
   // A lesson that brings no new words has neither cards nor questions and is
   // its text: it must open on the reading step, not on an empty card screen.
   // Only the browser shows that, so the walk ends on one.
   await page.evaluate(() => {
-    for (let id = 1; id <= 28; id += 1) localStorage.setItem(`shifahiya-p4-lesson-${id}`, "5");
+    for (let id = 1; id <= 27; id += 1) localStorage.setItem(`shifahiya-p8-lesson-${id}`, "5");
   });
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByRole("tab", { name: /4 · Фикх/ }).click();
+  await page.getByRole("tab", { name: /8 · Хадис/ }).click();
   const wordless = page.locator(".lesson-card").filter({ hasText: "только чтение" }).first();
   if (!(await wordless.count())) failures.push("урока без новых слов нет в списке");
   else {
@@ -401,8 +414,9 @@ try {
     process.exitCode = 1;
   } else {
     console.log(
-      `Опубликованный сайт живой. Урок четвёртой части пройден целиком: ${lesson}, ` +
-        `фрагментов ${fragments}, счёт ${stored.score}, карточек ${stored.cards}. ` +
+      `Опубликованный сайт живой. Урок восьмой части пройден целиком: ${lesson}, ` +
+        `фрагментов ${fragments} (из них ${verses} стихом), счёт ${stored.score}, ` +
+        `карточек ${stored.cards}. ` +
         "Урок без новых слов открывается сразу на чтении. " +
         `Занятие темы разобрано (${[...forms].join(", ")}), карточек в расписании ${topicStored.cards}.`,
     );

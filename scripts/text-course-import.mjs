@@ -53,13 +53,14 @@ const lessonNumberOf = (entry) =>
   entry.number;
 
 /**
- * The text export has come in four shapes so far. The first laid every row of
+ * The text export has come in five shapes so far. The first laid every row of
  * the book in one `items` array, each row saying which lesson it belongs to;
  * the next nested the rows inside the lesson as `lessons[].blocks[]`; the one
  * after that keeps the lesson headers apart from the rows and lists the rows as
- * `lesson_blocks[]`; the newest nests the header itself, as
- * `lessons[].lesson.number`. The rows themselves are the same, so they are read
- * into one list here.
+ * `lesson_blocks[]`; the fourth nests the header itself, as
+ * `lessons[].lesson.number`; the newest is `lessons[].blocks[]` again, naming
+ * its keys `titleRu`/`titleAr` and calling a row of text `text` rather than
+ * `pair`. The rows themselves are the same, so they are read into one list here.
  */
 function rowsOf(text) {
   if (Array.isArray(text.items)) return text.items;
@@ -80,8 +81,8 @@ const headersOf = (text) =>
 
 /** The lesson's printed title, under whichever pair of keys the export uses. */
 const printedTitle = (named) => ({
-  ru: named.ru ?? named.title_ru ?? "",
-  ar: named.ar ?? named.title_ar ?? "",
+  ru: named.ru ?? named.title_ru ?? named.titleRu ?? "",
+  ar: named.ar ?? named.title_ar ?? named.titleAr ?? "",
 });
 
 function renderWord(word) {
@@ -89,8 +90,11 @@ function renderWord(word) {
 }
 
 function renderFragment(fragment) {
-  const heading = fragment.heading ? ", heading: true" : "";
-  return `    { arabic: ${quote(fragment.arabic)}, russian: ${quote(fragment.russian)}${heading} },`;
+  const marked = [fragment.heading && "heading: true", fragment.verse && "verse: true"]
+    .filter(Boolean)
+    .map((flag) => `, ${flag}`)
+    .join("");
+  return `    { arabic: ${quote(fragment.arabic)}, russian: ${quote(fragment.russian)}${marked} },`;
 }
 
 function render(lesson, prefix) {
@@ -124,33 +128,50 @@ ${lesson.fragments.map(renderFragment).join("\n")}
  * @param {(text: object, glossary: object) => string} course.bookName
  * @param {(entry: object, named: object, text: object) => {section?: string, chapter?: string}} course.divide
  * @param {((named: object) => {ru: string, ar: string})=} course.titleOf
+ * @param {Set<string>=} course.pairRows     rows that are the text itself (default: `pair`)
+ * @param {Set<string>=} course.verseRows    rows of verse the book comments on
  * @param {Set<string>} course.headingRows  rows that head a piece of text
  * @param {Set<string>} course.skippedRows  rows that mark the text without being it
- * @param {object} course.fixes     TITLE_FIXES, TEXT_FIXES, GLOSSARY_FIXES
+ * @param {object} course.fixes     TITLE_FIXES, TEXT_FIXES, GLOSSARY_FIXES, SKIPPED_IDS
  * @param {string} glossaryPath
  * @param {string} textPath
  */
 export async function importTextCourse(course, glossaryPath, textPath) {
   const {
     prefix, directory, title: courseTitle, bookName, divide, titleOf,
-    headingRows, skippedRows, fixes: { TITLE_FIXES = {}, TEXT_FIXES = {}, GLOSSARY_FIXES = {} } = {},
+    pairRows = new Set(["pair"]), verseRows = new Set(),
+    headingRows, skippedRows,
+    fixes: {
+      TITLE_FIXES = {}, TEXT_FIXES = {}, GLOSSARY_FIXES = {}, SKIPPED_IDS = {},
+    } = {},
   } = course;
 
-  const knownRows = new Set(["pair", ...headingRows, ...skippedRows]);
+  const knownRows = new Set([...pairRows, ...verseRows, ...headingRows, ...skippedRows]);
   await mkdir(directory, { recursive: true });
 
   const glossary = JSON.parse(await readFile(glossaryPath, "utf8"));
   const text = JSON.parse(await readFile(textPath, "utf8"));
 
   const book = nfc(bookName(text, glossary)).trim();
-  const author = nfc(text.author_ru ?? glossary.author_ru ?? "").trim();
+  // Only for the closing report. The newest export writes it as a sentence
+  // («Автор: муфтий …»), and a glossary that does not know the author says so
+  // in words rather than leaving the field out — neither is a name.
+  const author = nfc(text.author_ru ?? text.authorRu ?? glossary.author_ru ?? "")
+    .replace(/^\s*Автор:\s*/u, "")
+    .trim();
   if (!book) throw new Error("в выгрузке нет названия книги");
 
   const fragmentsByLesson = new Map();
   const dropped = [];
   const skipped = [];
+  const byName = [];
+  // Keyed by book: every export numbers its rows from `l1-b1`, so a bare id
+  // would carry one book's skip into another — «Тавдихат» has an `l2-b2` of its
+  // own, and it is a sentence of the commentary.
+  const skippedHere = SKIPPED_IDS[book] ?? {};
   let patched = 0;
   let headings = 0;
+  let verses = 0;
   for (const item of rowsOf(text)) {
     // A kind nobody taught this script stops the import: slipping through
     // unnoticed, it would be read to the learner as text of the book.
@@ -159,6 +180,17 @@ export async function importTextCourse(course, glossaryPath, textPath) {
     }
     if (skippedRows.has(item.type)) {
       skipped.push(item.type);
+      continue;
+    }
+    // A row the export typed as text although it is markup. Named one by one
+    // rather than matched by shape, and checked against what it still says: a
+    // corrected export stops the import instead of silently losing a line.
+    const named = skippedHere[item.id];
+    if (named) {
+      if (nfc(item.ar ?? "").trim() !== named.arabic) {
+        throw new Error(`пропуск строки ${item.id} больше не совпадает: «${nfc(item.ar ?? "").trim()}»`);
+      }
+      byName.push(item.id);
       continue;
     }
     const arabic = unquote(item.ar);
@@ -180,6 +212,10 @@ export async function importTextCourse(course, glossaryPath, textPath) {
     if (headingRows.has(item.type)) {
       fragment.heading = true;
       headings += 1;
+    }
+    if (verseRows.has(item.type)) {
+      fragment.verse = true;
+      verses += 1;
     }
     fragmentsByLesson.get(item.lesson).push(fragment);
   }
@@ -386,11 +422,15 @@ ${glossaryLines}
   const wordless = whole.filter((lesson) => !lesson.words.length).map((lesson) => lesson.id);
   if (wordless.length) console.log(`уроков без новых слов (только чтение): ${wordless.join(", ")}`);
   if (headings) console.log(`заголовков внутри уроков: ${headings}`);
+  if (verses) console.log(`строк стиха: ${verses}`);
   if (skipped.length) {
     const counted = skipped.reduce((all, type) => ({ ...all, [type]: (all[type] ?? 0) + 1 }), {});
     const named = Object.entries(counted).map(([type, n]) => `${type} — ${n}`).join(", ");
     console.log(`пропущено строк разметки: ${skipped.length} (${named})`);
   }
+  const unfound = Object.keys(skippedHere).filter((id) => !byName.includes(id));
+  if (unfound.length) throw new Error(`строк из SKIPPED_IDS нет в выгрузке: ${unfound.join(", ")}`);
+  if (byName.length) console.log(`пропущено строк по имени: ${byName.length}`);
   if (patched) console.log(`правок текста применено: ${patched}`);
   if (retitled) console.log(`уроков переименовано по сверенному тексту: ${retitled}`);
   if (mended) console.log(`правок словаря применено: ${mended}`);
