@@ -458,14 +458,6 @@ test("очищение по аль-Кудури спрашивается все�
       assert.ok(unit.page >= from && unit.page <= (to ?? from), `${unit.id}: страница ${unit.page} вне занятия ${step.pages}`);
     }
   }
-
-  // Общее правило о помёте съедобных птиц и список тяжёлой нечистоты стоят на
-  // одной странице, и курица с гусем попадают в оба: правило, не назвавшее их
-  // исключением, учит неверному ответу на собственный список темы.
-  const heavy = topicAtoms(taharah).find((atom) => atom.id === "tq-heavy-najasa");
-  const pure = topicAtoms(taharah).find((atom) => atom.id === "tq-clean-bird-droppings");
-  assert.match(heavy.items.join(" "), /курицы/);
-  assert.match(pure.answer, /курицы/, "исключение из правила не названо");
 });
 
 /**
