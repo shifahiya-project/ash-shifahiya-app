@@ -10,7 +10,17 @@
  * rendered identically wherever it is built.
  */
 import { nounForm, plural, seededShuffle } from "../content/questions.ts";
-import type { Drill, MoneyDrill, OrderDrill, ShareDrill, SortDrill, StepsDrill } from "../content/topics/types.ts";
+import type {
+  Drill,
+  EstateCase,
+  EstateDrill,
+  EstateHeir,
+  MoneyDrill,
+  OrderDrill,
+  ShareDrill,
+  SortDrill,
+  StepsDrill,
+} from "../content/topics/types.ts";
 
 /** Feminine numerals, which is what the counted animals here need. */
 const NUMERALS = ["", "одна", "две", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять", "десять"];
@@ -243,6 +253,130 @@ function orderTask(drill: OrderDrill, seed: number): OrderTask {
   };
 }
 
+/* ——— Раздел наследства: асль, сахм, кымат ас-сахм, `ауль и радд ——— */
+
+function gcd(a: number, b: number): number {
+  return b === 0 ? Math.abs(a) : gcd(b, a % b);
+}
+
+function lcm(a: number, b: number) {
+  return Math.abs(a * b) / gcd(a, b);
+}
+
+/** One person's share of the estate, kept exact until it is turned into money. */
+type Share = { heir: EstateHeir; num: number; den: number };
+
+/**
+ * What each heir gets, as an exact fraction of the estate.
+ *
+ * The base (асль) is the common denominator of the fixed shares; a residuary
+ * takes what the fixed shares leave. Two corrections can apply, and which one
+ * is never declared in the data — it follows from the arithmetic, exactly as
+ * it does in the book: the shares overrunning the base is `ауль, and falling
+ * short of it with no residuary present is радд.
+ */
+function estateShares(heirs: EstateHeir[]) {
+  const present = heirs.filter((heir) => !heir.blocked);
+  const fixed = present.filter((heir) => heir.fard);
+  const residuary = present.filter((heir) => heir.residue);
+
+  const base = fixed.length
+    ? fixed.map((heir) => heir.fard![1]).reduce(lcm, 1)
+    : present.reduce((sum, heir) => sum + heir.count * (heir.residue ?? 0), 0);
+
+  const sahm = new Map<EstateHeir, number>();
+  for (const heir of fixed) sahm.set(heir, (base / heir.fard![1]) * heir.fard![0]);
+  const claimed = fixed.reduce((sum, heir) => sum + sahm.get(heir)!, 0);
+  const weight = residuary.reduce((sum, heir) => sum + heir.count * heir.residue!, 0);
+
+  const shares: Share[] = [];
+  let mode: "plain" | "awl" | "radd" = "plain";
+
+  if (claimed > base) {
+    // `ауль: the shares themselves become the base, and nothing is left over.
+    mode = "awl";
+    for (const heir of fixed) shares.push({ heir, num: sahm.get(heir)!, den: claimed * heir.count });
+  } else if (claimed < base && !residuary.length) {
+    // Радд: a spouse keeps their share of the whole, the rest is returned to
+    // the others in proportion to the shares they already hold.
+    mode = "radd";
+    const spouses = fixed.filter((heir) => heir.spouse);
+    const rest = fixed.filter((heir) => !heir.spouse);
+    const spouseNum = spouses.reduce((sum, heir) => sum + sahm.get(heir)!, 0);
+    const restSahm = rest.reduce((sum, heir) => sum + sahm.get(heir)!, 0);
+    for (const heir of spouses) shares.push({ heir, num: sahm.get(heir)!, den: base * heir.count });
+    for (const heir of rest) {
+      shares.push({
+        heir,
+        num: (base - spouseNum) * sahm.get(heir)!,
+        den: base * restSahm * heir.count,
+      });
+    }
+  } else {
+    for (const heir of fixed) shares.push({ heir, num: sahm.get(heir)!, den: base * heir.count });
+    for (const heir of residuary) {
+      shares.push({ heir, num: (base - claimed) * heir.residue!, den: base * weight });
+    }
+  }
+
+  for (const heir of present) {
+    if (!sahm.has(heir) && !heir.residue) shares.push({ heir, num: 0, den: 1 });
+  }
+  for (const heir of heirs.filter((heir) => heir.blocked)) shares.push({ heir, num: 0, den: 1 });
+
+  return { base, claimed, mode, newBase: mode === "awl" ? claimed : base, shares };
+}
+
+/** The smallest estate that leaves every heir whole money. */
+function estateScale(shares: Share[]) {
+  return shares.reduce((acc, share) => lcm(acc, share.den / gcd(share.num, share.den)), 1);
+}
+
+function estateNote(drill: EstateDrill, item: EstateCase, asked: Share, total: number) {
+  const money = (value: number) => formatMoney(value, drill.currency);
+  const { base, claimed, mode, newBase } = estateShares(item.heirs);
+  const correction =
+    mode === "awl"
+      ? `Долей вышло больше основы (${claimed} против ${base}), поэтому доли уменьшаются: новая основа — ${claimed}. `
+      : mode === "radd"
+        ? `Долей вышло меньше основы (${claimed} против ${base}), а наследника конечной доли нет, поэтому остаток возвращается: это приращение долей. `
+        : "";
+  const value = total / newBase;
+  const who = asked.heir.count > 1 ? (asked.heir.each ?? asked.heir.label) : asked.heir.label;
+  const own = asked.heir.blocked
+    ? `${capitalize(asked.heir.label)} не наследует: ${asked.heir.blocked}.`
+    : `${capitalize(who)} — ${money((asked.num / asked.den) * total)}.`;
+  return (
+    `Основа долей — ${base}. ${correction}` +
+    (mode === "radd" ? "" : `Стоимость доли — ${money(total)} ÷ ${newBase} = ${money(value)}. `) +
+    `${own} ${item.note}`
+  );
+}
+
+function estateTask(drill: EstateDrill, seed: number): NumberTask {
+  const item = drill.cases[seed % drill.cases.length];
+  const rest = Math.floor(seed / drill.cases.length);
+  const { shares } = estateShares(item.heirs);
+  const total = drill.values[rest % drill.values.length] * estateScale(shares);
+  const asked = shares[Math.floor(rest / drill.values.length) % shares.length];
+
+  const roll = item.heirs.map((heir) => heir.label).join(", ");
+  const answer = Math.round((asked.num / asked.den) * total);
+  return {
+    drillId: drill.id,
+    kind: "number",
+    title: drill.title,
+    prompt:
+      `После наследодателя, имевшего ${formatMoney(total, drill.currency)}, остались: ${roll}. ` +
+      `Сколько наследует ${asked.heir.count > 1 ? (asked.heir.each ?? asked.heir.label) : asked.heir.label}? ` +
+      `Если не наследует — ответ 0.`,
+    answer,
+    answerLabel: answer === 0 ? "Не наследует" : formatMoney(answer, drill.currency),
+    note: estateNote(drill, item, asked, total),
+    page: drill.page,
+  };
+}
+
 export function buildTask(drill: Drill, seed: number): DrillTask {
   switch (drill.kind) {
     case "steps":
@@ -255,5 +389,7 @@ export function buildTask(drill: Drill, seed: number): DrillTask {
       return sortTask(drill, seed);
     case "order":
       return orderTask(drill, seed);
+    case "estate":
+      return estateTask(drill, seed);
   }
 }

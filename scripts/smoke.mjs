@@ -427,6 +427,44 @@ try {
     }
   }
 
+  // Третья тема считает наследство: единственная форма, где ответ вводится
+  // числом и сверяется точно. Её и проверяем — заодно с тем, что разбор после
+  // ответа называет основу долей, то есть расчёт показан, а не только итог.
+  await page.evaluate(() => {
+    const cards = JSON.parse(localStorage.getItem("shifahiya-topic-cards-v1") ?? "{}");
+    cards["mirath:c3-drill-estate"] = {
+      box: 1,
+      nextReview: "2020-01-01",
+      lastSeen: "2020-01-01",
+      reps: 1,
+      lapses: 0,
+    };
+    localStorage.setItem("shifahiya-topic-cards-v1", JSON.stringify(cards));
+  });
+  await page.goto(`${origin}topics/`, { waitUntil: "networkidle" });
+  const inheritance = page.locator(".lesson-card").filter({ hasText: "Наследственное право" }).first();
+  if (!(await inheritance.count())) failures.push("третьей темы нет в списке");
+  else {
+    await inheritance.getByRole("button", { name: /Начать|Продолжить/ }).click();
+    await page.getByRole("button", { name: "Повторить" }).click();
+    await page.waitForSelector(".topic-run", { timeout: 15_000 });
+    const asked = await page.locator(".topic-prompt").innerText();
+    if (!/Сколько наследует/.test(asked)) failures.push(`расчёт наследства не открылся: ${asked}`);
+    else {
+      // Разбор читается до оценки: она уводит с этого экрана.
+      await page.locator(".topic-answer input").fill("0");
+      await page.getByRole("button", { name: "Проверить" }).click();
+      const shown = await page.locator(".feedback").innerText();
+      if (!/Основа долей/.test(shown)) failures.push("разбор расчёта не называет основу долей");
+      await page.locator(".feedback button").click();
+      forms.add("расчёт наследства");
+      const counted = await page.evaluate(
+        () => JSON.parse(localStorage.getItem("shifahiya-topic-cards-v1") ?? "{}")["mirath:c3-drill-estate"],
+      );
+      if (!counted || counted.nextReview === "2020-01-01") failures.push("оценка за расчёт не дошла до расписания");
+    }
+  }
+
   if (failures.length) {
     console.error("Прогон не прошёл:");
     for (const failure of failures) console.error(`  · ${failure}`);

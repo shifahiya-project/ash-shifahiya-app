@@ -133,7 +133,64 @@ export type OrderDrill = {
   page: number;
 };
 
-export type Drill = StepsDrill | ShareDrill | MoneyDrill | SortDrill | OrderDrill;
+/**
+ * One heir in an estate to be divided: how the task names the row, how many
+ * people share it, and what the book gives them — a fixed share of the whole,
+ * a residuary's weight (two for a man against one for a woman), or nothing at
+ * all because someone present bars them.
+ */
+export type EstateHeir = {
+  label: string;
+  /** How many people share the row; the task asks about one of them. */
+  count: number;
+  /**
+   * How to name one person of the row, when the row holds several: «каждая из
+   * трёх жён». Written out because Russian declines it and a generated «три
+   * жены — каждый из них» is both ungrammatical and ambiguous — it reads as a
+   * question about the group's total, which is not what the answer is.
+   */
+  each?: string;
+  /** The fixed share (фард) of the whole, as [numerator, denominator]. */
+  fard?: [number, number];
+  /** A residuary's weight per person: 2 for a man, 1 for a woman. */
+  residue?: number;
+  /** Named in the task and given nothing, because the learner has to know it. */
+  blocked?: string;
+  /** A spouse, who is left out when a remainder is returned by радд. */
+  spouse?: boolean;
+};
+
+/** One configuration of heirs, and the rule the case turns on. */
+export type EstateCase = { heirs: EstateHeir[]; note: string };
+
+/**
+ * The whole arithmetic of an estate: the base of shares (асль), each heir's
+ * share (сахм), what a share is worth (кымат ас-сахм), and the money that
+ * leaves every heir — including the two corrections, `ауль when the shares
+ * overrun the base and радд when they fall short of it.
+ *
+ * A task asks about one heir at a time. That is not a smaller question than
+ * the book's: to name one heir's money the learner has to find the base, share
+ * out every фард, see whether the case needs a correction and value a share —
+ * the same walk either way, and a single number that can be checked exactly.
+ * The sum is chosen so that every answer is whole money, never a rounding.
+ */
+export type EstateDrill = {
+  id: string;
+  kind: "estate";
+  title: string;
+  currency: string;
+  cases: EstateCase[];
+  /**
+   * Sizes the estate: the sum offered is one of these times the smallest
+   * factor that leaves every heir whole money. It is therefore not the value
+   * of a share — that follows from the base, and a correction can change it.
+   */
+  values: number[];
+  page: number;
+};
+
+export type Drill = StepsDrill | ShareDrill | MoneyDrill | SortDrill | OrderDrill | EstateDrill;
 
 /**
  * One sitting: pages to read in the book, the theses that hold them together,
