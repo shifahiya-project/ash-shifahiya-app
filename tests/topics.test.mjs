@@ -129,6 +129,19 @@ test("a place where the book does not add up is marked, not settled here", () =>
   // Список закреплён, чтобы новое расхождение попадало сюда осознанно, а старое
   // не исчезало молча. Дважды напечатанный вопрос помечают оба его номера.
   assert.deepEqual(marks.sort(), [
+    "hajj-quduri:blood-choice-printed",
+    "hajj-quduri:excuse-food-printed",
+    "hajj-quduri:hady-voluntary-time",
+    "hajj-quduri:haram-resident-miqats-typo",
+    "hajj-quduri:ihram-definition",
+    "hajj-quduri:ihsar-hair-dispute",
+    "hajj-quduri:ihsar-hajj-time-dispute",
+    "hajj-quduri:вопрос 131",
+    "hajj-quduri:вопрос 132",
+    "hajj-quduri:вопрос 56",
+    "hajj-quduri:вопрос 57",
+    "hajj-quduri:вопрос 87",
+    "hajj-quduri:вопрос 88",
     "hajj:late-actions",
     "mirath:c2-daughter-evidence",
     "mirath:c2-maternal-siblings-cases",
