@@ -91,7 +91,13 @@ test("the exam is the book's own review list, answered from the atoms themselves
     );
 
     for (const question of topic.exam.questions) {
-      assert.ok(question.atoms.length >= 1, `вопрос ${question.id} ни на что не опирается`);
+      // Эталон собирается из атомов; там, где книга отвечает правилом, которого
+      // у темы нет отдельной карточкой, ответ говорит `extra` — но молчать
+      // вопрос не вправе.
+      assert.ok(
+        question.atoms.length >= 1 || /\S/.test(question.extra ?? ""),
+        `вопрос ${question.id} ни на что не опирается`,
+      );
       for (const atom of question.atoms) {
         assert.ok(ids.has(atom), `${topic.id}, вопрос ${question.id}: нет факта ${atom}`);
       }
@@ -755,4 +761,59 @@ test("the memorisation part is its own route and renders on the server", async (
   // The server knows neither the learner's progress nor their date, so nothing
   // that depends on either may appear in the markup it hands over.
   assert.ok(!html.includes("к повторению:"), "серверная разметка не знает про очередь");
+});
+
+test("зачёт намаза спрашивает те факты, которыми книга на него и отвечает", () => {
+  const salah = topicById("salah-quduri");
+  assert.ok(salah, "тема намаза на месте");
+  const linked = (id) => salah.exam.questions.find((question) => question.id === id)?.atoms ?? [];
+
+  // Связи зачёта расставлялись по месту вопроса в списке, а не по его смыслу, и
+  // разъезжались на каждом «Разъясните…», после которого нумерация сдвигалась.
+  // Эти шесть — по одному из каждого сдвинувшегося куска: заря заката против
+  // второго рассвета, витр, запретные времена, порядок восполнения, саждат
+  // ат-тилява и шахид. Не связь вообще, а та связь, которая отвечает.
+  assert.deepEqual(linked("5"), ["twilight"]);
+  assert.deepEqual(linked("6"), ["second-dawn"]);
+  assert.deepEqual(linked("11"), ["three-forbidden"]);
+  assert.deepEqual(linked("13"), ["asr-sunset-exception"]);
+  assert.deepEqual(linked("139"), ["tilawa-method"]);
+  assert.deepEqual(linked("274"), ["rebel-bandit"]);
+
+  // «Разъясните…» отвечает своим перечислением, а не всем занятием подряд:
+  // иначе один вопрос двигал бы по расписанию каждую карточку своего шага.
+  for (const question of salah.exam.questions) {
+    assert.ok(
+      question.atoms.length <= 13,
+      `вопрос ${question.id} опирается на ${question.atoms.length} фактов — это занятие целиком, а не ответ`,
+    );
+  }
+
+  // Шесть вопросов книга отвечает правилом, которого у темы нет карточкой:
+  // ответ сказан в `extra`. Список закреплён, чтобы седьмой появлялся осознанно,
+  // а не потому, что связь не нашлась.
+  const onExtra = salah.exam.questions.filter((question) => question.atoms.length === 0);
+  assert.deepEqual(onExtra.map((question) => question.id), ["54", "69", "71", "108", "166", "191"]);
+  for (const question of onExtra) {
+    assert.match(question.extra ?? "", /с\. ?\d/, `вопрос ${question.id}: не сказано, где сверять`);
+  }
+});
+
+test("тезисы занятия — карта его страниц, а не общая памятка темы", () => {
+  // `brief` читают перед занятием: что держать в голове на этих страницах.
+  // Один и тот же тезис, повторённый во всех занятиях темы, не говорит ничего
+  // ни об одном из них — и в четырёх темах по аль-Кудури так и было: три общие
+  // строки на 109 занятий подряд.
+  for (const topic of TOPICS) {
+    const seen = new Map();
+    for (const step of topic.steps) {
+      assert.ok(step.brief.length >= 3, `${topic.id}, «${step.title}»: тезисов меньше трёх`);
+      for (const line of step.brief) {
+        assert.match(line, /\S/, `${topic.id}, «${step.title}»: пустой тезис`);
+        const where = seen.get(line);
+        assert.equal(where, undefined, `${topic.id}: «${line}» стоит и в «${where}», и в «${step.title}»`);
+        seen.set(line, step.title);
+      }
+    }
+  }
 });
