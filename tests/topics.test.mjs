@@ -116,18 +116,18 @@ test("a place where the book does not add up is marked, not settled here", () =>
       if (!atom.check) continue;
       marks.push(`${topic.id}:${atom.id}`);
       assert.match(atom.check, /\S/, `${atom.id}: пометка ничего не говорит`);
-      assert.match(atom.check, /с\. \d/, `${atom.id}: не сказано, на какой странице сверять`);
+      assert.match(atom.check, /с(тр)?\. ?\d/, `${atom.id}: не сказано, на какой странице сверять`);
       assert.ok(!/учител|додумыв/i.test(atom.check), `${atom.id}: пометка советует, а не сообщает`);
     }
     for (const question of topic.exam.questions) {
       if (!question.check) continue;
       marks.push(`${topic.id}:вопрос ${question.id}`);
-      assert.match(question.check, /с\. \d/, `вопрос ${question.id}: не сказано, где сверять`);
+      assert.match(question.check, /с(тр)?\. ?\d/, `вопрос ${question.id}: не сказано, где сверять`);
     }
   }
 
-  // Мест, которые ждут сверки, сейчас восемь — список закреплён, чтобы новое
-  // расхождение попадало сюда осознанно, а старое не исчезало молча.
+  // Список закреплён, чтобы новое расхождение попадало сюда осознанно, а старое
+  // не исчезало молча. Дважды напечатанный вопрос помечают оба его номера.
   assert.deepEqual(marks.sort(), [
     "hajj:late-actions",
     "mirath:c2-daughter-evidence",
@@ -135,8 +135,17 @@ test("a place where the book does not add up is marked, not settled here", () =>
     "mirath:c2-mudmira",
     "mirath:c2-sisters-son-error",
     "mirath:вопрос 64",
+    "salah-quduri:вопрос 11",
+    "salah-quduri:вопрос 12",
+    "salah-quduri:вопрос 271",
+    "salah-quduri:вопрос 272",
+    "sawm-quduri:fidya-measure",
+    "sawm-quduri:вопрос 45",
+    "sawm-quduri:вопрос 46",
     "taharah-quduri:tq-clean-bird-droppings",
     "taharah-quduri:tq-menstruation-colors",
+    "zakat-quduri:fitr-amount-printed",
+    "zakat-quduri:вопрос 89",
   ]);
 });
 
