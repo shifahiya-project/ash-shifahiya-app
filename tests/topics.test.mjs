@@ -51,6 +51,22 @@ test("a topic is a book section broken into steps, and every unit says where it 
   }
 });
 
+test("a book that asks no questions of its own gets no exam, and none is offered", async () => {
+  const screen = await readFile(new URL("../app/topics/page.tsx", import.meta.url), "utf8");
+
+  // The paper is the book's own review list and nothing of ours, so a book
+  // without one leaves the exam empty. An empty exam that is still offered is
+  // worse than none: the card advertised «0 вопросов», and starting it read
+  // questions[0] of an empty list and took the whole screen down with it.
+  assert.match(screen, /const hasExam = topic\.exam\.questions\.length > 0;/);
+  assert.match(screen, /if \(!question\) return null;/);
+
+  for (const topic of TOPICS) {
+    if (topic.exam.questions.length > 0) continue;
+    assert.ok(topic.exam.intro, `${topic.id}: пустой зачёт обязан объяснить, почему его нет`);
+  }
+});
+
 test("every unit of a topic has its own address", () => {
   for (const topic of TOPICS) {
     const ids = topicUnits(topic).map((unit) => unit.id);
@@ -163,6 +179,7 @@ test("a place where the book does not add up is marked, not settled here", () =>
     "sawm-quduri:вопрос 46",
     "taharah-quduri:tq-clean-bird-droppings",
     "taharah-quduri:tq-menstruation-colors",
+    "tawdihat:book-purpose",
     "zakat-quduri:fitr-amount-printed",
     "zakat-quduri:вопрос 89",
   ]);
@@ -517,6 +534,47 @@ test("очищение по аль-Кудури спрашивается все�
     const [from, to] = step.pages.split("–").map(Number);
     for (const unit of stepUnits(step)) {
       assert.ok(unit.page >= from && unit.page <= (to ?? from), `${unit.id}: страница ${unit.page} вне занятия ${step.pages}`);
+    }
+  }
+});
+
+test("«Ясные разъяснения» ссылаются на страницы печатного оригинала, а не на доли раздела", () => {
+  const tawdihat = topicById("tawdihat");
+  assert.ok(tawdihat, "девятая тема на месте");
+
+  // Страницы этой темы были разложены поровну по объявленному промежутку
+  // 13–64, а не прочитаны: к середине книги они уходили вперёд на тринадцать
+  // страниц, а весь конец (оригинал: с. 52–64) лежал на одной «с. 64».
+  // Проверяется то, чем это чинилось: каждая единица внутри своего занятия,
+  // занятия идут по книге вперёд, и ни одно не растянуто на весь раздел.
+  let previous = 0;
+  for (const step of tawdihat.steps) {
+    const [from, to = from] = step.pages.split("–").map(Number);
+    assert.ok(from >= previous, `${step.id}: занятие начинается раньше предыдущего`);
+    previous = from;
+    for (const unit of stepUnits(step)) {
+      assert.ok(
+        unit.page >= from && unit.page <= to,
+        `${unit.id}: страница ${unit.page} вне занятия ${step.pages}`,
+      );
+    }
+  }
+
+  // Опорные точки, сверенные с фихрисом и со страницами самого издания.
+  const units = new Map(tawdihat.steps.flatMap((step) => stepUnits(step).map((u) => [u.id, u.page])));
+  assert.equal(units.get("hamd-five-kinds"), 13, "пять видов хвалы — с. 13");
+  assert.equal(units.get("salat-language"), 14, "салят в языке — с. 14");
+  assert.equal(units.get("dabt-language"), 28, "начало главы о дабте — с. 28");
+  assert.equal(units.get("jarh-two-conditions"), 48, "два условия джарха — с. 48");
+  assert.equal(units.get("closing-prayer"), 64, "конец книги — с. 64");
+
+  // Книга не даёт своего списка вопросов, поэтому зачёта у темы нет.
+  assert.equal(tawdihat.exam.questions.length, 0);
+
+  // Тезисы занятия — карта его страниц, а не шаблон с подставленным названием.
+  for (const step of tawdihat.steps) {
+    for (const line of step.brief) {
+      assert.ok(!line.includes(`«${step.title}»`), `${step.id}: тезис пересказывает название занятия`);
     }
   }
 });

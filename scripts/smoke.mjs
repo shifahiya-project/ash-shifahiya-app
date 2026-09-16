@@ -557,6 +557,35 @@ try {
     else forms.add("замечание в зачёте");
   }
 
+  // ——— Тема из книги, которая своих вопросов не задаёт ———
+  //
+  // «Ясные разъяснения» — первая такая тема: список контрольных вопросов
+  // книга не печатает, поэтому зачёта у неё нет. Пустой зачёт, который всё
+  // равно предлагают, хуже отсутствующего: карточка обещала «0 вопросов ·
+  // проходной балл 1», а «Начать зачёт» читало questions[0] пустого списка и
+  // сносило экран — тот же обрыв, что и `check` выше, и так же невидимый для
+  // `npm test`. Занятия подкладываются в хранилище: зачёт отпирается ими, и
+  // проверять надо именно отпертое состояние.
+  const tawdihatSteps = TOPICS.find((topic) => topic.id === "tawdihat").steps.map((step) => step.id);
+  await page.evaluate((ids) => {
+    const steps = JSON.parse(localStorage.getItem("shifahiya-topic-steps-v1") ?? "{}");
+    for (const id of ids) steps[`tawdihat:${id}`] = "2026-01-01";
+    localStorage.setItem("shifahiya-topic-steps-v1", JSON.stringify(steps));
+  }, tawdihatSteps);
+  await page.goto(`${origin}topics/`, { waitUntil: "networkidle" });
+  const tawdihat = page.locator(".lesson-card").filter({ hasText: "Ясные разъяснения" }).first();
+  await tawdihat.getByRole("button", { name: /Начать|Продолжить/ }).click();
+  await page.waitForSelector(".topic-view h1", { timeout: 15_000 });
+
+  const emptyExam = page.locator(".topic-exam");
+  if (await emptyExam.getByRole("button", { name: /Начать зачёт|Пересдать/ }).count()) {
+    failures.push("зачёт без вопросов всё равно предлагается");
+  } else if (!/Зачёта нет/.test(await emptyExam.innerText())) {
+    failures.push("карточка не говорит, что зачёта у этой книги нет");
+  } else {
+    forms.add("книга без своих вопросов");
+  }
+
   if (failures.length) {
     console.error("Прогон не прошёл:");
     for (const failure of failures) console.error(`  · ${failure}`);

@@ -266,6 +266,7 @@ export default function TopicsPage() {
       {/* ——— Тема: занятия, повторение, зачёт ——— */}
       {topic && summary && progress && !session && !finished && !exam && !examOutcome && (() => {
         const stepsDone = topic.steps.filter((step) => state.steps[stepKey(topic.id, step.id)]).length;
+        const hasExam = topic.exam.questions.length > 0;
         const examOpen = stepsDone === topic.steps.length;
         const result = state.exams[topic.id];
         return (
@@ -350,13 +351,31 @@ export default function TopicsPage() {
                 );
               })}
 
-              <article className={`lesson-card topic-exam${examOpen ? "" : " is-locked"}`}>
+              {/*
+                A book that asks no questions of its own gets no exam: the
+                standard here is that the paper is the book's questions and
+                none of ours. Offering an empty one is worse than not offering
+                it — the card advertised «0 вопросов · проходной балл 1», and
+                starting it read questions[0] of an empty list and took the
+                whole screen down with it.
+              */}
+              <article
+                className={`lesson-card topic-exam${
+                  hasExam ? (examOpen ? "" : " is-locked") : " is-locked"
+                }`}
+              >
                 <div className="lesson-number">✓</div>
                 <div className="lesson-copy">
                   <h2>{topic.exam.title}</h2>
                   <p>
-                    {plural(topic.exam.questions.length, "вопрос", "вопроса", "вопросов")} самой книги ·
-                    проходной балл {examPassMark(topic.exam.questions.length)}
+                    {hasExam ? (
+                      <>
+                        {plural(topic.exam.questions.length, "вопрос", "вопроса", "вопросов")} самой книги ·
+                        проходной балл {examPassMark(topic.exam.questions.length)}
+                      </>
+                    ) : (
+                      topic.exam.intro
+                    )}
                   </p>
                   {result && (
                     <p className="topic-source">
@@ -367,7 +386,11 @@ export default function TopicsPage() {
                   )}
                 </div>
                 <div className="lesson-actions">
-                  {examOpen ? (
+                  {!hasExam ? (
+                    <button className="locked" disabled>
+                      Зачёта нет
+                    </button>
+                  ) : examOpen ? (
                     <button
                       className="primary"
                       onClick={() => setExam({ topicId: topic.id, index: 0, marks: {} })}
@@ -457,6 +480,10 @@ export default function TopicsPage() {
       {/* ——— Зачёт по вопросам книги ——— */}
       {topic && exam && (() => {
         const question = topic.exam.questions[exam.index];
+        // A run past the last question, or into a topic whose book asks none,
+        // has nothing to render: reading .id off the missing question is what
+        // used to unmount the screen.
+        if (!question) return null;
         return (
           <section className="study-view topic-run">
             <div className="lesson-progress">
