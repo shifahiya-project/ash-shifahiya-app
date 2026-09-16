@@ -10,6 +10,7 @@
 import { writeFile } from "node:fs/promises";
 
 import { DEFAULT_HANDLES } from "../content/podcasts/channels.ts";
+import { shippedCatalog } from "../content/podcasts/catalog.ts";
 import { parseChannelHandle } from "../app/podcast-catalog.ts";
 import { fetchCatalog } from "../app/podcast-youtube.ts";
 
@@ -31,8 +32,23 @@ const handles = [...new Set([...DEFAULT_HANDLES, ...extra])];
 console.log(`Каналов на импорт: ${handles.length}`);
 const { catalog, missing } = await fetchCatalog(handles, apiKey, (message) => console.log(`  ${message}`));
 
-for (const handle of missing) {
-  console.warn(`  ! ${handle} не найден — канал переименован или удалён`);
+// A channel that did not open is skipped rather than fatal: one rename must not
+// cost the learner the other channels' episodes. But skipping it quietly is how
+// a whole channel once left the shipped catalogue unnoticed — the warning went
+// into a log, and the weekly pull request said nothing — so what the loss costs
+// is counted here, against the catalogue currently on disk, and carried out to
+// whoever reviews the refresh.
+const losses = missing.map((handle) => {
+  const had = shippedCatalog.channels.find((channel) => channel.handle === handle);
+  const episodes = had ? shippedCatalog.videos.filter((video) => video.channelId === had.id).length : 0;
+  return { handle, title: had?.title ?? "", episodes };
+});
+
+for (const loss of losses) {
+  const cost = loss.episodes
+    ? `из каталога уходит ${loss.episodes} выпусков канала «${loss.title}»`
+    : "в каталоге его выпусков и не было";
+  console.warn(`  ! ${loss.handle} не найден — канал переименован или удалён; ${cost}`);
 }
 if (catalog.channels.length === 0) {
   console.error("Ни один канал не открылся — каталог не тронут.");
@@ -91,3 +107,50 @@ const minutes = Math.round(catalog.videos.reduce((sum, video) => sum + video.sec
 console.log(
   `catalog.ts: ${catalog.channels.length} каналов, ${catalog.videos.length} выпусков, ${minutes} мин`,
 );
+
+// The weekly job turns this into the body of its pull request. Written only
+// when a path is asked for, so a hand run leaves nothing behind — the importer
+// knows what was lost and what it cost, and a reviewer should read that where
+// they decide, not in a log they never open.
+const summaryPath = process.env.PODCAST_SUMMARY_FILE;
+if (summaryPath) {
+  const before = shippedCatalog.videos.length;
+  const delta = catalog.videos.length - before;
+  const lines = [
+    "Каталог пересобран из YouTube заданием `Refresh podcasts`.",
+    "",
+    `- каналов: ${catalog.channels.length}`,
+    `- выпусков: ${catalog.videos.length}` +
+      (before ? ` (было ${before}, ${delta >= 0 ? "+" : ""}${delta})` : ""),
+    `- всего: ${minutes} мин`,
+  ];
+  if (losses.length) {
+    const many = losses.length > 1;
+    lines.push(
+      "",
+      many ? "## Каналы не открылись" : "## Канал не открылся",
+      "",
+      `Импорт ${many ? "их" : "его"} пропустил, чтобы не лишить остальные каналы обновления,`,
+      `но мерж ${many ? "уносит их" : "уносит его"} из каталога вместе с выпусками:`,
+      "",
+      ...losses.map(
+        (loss) =>
+          `- **${loss.handle}**` +
+          (loss.title ? ` («${loss.title}»)` : "") +
+          (loss.episodes ? ` — уйдёт ${loss.episodes} выпусков` : " — выпусков в каталоге не было"),
+      ),
+      "",
+      many
+        ? "Они остались в `content/podcasts/channels.ts`: их не убирали, они не ответили."
+        : "Он остался в `content/podcasts/channels.ts`: его не убирали, он не ответил.",
+      "Если канал переименован — поправьте хендл там и перезапустите задание,",
+      "тогда мерж не будет стоить ученику этих выпусков.",
+    );
+  }
+  lines.push(
+    "",
+    "Тесты прошли до создания ветки, так что форма каталога проверена.",
+    "Мерж этого PR публикует сайт со свежим списком.",
+  );
+  await writeFile(summaryPath, `${lines.join("\n")}\n`);
+}
