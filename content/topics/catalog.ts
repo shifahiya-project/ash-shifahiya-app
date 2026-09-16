@@ -8,6 +8,7 @@
  * shelf grows enough for the weight to be felt, this is the one file that
  * changes.
  */
+import { balaghaHistoryTopic } from "./balagha-history.ts";
 import { hajjTopic } from "./hajj.ts";
 import { hajjQuduriTopic } from "./hajj-quduri.ts";
 import { mirathTopic } from "./mirath.ts";
@@ -20,7 +21,7 @@ import { zakatTopic } from "./zakat.ts";
 import { topicAtoms, topicDrills, topicUnits, type Topic } from "./types.ts";
 
 // Existing shelf order stays stable; each newly authored book section is appended.
-export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQuduriTopic, salahQuduriTopic, zakatQuduriTopic, sawmQuduriTopic, hajjQuduriTopic, tawdihatTopic];
+export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQuduriTopic, salahQuduriTopic, zakatQuduriTopic, sawmQuduriTopic, hajjQuduriTopic, tawdihatTopic, balaghaHistoryTopic];
 
 export function topicById(id: string) {
   return TOPICS.find((topic) => topic.id === id);
