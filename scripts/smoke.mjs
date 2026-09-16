@@ -301,6 +301,17 @@ try {
   const opened = await page.getByRole("tab", { name: /9 · Усуль/ }).innerText();
   if (opened.includes("🔒")) failures.push("девятая часть не открылась по пройденной восьмой");
 
+  // И то же у десятой: её карточки адресуются «p10-», первым двузначным
+  // префиксом в общей коробке, поэтому её гейт стоит увидеть глазами.
+  const tenthLocked = await page.getByRole("tab", { name: /10 · Арбаин/ }).innerText();
+  if (!tenthLocked.includes("🔒")) failures.push("десятая часть открыта до того, как пройдена девятая");
+  await page.evaluate(() => {
+    for (let id = 1; id <= 117; id += 1) localStorage.setItem(`shifahiya-p9-lesson-${id}`, "5");
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  const tenthOpen = await page.getByRole("tab", { name: /10 · Арбаин/ }).innerText();
+  if (tenthOpen.includes("🔒")) failures.push("десятая часть не открылась по пройденной девятой");
+
   // ——— Тема наизусть: отдельный экран, отдельное хранилище ———
 
   await page.goto(`${origin}topics/`, { waitUntil: "networkidle" });

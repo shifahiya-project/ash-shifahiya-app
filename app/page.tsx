@@ -31,6 +31,9 @@ import { isPart8Open, part8CardId, part8LessonIdsInCards, unlockedPart8Ids } fro
 import { part9Summaries } from "../content/part9/manifest";
 import { loadPart9Lesson, loadPart9Lessons, loadPart9WordsMetBefore } from "../content/part9/lessons";
 import { isPart9Open, part9CardId, part9LessonIdsInCards, unlockedPart9Ids } from "./part9-access";
+import { part10Summaries } from "../content/part10/manifest";
+import { loadPart10Lesson, loadPart10Lessons, loadPart10WordsMetBefore } from "../content/part10/lessons";
+import { isPart10Open, part10CardId, part10LessonIdsInCards, unlockedPart10Ids } from "./part10-access";
 import { textCourseQuestions } from "../content/text-course-questions";
 import { textCourseDividerKey } from "./text-course-access";
 // Only the schedule and the store, never a topic's content: the memorisation
@@ -222,7 +225,7 @@ function textCourseReviewCardsOf(
 }
 
 /** The courses that teach a scholarly book: its glossary, then its text. */
-type TextCourseId = 3 | 4 | 5 | 6 | 7 | 8 | 9;
+type TextCourseId = 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 /**
  * Every course from the third on is one of them. A predicate rather than a
@@ -302,6 +305,15 @@ const TEXT_COURSES = {
     saveSession: progressStore.savePart9Session,
     finishLesson: progressStore.finishPart9Lesson,
   },
+  10: {
+    label: "Часть 10",
+    summaries: part10Summaries,
+    loadLesson: loadPart10Lesson,
+    cardId: part10CardId,
+    wordsMetBefore: loadPart10WordsMetBefore,
+    saveSession: progressStore.savePart10Session,
+    finishLesson: progressStore.finishPart10Lesson,
+  },
 } as const;
 
 /**
@@ -351,6 +363,12 @@ const TEXT_COURSE_GATES: Record<TextCourseId, { title: string; explains: string 
     explains:
       "Пройдите все уроки восьмой части — и усуль аль-фикх станет доступен. " +
       "Он спрашивает, откуда берётся решение, и опирается сразу на всё прочитанное.",
+  },
+  10: {
+    title: "Десятая часть открывается по девятой",
+    explains:
+      "Пройдите все уроки девятой части — и «Сорок хадисов» станут доступны. " +
+      "Это тот самый матн, о котором говорили науки предыдущих частей.",
   },
 };
 
@@ -466,6 +484,7 @@ export default function Home() {
   const [openPart7, setOpenPart7] = useState<Record<number, TextCourseLesson>>({});
   const [openPart8, setOpenPart8] = useState<Record<number, TextCourseLesson>>({});
   const [openPart9, setOpenPart9] = useState<Record<number, TextCourseLesson>>({});
+  const [openPart10, setOpenPart10] = useState<Record<number, TextCourseLesson>>({});
   const [reading, setReading] = useState<ReadingSection | null>(null);
   const [openLines, setOpenLines] = useState<string[]>([]);
   const [course, setCourse] = useState<1 | 2 | TextCourseId>(1);
@@ -557,8 +576,9 @@ export default function Home() {
       ...Object.values(openPart7).flatMap((item) => textCourseReviewCardsOf(item, part7CardId)),
       ...Object.values(openPart8).flatMap((item) => textCourseReviewCardsOf(item, part8CardId)),
       ...Object.values(openPart9).flatMap((item) => textCourseReviewCardsOf(item, part9CardId)),
+      ...Object.values(openPart10).flatMap((item) => textCourseReviewCardsOf(item, part10CardId)),
     ],
-    [openLessons, openPart2, openPart3, openPart4, openPart5, openPart6, openPart7, openPart8, openPart9],
+    [openLessons, openPart2, openPart3, openPart4, openPart5, openPart6, openPart7, openPart8, openPart9, openPart10],
   );
   const dueCards = useMemo(() => {
     const today = localDate();
@@ -599,6 +619,8 @@ export default function Home() {
   const part8Sessions = stored.part8Sessions;
   const part9Scores = stored.part9Scores;
   const part9Sessions = stored.part9Sessions;
+  const part10Scores = stored.part10Scores;
+  const part10Sessions = stored.part10Sessions;
   // The third course waits for the second one whole, not for a paper: a
   // treatise is what the hundred and five lessons of stories were reading for.
   const part3Ready = isPart3Open(part2Summaries, part2Scores);
@@ -616,6 +638,7 @@ export default function Home() {
   const part7Ready = isPart7Open(part6Summaries, part6Scores);
   const part8Ready = isPart8Open(part7Summaries, part7Scores);
   const part9Ready = isPart9Open(part8Summaries, part8Scores);
+  const part10Ready = isPart10Open(part9Summaries, part9Scores);
   const unlockedPart3 = useMemo(
     () => unlockedPart3Ids(part3Summaries, stored, part3Ready),
     [stored, part3Ready],
@@ -631,6 +654,10 @@ export default function Home() {
   const unlockedPart6 = useMemo(
     () => unlockedPart6Ids(part6Summaries, stored, part6Ready),
     [stored, part6Ready],
+  );
+  const unlockedPart10 = useMemo(
+    () => unlockedPart10Ids(part10Summaries, stored, part10Ready),
+    [stored, part10Ready],
   );
   const unlockedPart9 = useMemo(
     () => unlockedPart9Ids(part9Summaries, stored, part9Ready),
@@ -654,6 +681,7 @@ export default function Home() {
       7: { scores: part7Scores, sessions: part7Sessions, unlocked: unlockedPart7, ready: part7Ready },
       8: { scores: part8Scores, sessions: part8Sessions, unlocked: unlockedPart8, ready: part8Ready },
       9: { scores: part9Scores, sessions: part9Sessions, unlocked: unlockedPart9, ready: part9Ready },
+      10: { scores: part10Scores, sessions: part10Sessions, unlocked: unlockedPart10, ready: part10Ready },
     }),
     [
       part3Scores, part3Sessions, unlockedPart3, part3Ready,
@@ -663,6 +691,7 @@ export default function Home() {
       part7Scores, part7Sessions, unlockedPart7, part7Ready,
       part8Scores, part8Sessions, unlockedPart8, part8Ready,
       part9Scores, part9Sessions, unlockedPart9, part9Ready,
+      part10Scores, part10Sessions, unlockedPart10, part10Ready,
     ],
   );
   /** The text course on screen: its data, and the learner's place in it. */
@@ -861,6 +890,15 @@ export default function Home() {
       .join(",");
   }, [cardProgress, part9Sessions]);
 
+  const wantedPart10Ids = useMemo(() => {
+    const resume = Object.values(part10Sessions).sort(
+      (a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId),
+    )[0];
+    return [...new Set([...part10LessonIdsInCards(cardProgress), ...(resume ? [resume.lessonId] : [])])]
+      .sort((a, b) => a - b)
+      .join(",");
+  }, [cardProgress, part10Sessions]);
+
   useEffect(() => {
     if (!wantedPart2Ids) return;
 
@@ -964,6 +1002,19 @@ export default function Home() {
       cancelled = true;
     };
   }, [wantedPart9Ids]);
+
+  useEffect(() => {
+    if (!wantedPart10Ids) return;
+
+    let cancelled = false;
+    loadPart10Lessons(wantedPart10Ids.split(",").map(Number)).then((loaded) => {
+      if (cancelled) return;
+      setOpenPart10((items) => ({ ...items, ...Object.fromEntries(loaded.map((item) => [item.id, item])) }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wantedPart10Ids]);
 
   useEffect(() => {
     if (!wantedLessonIds) return;
@@ -1246,7 +1297,7 @@ export default function Home() {
     const met = await opening.wordsMetBefore(lesson);
     const remember = {
       3: setOpenPart3, 4: setOpenPart4, 5: setOpenPart5, 6: setOpenPart6, 7: setOpenPart7,
-      8: setOpenPart8, 9: setOpenPart9,
+      8: setOpenPart8, 9: setOpenPart9, 10: setOpenPart10,
     }[courseId];
     remember((items) => ({ ...items, [id]: lesson }));
     setTextCourseId(courseId);
@@ -1459,6 +1510,8 @@ export default function Home() {
       part8Sessions,
       part9Scores,
       part9Sessions,
+      part10Scores,
+      part10Sessions,
       stats: learningStats,
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
@@ -1515,6 +1568,8 @@ export default function Home() {
         part8Sessions: payload.part8Sessions ?? {},
         part9Scores: payload.part9Scores ?? {},
         part9Sessions: payload.part9Sessions ?? {},
+        part10Scores: payload.part10Scores ?? {},
+        part10Sessions: payload.part10Sessions ?? {},
         stats,
       });
       setBackupMessage("Прогресс восстановлен.");
@@ -1914,6 +1969,14 @@ export default function Home() {
               onClick={() => setCourse(9)}
             >
               9 · Усуль {part9Ready ? "" : "🔒"}
+            </button>
+            <button
+              role="tab"
+              aria-selected={course === 10}
+              className={course === 10 ? "is-active" : ""}
+              onClick={() => setCourse(10)}
+            >
+              10 · Арбаин {part10Ready ? "" : "🔒"}
             </button>
           </div>
 
