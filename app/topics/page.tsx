@@ -947,6 +947,7 @@ function ExamQuestionCard({
   prompt,
   atoms,
   extra,
+  check,
   onMark,
 }: {
   number: number;

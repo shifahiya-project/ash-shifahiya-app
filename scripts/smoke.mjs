@@ -509,6 +509,54 @@ try {
     }
   }
 
+  // ——— Зачёт: пометка «?» у вопроса, а не только у карточки повторения ———
+  //
+  // Выше знак проверен на карточке темы. У зачёта своя разметка и свой
+  // компонент, и однажды он ломался целиком: `check` был объявлен в типе
+  // `ExamQuestionCard`, но не разобран из аргумента, — сборка выбрасывала
+  // свободный идентификатор, и первое же «Показать эталон» давало
+  // `ReferenceError: check is not defined`, снося React-дерево. Валился не
+  // значок у четырнадцати помеченных вопросов, а эталон любого вопроса любой
+  // из восьми тем. `npm test` этого не видел: дело целиком клиентское, а
+  // `tsc` в прогон не входит.
+  //
+  // Зачёт отпирается разобранными занятиями, и они подкладываются в хранилище:
+  // проходить тридцать четыре занятия ради одного экрана прогон не станет.
+  const { TOPICS } = await import("../content/topics/catalog.ts");
+  const salahSteps = TOPICS.find((topic) => topic.id === "salah-quduri").steps.map((step) => step.id);
+  await page.evaluate((ids) => {
+    const steps = JSON.parse(localStorage.getItem("shifahiya-topic-steps-v1") ?? "{}");
+    for (const id of ids) steps[`salah-quduri:${id}`] = "2026-01-01";
+    localStorage.setItem("shifahiya-topic-steps-v1", JSON.stringify(steps));
+  }, salahSteps);
+  await page.goto(`${origin}topics/`, { waitUntil: "networkidle" });
+  const salah = page.locator(".lesson-card").filter({ hasText: "Намаз" }).first();
+  await salah.getByRole("button", { name: /Начать|Продолжить/ }).click();
+  await page.waitForSelector(".topic-view h1", { timeout: 15_000 });
+
+  const examButton = page.locator(".topic-exam").getByRole("button", { name: /Начать зачёт|Пересдать/ });
+  if (!(await examButton.count())) failures.push("зачёт не открылся по разобранным занятиям");
+  else {
+    await examButton.click();
+    await page.getByRole("button", { name: "Показать эталон" }).waitFor({ timeout: 15_000 });
+    // Помеченные вопросы этой темы стоят на одиннадцатом и двенадцатом месте.
+    let marked = 0;
+    for (let step = 1; step <= 12; step += 1) {
+      await page.getByRole("button", { name: "Показать эталон" }).click();
+      if (step >= 11) {
+        const mark = page.locator(".topic-check > button");
+        if (await mark.count()) {
+          await mark.first().click();
+          const remark = await page.locator(".topic-check-text").innerText();
+          if (/с\. 209/.test(remark)) marked += 1;
+        }
+      }
+      await page.locator(".topic-grades .good").click();
+    }
+    if (!marked) failures.push("знака «?» у помеченного вопроса зачёта нет");
+    else forms.add("замечание в зачёте");
+  }
+
   if (failures.length) {
     console.error("Прогон не прошёл:");
     for (const failure of failures) console.error(`  · ${failure}`);
