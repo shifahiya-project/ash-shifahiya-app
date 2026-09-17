@@ -135,8 +135,14 @@ test("a place where the book does not add up is marked, not settled here", () =>
   // Список закреплён, чтобы новое расхождение попадало сюда осознанно, а старое
   // не исчезало молча. Дважды напечатанный вопрос помечают оба его номера.
   assert.deepEqual(marks.sort(), [
-    // «Стилистика арабского языка»: الكشاف передан по-русски как «Лампа».
+    // «Стилистика арабского языка». Четыре опечатки издания и одно место,
+    // где книга спорит сама с собой: аят «Худ», 37 она четырежды относит к
+    // Мусе, тогда как «они будут утоплены» обращено к Нуху.
+    "balagha-badi:вопрос 16",
+    "balagha-badi:вопрос 4",
+    "balagha-bayan:вопрос 1",
     "balagha-history:major-scholars-and-works",
+    "balagha-maani:вопрос 10",
     "hajj-quduri:blood-choice-printed",
     "hajj-quduri:excuse-food-printed",
     "hajj-quduri:hady-voluntary-time",

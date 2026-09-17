@@ -8,7 +8,10 @@
  * shelf grows enough for the weight to be felt, this is the one file that
  * changes.
  */
+import { balaghaBadiTopic } from "./balagha-badi.ts";
+import { balaghaBayanTopic } from "./balagha-bayan.ts";
 import { balaghaHistoryTopic } from "./balagha-history.ts";
+import { balaghaMaaniTopic } from "./balagha-maani.ts";
 import { hajjTopic } from "./hajj.ts";
 import { hajjQuduriTopic } from "./hajj-quduri.ts";
 import { mirathTopic } from "./mirath.ts";
@@ -21,7 +24,11 @@ import { zakatTopic } from "./zakat.ts";
 import { topicAtoms, topicDrills, topicUnits, type Topic } from "./types.ts";
 
 // Existing shelf order stays stable; each newly authored book section is appended.
-export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQuduriTopic, salahQuduriTopic, zakatQuduriTopic, sawmQuduriTopic, hajjQuduriTopic, tawdihatTopic, balaghaHistoryTopic];
+export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQuduriTopic, salahQuduriTopic, zakatQuduriTopic, sawmQuduriTopic, hajjQuduriTopic, tawdihatTopic,
+  // «Стилистика арабского языка» идёт порядком самой книги:
+  // возникновение науки, затем три её направления — баян, ма‘ани, бади‘.
+  balaghaHistoryTopic, balaghaBayanTopic, balaghaMaaniTopic, balaghaBadiTopic,
+];
 
 export function topicById(id: string) {
   return TOPICS.find((topic) => topic.id === id);
