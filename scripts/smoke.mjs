@@ -366,6 +366,26 @@ try {
   }
 
   const forms = new Set();
+  // The first question has choices. Retire it straight to the longest topic
+  // interval and make sure the separate action does not become a second button
+  // inside the coloured feedback panel.
+  await page.locator(".options button").first().click();
+  if ((await page.locator(".feedback button").count()) !== 1) {
+    failures.push("кнопка «Выучил» попала внутрь плашки ответа");
+  }
+  await page.getByRole("button", { name: /Выучил/ }).click();
+  forms.add("выбор");
+  const masteredTopicCard = await page.evaluate(() => {
+    const card = JSON.parse(localStorage.getItem("shifahiya-topic-cards-v1") ?? "{}")["zakat:lang"];
+    const date = new Date();
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() + 90);
+    return { card, expected: date.toISOString().slice(0, 10) };
+  });
+  if (masteredTopicCard.card?.box !== 6 || masteredTopicCard.card?.nextReview !== masteredTopicCard.expected) {
+    failures.push("«Выучил» не перенёс вопрос в последнюю коробку на 90 дней");
+  }
+
   for (let step = 0; step < 80; step += 1) {
     if (await page.locator(".result-view").count()) break;
     forms.add(await answerUnit());
@@ -373,6 +393,9 @@ try {
   if (!(await page.locator(".result-view").count())) failures.push("занятие темы не дошло до итога");
   if (!forms.has("припоминание")) failures.push("свободное припоминание ни разу не встретилось");
   if (!forms.has("список")) failures.push("список ни разу не спросили целиком");
+  if ((await page.locator(".topic-result-grid").innerText()).includes("1\nВЫУЧИЛ") === false) {
+    failures.push("итог занятия не посчитал выученный вопрос");
+  }
 
   const topicStored = await page.evaluate(() => ({
     cards: Object.keys(JSON.parse(localStorage.getItem("shifahiya-topic-cards-v1") ?? "{}")).length,

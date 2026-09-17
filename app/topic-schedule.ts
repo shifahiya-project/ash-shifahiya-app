@@ -78,6 +78,22 @@ export function nextTopicCard(
 }
 
 /**
+ * Puts a unit straight into the last box when the learner already owns it.
+ *
+ * It still comes back after the longest interval: «выучил» skips the walk
+ * through the shorter boxes, it does not remove the rule from the topic.
+ */
+export function masterTopicCard(previous: TopicCard | undefined, today = new Date()): TopicCard {
+  return {
+    box: LAST_TOPIC_BOX,
+    nextReview: topicDate(TOPIC_INTERVALS[LAST_TOPIC_BOX], today),
+    lastSeen: topicDate(0, today),
+    reps: (previous?.reps ?? 0) + 1,
+    lapses: previous?.lapses ?? 0,
+  };
+}
+
+/**
  * A card sent back to the very beginning, keeping its history.
  *
  * Used by the exam: a question the learner could not answer says more about

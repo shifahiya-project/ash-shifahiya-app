@@ -860,12 +860,14 @@ h1 em { color: var(--green); font-weight: inherit; }
 .feedback div { flex: 1; }
 .feedback strong { font-family: Georgia, serif; }
 .feedback p { margin: 3px 0 0; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+.topic-mastered { display: block; margin: 10px 0 0 auto; }
 
 .result-view { max-width: 760px; text-align: center; }
 .result-mark { width: 66px; height: 66px; margin: 0 auto 22px; border-radius: 50%; display: grid; place-items: center; background: var(--green); color: white; font-size: 30px; box-shadow: 0 12px 30px rgba(23,107,85,.22); }
 .result-view h1 { font-size: clamp(42px, 7vw, 58px); }
 .result-view > p { max-width: 560px; margin: 18px auto 32px; color: var(--ink-soft); line-height: 1.7; }
 .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.65); overflow: hidden; }
+.topic-result-grid { grid-template-columns: repeat(4, 1fr); }
 .result-grid div { padding: 22px 12px; border-right: 1px solid var(--line); }
 .result-grid div:last-child { border: 0; }
 .result-grid strong, .result-grid span { display: block; }
@@ -908,6 +910,7 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
      the retire button takes the one below it. */
   .study-actions.three { grid-template-columns: 1fr 1fr; }
   .study-actions.three .mastered { grid-column: 1 / -1; }
+  .topic-mastered { width: 100%; }
   .daily-review { align-items: stretch; flex-direction: column; }
   .daily-review .primary { width: 100%; }
   .continue-learning { grid-template-columns: 42px 1fr; padding: 18px; }

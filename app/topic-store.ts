@@ -12,7 +12,14 @@
  */
 import type { SyncedTopics } from "./merge-progress.ts";
 import type { TopicCard, TopicExamResult, TopicGrade } from "./topic-schedule.ts";
-import { cardKey, demoteTopicCard, nextTopicCard, resetTopicCard, topicDate } from "./topic-schedule.ts";
+import {
+  cardKey,
+  demoteTopicCard,
+  masterTopicCard,
+  nextTopicCard,
+  resetTopicCard,
+  topicDate,
+} from "./topic-schedule.ts";
 
 export const TOPIC_CARDS_KEY = "shifahiya-topic-cards-v1";
 export const TOPIC_STEPS_KEY = "shifahiya-topic-steps-v1";
@@ -78,6 +85,13 @@ export const topicStore = {
     const cards = topicStore.getSnapshot().cards;
     const key = cardKey(topicId, unitId);
     writeCards({ ...cards, [key]: nextTopicCard(cards[key], grade) });
+  },
+
+  /** Skips a unit straight to the topic schedule's longest interval. */
+  master(topicId: string, unitId: string) {
+    const cards = topicStore.getSnapshot().cards;
+    const key = cardKey(topicId, unitId);
+    writeCards({ ...cards, [key]: masterTopicCard(cards[key]) });
   },
 
   /**
