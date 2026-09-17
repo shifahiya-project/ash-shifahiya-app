@@ -8,6 +8,7 @@
  * shelf grows enough for the weight to be felt, this is the one file that
  * changes.
  */
+import { balaghaHistoryTopic } from "./balagha-history.ts";
 import { hajjTopic } from "./hajj.ts";
 import { hajjQuduriTopic } from "./hajj-quduri.ts";
 import { mirathTopic } from "./mirath.ts";
@@ -20,7 +21,7 @@ import { zakatTopic } from "./zakat.ts";
 import { topicAtoms, topicDrills, topicUnits, type Topic } from "./types.ts";
 
 // Existing shelf order stays stable; each newly authored book section is appended.
-export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQuduriTopic, salahQuduriTopic, zakatQuduriTopic, sawmQuduriTopic, hajjQuduriTopic, tawdihatTopic];
+export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQuduriTopic, salahQuduriTopic, zakatQuduriTopic, sawmQuduriTopic, hajjQuduriTopic, tawdihatTopic, balaghaHistoryTopic];
 
 export function topicById(id: string) {
   return TOPICS.find((topic) => topic.id === id);
@@ -57,3 +58,27 @@ export function summarize(topic: Topic): TopicSummary {
 }
 
 export const TOPIC_SUMMARIES = TOPICS.map(summarize);
+
+/**
+ * The shelf grouped by the book its sections came from.
+ *
+ * A book read section by section arrives here as several topics — five for
+ * «Мухтасар аль-Кудури», four for the Arabic stylistics — and each of them was
+ * printing the same book name on its own card. That is the course lists'
+ * problem, solved there the same way: one divider over the run, and the cards
+ * under it say only which part of the book they are.
+ *
+ * Grouped by a run rather than by name, so a book can only ever head one place
+ * in the list. Should the same book come back further down the shelf — a second
+ * volume authored years later — it heads its own run there instead of being
+ * quietly hoisted up to the first, which would reorder the shelf under the
+ * reader and move a topic away from the ones it was written beside.
+ */
+export type TopicBook = { book: string; topics: TopicSummary[] };
+
+export const TOPIC_BOOKS: TopicBook[] = TOPIC_SUMMARIES.reduce<TopicBook[]>((books, topic) => {
+  const open = books[books.length - 1];
+  if (open && open.book === topic.source.book) open.topics.push(topic);
+  else books.push({ book: topic.source.book, topics: [topic] });
+  return books;
+}, []);
