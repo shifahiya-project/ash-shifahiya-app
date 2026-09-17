@@ -404,7 +404,11 @@ try {
   await page.getByRole("button", { name: "Повторить" }).click();
   await page.waitForSelector(".topic-run", { timeout: 15_000 });
   const drillAsked = await page.locator(".topic-prompt").innerText();
-  if (!/овец/i.test(drillAsked)) failures.push(`из очереди пришло не то: ${drillAsked}`);
+  // Число в задании выводится из сида, а сид — из сегодняшней даты, поэтому
+  // слово идёт за числом: «10 овец», но «271 овцы». Спрашиваем предмет
+  // задания, а не падеж, иначе прогон краснеет в те дни, когда выпало
+  // число на «1». Проверено: 17 сентября 2026 года выпадает 271.
+  if (!/овц[аыу]|овец/i.test(drillAsked)) failures.push(`из очереди пришло не то: ${drillAsked}`);
   forms.add(await answerUnit());
 
   // Вторая тема спрашивает обряд порядком, и эта форма есть только у неё:
@@ -487,6 +491,11 @@ try {
       reps: 1,
       lapses: 0,
     };
+    // Расчёт выше отвечали нулём, а верен он не в каждом сгенерированном случае:
+    // неверный ответ возвращает карточку на сегодня, и тогда из очереди первым
+    // приходит расчёт, а не помеченный вопрос. Убираем его с сегодняшнего дня —
+    // проверяем здесь знак «?», а не порядок очереди.
+    if (cards["mirath:c3-drill-estate"]) cards["mirath:c3-drill-estate"].nextReview = "2099-01-01";
     localStorage.setItem("shifahiya-topic-cards-v1", JSON.stringify(cards));
   });
   await page.goto(`${origin}topics/`, { waitUntil: "networkidle" });

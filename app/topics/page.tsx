@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { Fragment, useMemo, useState, useSyncExternalStore } from "react";
 import { plural, seededShuffle } from "../../content/questions";
-import { TOPIC_SUMMARIES, topicById } from "../../content/topics/catalog";
+import { TOPIC_BOOKS, TOPIC_SUMMARIES, topicById } from "../../content/topics/catalog";
 import { isDrill, stepUnits, type Atom, type Topic, type TopicStep, type TopicUnit } from "../../content/topics/types";
 import { examPassMark } from "../lesson-access";
 import { todayStore } from "../podcast-store";
@@ -224,7 +224,15 @@ export default function TopicsPage() {
           </p>
 
           <div className="lesson-list">
-            {TOPIC_SUMMARIES.map((item) => {
+            {TOPIC_BOOKS.map((shelf) => (
+              <Fragment key={shelf.book}>
+                {/* Один заголовок на книгу вместо её названия на каждой карточке:
+                    книга, разобранная по разделам, приходит сюда несколькими темами. */}
+                <div className="book-divider">
+                  <strong>{shelf.book}</strong>
+                  <span>{plural(shelf.topics.length, "раздел", "раздела", "разделов")}</span>
+                </div>
+                {shelf.topics.map((item) => {
               const stats = topicProgress(state.cards, item.id, item.unitIds, today);
               const exists = topicById(item.id);
               return (
@@ -234,7 +242,7 @@ export default function TopicsPage() {
                     <h2>{item.title}</h2>
                     <p>{item.subtitle}</p>
                     <p className="topic-source">
-                      {item.source.book} · {item.source.section} · с. {item.source.pages}
+                      {item.source.section} · с. {item.source.pages}
                     </p>
                     <div className="chips">
                       <span>{plural(item.steps, "занятие", "занятия", "занятий")}</span>
@@ -250,7 +258,9 @@ export default function TopicsPage() {
                   </div>
                 </article>
               );
-            })}
+                })}
+              </Fragment>
+            ))}
           </div>
 
           <div className="principle">
@@ -350,6 +360,11 @@ export default function TopicsPage() {
                 );
               })}
 
+              {/* Зачёт — вопросы самой книги, и ни одного своего. Раздел, по
+                  которому книга их не даёт, карточки зачёта не получает: иначе
+                  она предлагала бы работу из нуля вопросов с проходным баллом,
+                  выведенным из нуля. */}
+              {topic.exam.questions.length > 0 && (
               <article className={`lesson-card topic-exam${examOpen ? "" : " is-locked"}`}>
                 <div className="lesson-number">✓</div>
                 <div className="lesson-copy">
@@ -381,6 +396,7 @@ export default function TopicsPage() {
                   )}
                 </div>
               </article>
+              )}
             </div>
           </section>
         );

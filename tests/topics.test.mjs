@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { TOPICS, TOPIC_SUMMARIES, summarize, topicById } from "../content/topics/catalog.ts";
+import { TOPICS, TOPIC_BOOKS, TOPIC_SUMMARIES, summarize, topicById } from "../content/topics/catalog.ts";
 import { isDrill, stepUnits, topicAtoms, topicDrills, topicUnits } from "../content/topics/types.ts";
 import { examPassMark } from "../app/lesson-access.ts";
 import { buildTask, countInWords, dueFor, taskSeed } from "../app/topic-drills.ts";
@@ -135,6 +135,19 @@ test("a place where the book does not add up is marked, not settled here", () =>
   // Список закреплён, чтобы новое расхождение попадало сюда осознанно, а старое
   // не исчезало молча. Дважды напечатанный вопрос помечают оба его номера.
   assert.deepEqual(marks.sort(), [
+    // «Стилистика арабского языка». Опечатки издания и три места, где книга
+    // спорит сама с собой: аят «Худ», 37 она четырежды относит к Мусе, тогда
+    // как «они будут утоплены» обращено к Нуху; на с. 55 арабские названия
+    // основной и производной метафоры переставлены против собственного
+    // заголовка параграфа; на с. 72 разбор первого вида намёка назван
+    // по-русски по третьему, хотя термин и определение говорят о качестве.
+    "balagha-badi:вопрос 16",
+    "balagha-badi:вопрос 4",
+    "balagha-bayan:вопрос 1",
+    "balagha-bayan:вопрос 37",
+    "balagha-bayan:вопрос 49",
+    "balagha-history:major-scholars-and-works",
+    "balagha-maani:вопрос 10",
     "hajj-quduri:blood-choice-printed",
     "hajj-quduri:excuse-food-printed",
     "hajj-quduri:hady-voluntary-time",
@@ -816,4 +829,33 @@ test("тезисы занятия — карта его страниц, а не 
       }
     }
   }
+});
+
+test("книга без своих вопросов зачёта не получает, а полка группируется по книгам", async () => {
+  // «Зачёт — вопросы книги, и ни одного своего»: раздел, по которому книга их
+  // не даёт, карточки зачёта не показывает вовсе. Иначе на экране стояла бы
+  // работа из нуля вопросов с проходным баллом, выведенным из нуля, —
+  // examPassMark(0) даёт 1, то есть зачёт, который нельзя ни начать, ни сдать.
+  const screen = await readFile(new URL("../app/topics/page.tsx", import.meta.url), "utf8");
+  assert.match(
+    screen,
+    /topic\.exam\.questions\.length > 0 && \(/,
+    "карточка зачёта показывается и там, где вопросов книги нет",
+  );
+  const history = topicById("balagha-history");
+  assert.ok(history, "раздел о возникновении стилистики на месте");
+  assert.equal(history.exam.questions.length, 0, "в книге нет вопросов для повторения по этому разделу");
+
+  // Книга, разобранная по разделам, приходит сюда несколькими темами, и её имя
+  // стоит один раз над ними, а не на каждой карточке. Группа — непрерывный кусок
+  // полки, поэтому тема не может быть тихо переставлена к одноимённой книге.
+  const flat = TOPIC_BOOKS.flatMap((shelf) => shelf.topics.map((topic) => topic.id));
+  assert.deepEqual(flat, TOPIC_SUMMARIES.map((topic) => topic.id), "группировка переставила полку");
+  for (const shelf of TOPIC_BOOKS) {
+    for (const topic of shelf.topics) {
+      assert.equal(topic.source.book, shelf.book, `${topic.id} попал под чужую книгу`);
+    }
+  }
+  const quduri = TOPIC_BOOKS.find((shelf) => /Кудури/.test(shelf.book));
+  assert.equal(quduri?.topics.length, 5, "пять разделов аль-Кудури стоят под одним заголовком");
 });
