@@ -48,7 +48,7 @@ function toneOf(grade: TopicGrade) {
   return grade === "good" ? "good" : grade === "hard" ? "plain" : "bad";
 }
 
-type SessionStats = { good: number; hard: number; again: number };
+type SessionStats = { good: number; hard: number; again: number; mastered: number };
 
 type Session = {
   topicId: string;
@@ -123,7 +123,7 @@ export default function TopicsPage() {
       stepId: step.id,
       queue: stepUnits(step).map((unit) => unit.id),
       index: 0,
-      stats: { good: 0, hard: 0, again: 0 },
+      stats: { good: 0, hard: 0, again: 0, mastered: 0 },
     });
   }
 
@@ -135,7 +135,7 @@ export default function TopicsPage() {
       mode: "review",
       queue: seededShuffle(ids, ids.length + today.length + Number(today.replaceAll("-", ""))),
       index: 0,
-      stats: { good: 0, hard: 0, again: 0 },
+      stats: { good: 0, hard: 0, again: 0, mastered: 0 },
     });
   }
 
@@ -151,6 +151,29 @@ export default function TopicsPage() {
       queue,
       index: session.index + 1,
       stats: { ...session.stats, [value]: session.stats[value] + 1 },
+    };
+
+    if (next.index >= next.queue.length) {
+      if (next.mode === "learn" && next.stepId) topicStore.markStep(next.topicId, next.stepId);
+      setSession(null);
+      setFinished({ ...next, units: new Set(next.queue).size });
+      return;
+    }
+    setSession(next);
+  }
+
+  function master(unitId: string) {
+    if (!session) return;
+    topicStore.master(session.topicId, unitId);
+
+    // A question may already be waiting again after an earlier «Не вспомнил».
+    // Retiring it from the short intervals retires those queued copies too.
+    const queue = session.queue.filter((id, index) => index <= session.index || id !== unitId);
+    const next: Session = {
+      ...session,
+      queue,
+      index: session.index + 1,
+      stats: { ...session.stats, mastered: session.stats.mastered + 1 },
     };
 
     if (next.index >= next.queue.length) {
@@ -432,6 +455,7 @@ export default function TopicsPage() {
               card={card}
               today={today}
               onGrade={(value) => grade(unitId, value)}
+              onMastered={() => master(unitId)}
             />
           </section>
         );
@@ -446,11 +470,13 @@ export default function TopicsPage() {
           </div>
           <h1>{finished.units}</h1>
           <p>
-            {finished.mode === "learn"
-              ? "Всё, что сейчас прошло через припоминание, вернётся завтра и дальше по расписанию. Это и есть работа: не перечитать, а вспомнить."
-              : "Вспомненное ушло дальше по расписанию, а то, что не далось, вернётся уже завтра."}
+            {finished.stats.mastered
+              ? `Отмечено как выученное: ${plural(finished.stats.mastered, "вопрос", "вопроса", "вопросов")}. ${finished.stats.mastered === 1 ? "Он вернётся" : "Они вернутся"} через 90 дней; остальные — по обычному расписанию.`
+              : finished.mode === "learn"
+                ? "Всё, что сейчас прошло через припоминание, вернётся завтра и дальше по расписанию. Это и есть работа: не перечитать, а вспомнить."
+                : "Вспомненное ушло дальше по расписанию, а то, что не далось, вернётся уже завтра."}
           </p>
-          <div className="result-grid">
+          <div className="result-grid topic-result-grid">
             <div>
               <strong>{finished.stats.good}</strong>
               <span>ВСПОМНИЛ</span>
@@ -462,6 +488,10 @@ export default function TopicsPage() {
             <div>
               <strong>{finished.stats.again}</strong>
               <span>НЕ ВСПОМНИЛ</span>
+            </div>
+            <div>
+              <strong>{finished.stats.mastered}</strong>
+              <span>ВЫУЧИЛ</span>
             </div>
           </div>
           <button className="primary wide" onClick={() => setFinished(null)}>
@@ -540,6 +570,19 @@ export default function TopicsPage() {
   );
 }
 
+function MasteredButton({ onMastered }: { onMastered: () => void }) {
+  return (
+    <button
+      type="button"
+      className="mastered topic-mastered"
+      onClick={onMastered}
+      title="Перенести в последнюю коробку повторения"
+    >
+      Выучил <span>✓</span>
+    </button>
+  );
+}
+
 /**
  * One unit, asked in the form its box calls for.
  *
@@ -553,11 +596,13 @@ function UnitRunner({
   card,
   today,
   onGrade,
+  onMastered,
 }: {
   unit: TopicUnit;
   card: TopicCard | undefined;
   today: string;
   onGrade: (grade: TopicGrade) => void;
+  onMastered: () => void;
 }) {
   const mode = modeFor(unit, card);
   const [revealed, setRevealed] = useState(false);
@@ -606,15 +651,18 @@ function UnitRunner({
             })}
           </div>
           {chosen && (
-            <div className={`feedback ${chosen === task.answer ? "good" : "bad"}`}>
-              <div>
-                <strong>{chosen === task.answer ? "Верно" : task.answer}</strong>
-                <p>Книга, с. {task.page}</p>
+            <>
+              <div className={`feedback ${chosen === task.answer ? "good" : "bad"}`}>
+                <div>
+                  <strong>{chosen === task.answer ? "Верно" : task.answer}</strong>
+                  <p>Книга, с. {task.page}</p>
+                </div>
+                <button className="primary" onClick={() => onGrade(chosen === task.answer ? "good" : "again")}>
+                  Дальше <span>→</span>
+                </button>
               </div>
-              <button className="primary" onClick={() => onGrade(chosen === task.answer ? "good" : "again")}>
-                Дальше <span>→</span>
-              </button>
-            </div>
+              <MasteredButton onMastered={onMastered} />
+            </>
           )}
         </>
       );
@@ -652,17 +700,20 @@ function UnitRunner({
             )}
           </form>
           {revealed && (
-            <div className={`feedback ${correct ? "good" : "bad"}`}>
-              <div>
-                <strong>{correct ? `Верно — ${task.answerLabel}` : task.answerLabel}</strong>
-                <p>
-                  {task.note} Книга, с. {task.page}
-                </p>
+            <>
+              <div className={`feedback ${correct ? "good" : "bad"}`}>
+                <div>
+                  <strong>{correct ? `Верно — ${task.answerLabel}` : task.answerLabel}</strong>
+                  <p>
+                    {task.note} Книга, с. {task.page}
+                  </p>
+                </div>
+                <button className="primary" onClick={() => onGrade(correct ? "good" : "again")}>
+                  Дальше <span>→</span>
+                </button>
               </div>
-              <button className="primary" onClick={() => onGrade(correct ? "good" : "again")}>
-                Дальше <span>→</span>
-              </button>
-            </div>
+              <MasteredButton onMastered={onMastered} />
+            </>
           )}
         </>
       );
@@ -732,6 +783,7 @@ function UnitRunner({
                   Дальше <span>→</span>
                 </button>
               </div>
+              <MasteredButton onMastered={onMastered} />
             </>
           )}
         </>
@@ -773,17 +825,20 @@ function UnitRunner({
             Проверить
           </button>
         ) : (
-          <div className={`feedback ${toneOf(gradeFromRecall(right, task.items.length))}`}>
-            <div>
-              <strong>
-                {right} из {task.items.length}
-              </strong>
-              <p>Книга, с. {task.page}</p>
+          <>
+            <div className={`feedback ${toneOf(gradeFromRecall(right, task.items.length))}`}>
+              <div>
+                <strong>
+                  {right} из {task.items.length}
+                </strong>
+                <p>Книга, с. {task.page}</p>
+              </div>
+              <button className="primary" onClick={() => onGrade(gradeFromRecall(right, task.items.length))}>
+                Дальше <span>→</span>
+              </button>
             </div>
-            <button className="primary" onClick={() => onGrade(gradeFromRecall(right, task.items.length))}>
-              Дальше <span>→</span>
-            </button>
-          </div>
+            <MasteredButton onMastered={onMastered} />
+          </>
         )}
       </>
     );
@@ -818,23 +873,26 @@ function UnitRunner({
           })}
         </div>
         {chosen && (
-          <div className={`feedback ${chosen === atom.answer ? "good" : "bad"}`}>
-            <div>
-              <strong>
-                {chosen === atom.answer ? "Верно" : atom.answer}
-                {atom.check && <CheckMark text={atom.check} />}
-              </strong>
-              {atom.note && <p>{atom.note}</p>}
-              {atom.evidence && (
-                <p>
-                  {atom.evidence.text} — <i>{atom.evidence.source}</i>
-                </p>
-              )}
+          <>
+            <div className={`feedback ${chosen === atom.answer ? "good" : "bad"}`}>
+              <div>
+                <strong>
+                  {chosen === atom.answer ? "Верно" : atom.answer}
+                  {atom.check && <CheckMark text={atom.check} />}
+                </strong>
+                {atom.note && <p>{atom.note}</p>}
+                {atom.evidence && (
+                  <p>
+                    {atom.evidence.text} — <i>{atom.evidence.source}</i>
+                  </p>
+                )}
+              </div>
+              <button className="primary" onClick={() => onGrade(chosen === atom.answer ? "good" : "again")}>
+                Дальше <span>→</span>
+              </button>
             </div>
-            <button className="primary" onClick={() => onGrade(chosen === atom.answer ? "good" : "again")}>
-              Дальше <span>→</span>
-            </button>
-          </div>
+            <MasteredButton onMastered={onMastered} />
+          </>
         )}
       </>
     );
@@ -901,6 +959,7 @@ function UnitRunner({
                 Дальше <span>→</span>
               </button>
             </div>
+            <MasteredButton onMastered={onMastered} />
           </>
         )}
       </>
@@ -951,6 +1010,7 @@ function UnitRunner({
               </button>
             ))}
           </div>
+          <MasteredButton onMastered={onMastered} />
         </>
       )}
     </>

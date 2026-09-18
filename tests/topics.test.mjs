@@ -15,6 +15,7 @@ import {
   dueUnitIds,
   gradeFromRecall,
   isMastered,
+  masterTopicCard,
   modeFor,
   nextTopicCard,
   resetTopicCard,
@@ -216,6 +217,33 @@ test("the boxes grow and the last one holds", () => {
   assert.equal(card.box, LAST_TOPIC_BOX);
   assert.equal(card.nextReview, topicDate(90, day));
   assert.ok(isMastered(card));
+});
+
+test("a unit already learnt skips to the longest topic interval", () => {
+  const day = new Date("2026-09-17T09:00:00");
+  const previous = { box: 2, nextReview: "2026-09-20", lastSeen: "2026-09-16", reps: 4, lapses: 1 };
+  const mastered = masterTopicCard(previous, day);
+
+  assert.equal(mastered.box, LAST_TOPIC_BOX);
+  assert.equal(mastered.nextReview, "2026-12-16");
+  assert.equal(mastered.lastSeen, "2026-09-17");
+  assert.equal(mastered.reps, 5);
+  assert.equal(mastered.lapses, 1);
+  assert.ok(isMastered(mastered));
+});
+
+test("a unit skipped to the last box leaves today's queue and counts as mastered", () => {
+  const day = new Date("2026-09-17T09:00:00");
+  const cards = { [cardKey("zakat", "lang")]: masterTopicCard(undefined, day) };
+
+  assert.deepEqual(dueUnitIds(cards, "zakat", ["lang"], "2026-09-17"), []);
+  assert.deepEqual(topicProgress(cards, "zakat", ["lang"], "2026-09-17"), {
+    total: 1,
+    seen: 1,
+    due: 0,
+    mastered: 1,
+    shaky: 0,
+  });
 });
 
 test("forgetting sends a card back to today and is counted", () => {
