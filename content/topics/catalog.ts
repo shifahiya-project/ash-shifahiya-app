@@ -13,6 +13,7 @@ import { balaghaBayanTopic } from "./balagha-bayan.ts";
 import { balaghaHistoryTopic } from "./balagha-history.ts";
 import { isagujiTopic } from "./isaguji.ts";
 import { kafwAlfazTopic } from "./kafw-alfaz.ts";
+import { qawaidTopic } from "./qawaid.ts";
 import { balaghaMaaniTopic } from "./balagha-maani.ts";
 import { hajjTopic } from "./hajj.ts";
 import { hajjQuduriTopic } from "./hajj-quduri.ts";
@@ -37,6 +38,8 @@ export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQudur
   kafwAlfazTopic,
   // Another book new to the shelf, appended for the same reason.
   isagujiTopic,
+  // One more book new to the shelf, appended so it heads its own run.
+  qawaidTopic,
 ];
 
 export function topicById(id: string) {
