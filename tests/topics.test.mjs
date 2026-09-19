@@ -15,6 +15,7 @@ import {
   dueUnitIds,
   gradeFromRecall,
   isMastered,
+  masterTopicCard,
   modeFor,
   nextTopicCard,
   resetTopicCard,
@@ -229,6 +230,55 @@ test("forgetting sends a card back to today and is counted", () => {
 
   // A card that never got anywhere has nothing to lapse from.
   assert.equal(nextTopicCard(undefined, "again", day).lapses, 0);
+});
+
+test("«Выучил» убирает вопрос в последнюю коробку, а не удаляет его", () => {
+  const day = new Date("2026-09-13T09:00:00");
+  const fresh = masterTopicCard(undefined, day);
+
+  // Из любой коробки — сразу в последнюю: ученик знает это до того, как тема
+  // открыта, и семь шагов по расписанию отняли бы внимание у забытого.
+  assert.equal(fresh.box, LAST_TOPIC_BOX);
+  assert.equal(fresh.nextReview, topicDate(90, day), "вернётся через квартал, а не исчезнет");
+  assert.ok(isMastered(fresh));
+
+  // История карточки остаётся: потери не обнуляются, ответ засчитывается.
+  const shaky = { box: 1, nextReview: "2026-09-14", lastSeen: "2026-09-13", reps: 5, lapses: 2 };
+  const retired = masterTopicCard(shaky, day);
+  assert.equal(retired.box, LAST_TOPIC_BOX, "прыжок из первой коробки — это и есть смысл кнопки");
+  assert.equal(retired.lapses, 2, "прежние потери не стираются");
+  assert.equal(retired.reps, 6);
+
+  // И оно доходит до счётчика темы, по которому ученик видит, что убрал.
+  const before = topicProgress({}, "t", ["a", "b"], "2026-09-13");
+  assert.equal(before.mastered, 0);
+  const after = topicProgress(
+    { [cardKey("t", "a")]: retired },
+    "t",
+    ["a", "b"],
+    "2026-09-13",
+  );
+  assert.equal(after.mastered, 1);
+  assert.equal(after.due, 0, "убранное сегодня не спрашивается");
+});
+
+test("кнопка «Выучил» дошла до экрана и уносит вопрос из очереди", async () => {
+  const screen = await readFile(new URL("../app/topics/page.tsx", import.meta.url), "utf8");
+
+  // Форм вопроса семь — факт выбором, факт припоминанием, список и четыре
+  // тренажёра, — и убрать вопрос можно из любой: иначе нашлась бы карточка,
+  // которую ученик убрать не может.
+  const buttons = screen.match(/<MasterButton onMaster=\{onMaster\} \/>/g) ?? [];
+  assert.equal(buttons.length, 7, "кнопка стоит не во всех формах вопроса");
+
+  // Убранное уходит и из того, что ещё впереди: вопрос, не вспомненный раньше
+  // в этой же сессии, ждёт ниже по очереди, и спросив его снова, мы отменили бы
+  // отставку первой же оценкой.
+  assert.match(
+    screen,
+    /session\.queue\.filter\(\(id, index\) => index <= session\.index \|\| id !== unitId\)/,
+    "«Выучил» не вычищает вопрос из остатка очереди",
+  );
 });
 
 test("the exam's middle answer is one box back, not the beginning", () => {

@@ -113,6 +113,29 @@ export function demoteTopicCard(previous: TopicCard | undefined, today = new Dat
   };
 }
 
+/**
+ * A card put straight into the last box, because the learner says they own it.
+ *
+ * Some of what a topic asks is already known before the topic is opened — a
+ * date, a term met in another book, a rule the learner has taught. Walking it
+ * up seven boxes one review at a time spends on it the attention the forgotten
+ * cards need, and the learner is the only one who can tell the difference.
+ *
+ * Retiring is not deleting: the card keeps its history and comes back in a
+ * quarter like anything else in the last box. Something genuinely known
+ * survives that, and something mistakenly retired here gets one more chance to
+ * be caught rather than disappearing on the strength of a single tap.
+ */
+export function masterTopicCard(previous: TopicCard | undefined, today = new Date()): TopicCard {
+  return {
+    box: LAST_TOPIC_BOX,
+    nextReview: topicDate(TOPIC_INTERVALS[LAST_TOPIC_BOX], today),
+    lastSeen: topicDate(0, today),
+    reps: (previous?.reps ?? 0) + 1,
+    lapses: previous?.lapses ?? 0,
+  };
+}
+
 export function isMastered(card: TopicCard | undefined) {
   return card !== undefined && card.box >= LAST_TOPIC_BOX;
 }

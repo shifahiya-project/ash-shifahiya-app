@@ -861,6 +861,12 @@ h1 em { color: var(--green); font-weight: inherit; }
 .feedback strong { font-family: Georgia, serif; }
 .feedback p { margin: 3px 0 0; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
 
+/* «Выучил» стоит под итогом ответа, а не в цветной плашке рядом с «Дальше»:
+   плашка говорит, как прошло припоминание, а кнопка решает судьбу карточки. */
+.topic-retire { margin-top: 10px; display: flex; justify-content: center; }
+.topic-retire .mastered { background: transparent; font-size: 13px; padding: 9px 16px; }
+.topic-retire .mastered:hover { background: var(--blue-soft); }
+
 .result-view { max-width: 760px; text-align: center; }
 .result-mark { width: 66px; height: 66px; margin: 0 auto 22px; border-radius: 50%; display: grid; place-items: center; background: var(--green); color: white; font-size: 30px; box-shadow: 0 12px 30px rgba(23,107,85,.22); }
 .result-view h1 { font-size: clamp(42px, 7vw, 58px); }

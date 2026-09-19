@@ -48,7 +48,24 @@ function toneOf(grade: TopicGrade) {
   return grade === "good" ? "good" : grade === "hard" ? "plain" : "bad";
 }
 
-type SessionStats = { good: number; hard: number; again: number };
+/**
+ * «Выучил»: the course's own button, in the part that needed it just as much.
+ *
+ * It stands apart from the three grades because it is not one of them. A grade
+ * says how this recall went and lets the schedule decide; this says the card
+ * should stop coming, and only the learner can say it. Shown once the answer is
+ * on screen, for the same reason the grades are: retiring a card you have not
+ * looked at is a guess about yourself.
+ */
+function MasterButton({ onMaster }: { onMaster: () => void }) {
+  return (
+    <button className="mastered" onClick={onMaster} title="Больше не спрашивать: вернётся через 90 дней">
+      Выучил <span>✓</span>
+    </button>
+  );
+}
+
+type SessionStats = { good: number; hard: number; again: number; mastered: number };
 
 type Session = {
   topicId: string;
@@ -123,7 +140,7 @@ export default function TopicsPage() {
       stepId: step.id,
       queue: stepUnits(step).map((unit) => unit.id),
       index: 0,
-      stats: { good: 0, hard: 0, again: 0 },
+      stats: { good: 0, hard: 0, again: 0, mastered: 0 },
     });
   }
 
@@ -135,7 +152,7 @@ export default function TopicsPage() {
       mode: "review",
       queue: seededShuffle(ids, ids.length + today.length + Number(today.replaceAll("-", ""))),
       index: 0,
-      stats: { good: 0, hard: 0, again: 0 },
+      stats: { good: 0, hard: 0, again: 0, mastered: 0 },
     });
   }
 
@@ -151,6 +168,34 @@ export default function TopicsPage() {
       queue,
       index: session.index + 1,
       stats: { ...session.stats, [value]: session.stats[value] + 1 },
+    };
+
+    if (next.index >= next.queue.length) {
+      if (next.mode === "learn" && next.stepId) topicStore.markStep(next.topicId, next.stepId);
+      setSession(null);
+      setFinished({ ...next, units: new Set(next.queue).size });
+      return;
+    }
+    setSession(next);
+  }
+
+  /**
+   * Retires the unit on the screen: the learner says they know it, so it goes
+   * to the last box and leaves the rest of today's queue. Dropping it from
+   * what is still ahead matters — a unit forgotten earlier in the session is
+   * waiting further down, and asking it again after it has just been retired
+   * would undo the retirement on the next grade.
+   */
+  function master(unitId: string) {
+    if (!session) return;
+    topicStore.master(session.topicId, unitId);
+
+    const queue = session.queue.filter((id, index) => index <= session.index || id !== unitId);
+    const next: Session = {
+      ...session,
+      queue,
+      index: session.index + 1,
+      stats: { ...session.stats, mastered: session.stats.mastered + 1 },
     };
 
     if (next.index >= next.queue.length) {
@@ -432,6 +477,7 @@ export default function TopicsPage() {
               card={card}
               today={today}
               onGrade={(value) => grade(unitId, value)}
+              onMaster={() => master(unitId)}
             />
           </section>
         );
@@ -463,6 +509,14 @@ export default function TopicsPage() {
               <strong>{finished.stats.again}</strong>
               <span>НЕ ВСПОМНИЛ</span>
             </div>
+            {/* Показывается только когда есть что показать: столбец с нулём
+                в каждом итоге предлагал бы убирать вопросы как норму. */}
+            {finished.stats.mastered > 0 && (
+              <div>
+                <strong>{finished.stats.mastered}</strong>
+                <span>ВЫУЧИЛ</span>
+              </div>
+            )}
           </div>
           <button className="primary wide" onClick={() => setFinished(null)}>
             К теме <span>→</span>
@@ -553,11 +607,13 @@ function UnitRunner({
   card,
   today,
   onGrade,
+  onMaster,
 }: {
   unit: TopicUnit;
   card: TopicCard | undefined;
   today: string;
   onGrade: (grade: TopicGrade) => void;
+  onMaster: () => void;
 }) {
   const mode = modeFor(unit, card);
   const [revealed, setRevealed] = useState(false);
@@ -606,15 +662,20 @@ function UnitRunner({
             })}
           </div>
           {chosen && (
-            <div className={`feedback ${chosen === task.answer ? "good" : "bad"}`}>
-              <div>
-                <strong>{chosen === task.answer ? "Верно" : task.answer}</strong>
-                <p>Книга, с. {task.page}</p>
+            <>
+              <div className={`feedback ${chosen === task.answer ? "good" : "bad"}`}>
+                <div>
+                  <strong>{chosen === task.answer ? "Верно" : task.answer}</strong>
+                  <p>Книга, с. {task.page}</p>
+                </div>
+                <button className="primary" onClick={() => onGrade(chosen === task.answer ? "good" : "again")}>
+                  Дальше <span>→</span>
+                </button>
               </div>
-              <button className="primary" onClick={() => onGrade(chosen === task.answer ? "good" : "again")}>
-                Дальше <span>→</span>
-              </button>
-            </div>
+              <div className="topic-retire">
+                <MasterButton onMaster={onMaster} />
+              </div>
+            </>
           )}
         </>
       );
@@ -652,17 +713,22 @@ function UnitRunner({
             )}
           </form>
           {revealed && (
-            <div className={`feedback ${correct ? "good" : "bad"}`}>
-              <div>
-                <strong>{correct ? `Верно — ${task.answerLabel}` : task.answerLabel}</strong>
-                <p>
-                  {task.note} Книга, с. {task.page}
-                </p>
+            <>
+              <div className={`feedback ${correct ? "good" : "bad"}`}>
+                <div>
+                  <strong>{correct ? `Верно — ${task.answerLabel}` : task.answerLabel}</strong>
+                  <p>
+                    {task.note} Книга, с. {task.page}
+                  </p>
+                </div>
+                <button className="primary" onClick={() => onGrade(correct ? "good" : "again")}>
+                  Дальше <span>→</span>
+                </button>
               </div>
-              <button className="primary" onClick={() => onGrade(correct ? "good" : "again")}>
-                Дальше <span>→</span>
-              </button>
-            </div>
+              <div className="topic-retire">
+                <MasterButton onMaster={onMaster} />
+              </div>
+            </>
           )}
         </>
       );
@@ -732,6 +798,9 @@ function UnitRunner({
                   Дальше <span>→</span>
                 </button>
               </div>
+              <div className="topic-retire">
+                <MasterButton onMaster={onMaster} />
+              </div>
             </>
           )}
         </>
@@ -773,6 +842,7 @@ function UnitRunner({
             Проверить
           </button>
         ) : (
+          <>
           <div className={`feedback ${toneOf(gradeFromRecall(right, task.items.length))}`}>
             <div>
               <strong>
@@ -784,6 +854,10 @@ function UnitRunner({
               Дальше <span>→</span>
             </button>
           </div>
+          <div className="topic-retire">
+            <MasterButton onMaster={onMaster} />
+          </div>
+          </>
         )}
       </>
     );
@@ -818,6 +892,7 @@ function UnitRunner({
           })}
         </div>
         {chosen && (
+          <>
           <div className={`feedback ${chosen === atom.answer ? "good" : "bad"}`}>
             <div>
               <strong>
@@ -835,6 +910,10 @@ function UnitRunner({
               Дальше <span>→</span>
             </button>
           </div>
+          <div className="topic-retire">
+            <MasterButton onMaster={onMaster} />
+          </div>
+          </>
         )}
       </>
     );
@@ -901,6 +980,9 @@ function UnitRunner({
                 Дальше <span>→</span>
               </button>
             </div>
+            <div className="topic-retire">
+              <MasterButton onMaster={onMaster} />
+            </div>
           </>
         )}
       </>
@@ -950,6 +1032,7 @@ function UnitRunner({
                 </small>
               </button>
             ))}
+            <MasterButton onMaster={onMaster} />
           </div>
         </>
       )}
