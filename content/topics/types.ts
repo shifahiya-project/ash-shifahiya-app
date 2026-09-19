@@ -45,8 +45,15 @@ export type Atom = {
    * the options are ranked out of the topic's own answers instead.
    */
   options?: string[];
-  /** The page of the book this is taken from. */
-  page: number;
+  /** The page of the book this is taken from, where the book has pages. */
+  page?: number;
+  /**
+   * Where the answer is, when the book is not read on paper: the name of its
+   * section. The rule is unchanged — the answer on the screen has to be
+   * checkable against the original in one move — only the address is, because
+   * a manuscript read inside this app has sections and no page numbers.
+   */
+  where?: string;
 };
 
 /**
@@ -69,7 +76,8 @@ export type StepsDrill = {
   cycle?: { from: number; every: number; noun: [string, string, string] };
   /** Counts the generator may offer, inclusive. */
   range: [number, number];
-  page: number;
+  page?: number;
+  where?: string;
 };
 
 /** A fraction of a harvest: the same amount, a tenth or a twentieth of it. */
@@ -85,7 +93,8 @@ export type ShareDrill = {
   /** Amounts are multiples of `step` between the two bounds. */
   range: [number, number];
   step: number;
-  page: number;
+  page?: number;
+  where?: string;
 };
 
 /** Assets against a nisab, and the rate on what is left of them. */
@@ -104,7 +113,8 @@ export type MoneyDrill = {
   step: number;
   /** Debts the task may put against the assets; a zero belongs here too. */
   debts: number[];
-  page: number;
+  page?: number;
+  where?: string;
 };
 
 /**
@@ -122,7 +132,8 @@ export type SortDrill = {
   items: { label: string; bucket: number; note?: string }[];
   /** How many of the items one task offers. */
   size: number;
-  page: number;
+  page?: number;
+  where?: string;
 };
 
 /**
@@ -139,7 +150,8 @@ export type OrderDrill = {
   items: string[];
   /** How many consecutive steps one task offers. */
   size: number;
-  page: number;
+  page?: number;
+  where?: string;
 };
 
 /**
@@ -196,7 +208,8 @@ export type EstateDrill = {
    * of a share — that follows from the base, and a correction can change it.
    */
   values: number[];
-  page: number;
+  page?: number;
+  where?: string;
 };
 
 export type Drill = StepsDrill | ShareDrill | MoneyDrill | SortDrill | OrderDrill | EstateDrill;
@@ -244,6 +257,22 @@ export type Topic = {
 
 /** Every unit of a topic that the schedule can hold a card for. */
 export type TopicUnit = Atom | Drill;
+
+/**
+ * How a unit names its place in the book: «с. 98» for a printed edition, or the
+ * section itself for a book that has no pages. The screen says one or the
+ * other, never «с.» in front of a section name — a label that lies about what
+ * it points at is worse than no label.
+ */
+export function citeOf(unit: { page?: number; where?: string }) {
+  if (unit.where) return unit.where;
+  return unit.page === undefined ? "" : `с. ${unit.page}`;
+}
+
+/** The same for a step or a whole topic, whose range is already a string. */
+export function citeRange(range: string) {
+  return /^\d/.test(range) ? `с. ${range}` : range;
+}
 
 export function stepUnits(step: TopicStep): TopicUnit[] {
   return [...step.atoms, ...(step.drills ?? [])];

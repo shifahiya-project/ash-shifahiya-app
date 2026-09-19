@@ -62,7 +62,8 @@ export type ChoiceTask = {
   answer: string;
   options: string[];
   note?: string;
-  page: number;
+  page?: number;
+  where?: string;
 };
 
 export type NumberTask = {
@@ -74,7 +75,8 @@ export type NumberTask = {
   /** The answer as it is spelled out once it is revealed. */
   answerLabel: string;
   note: string;
-  page: number;
+  page?: number;
+  where?: string;
 };
 
 export type SortTask = {
@@ -84,7 +86,8 @@ export type SortTask = {
   prompt: string;
   buckets: string[];
   items: { label: string; bucket: number; note?: string }[];
-  page: number;
+  page?: number;
+  where?: string;
 };
 
 export type OrderTask = {
@@ -96,7 +99,8 @@ export type OrderTask = {
   items: string[];
   /** The same steps in the order they are performed. */
   answer: string[];
-  page: number;
+  page?: number;
+  where?: string;
 };
 
 export type DrillTask = ChoiceTask | NumberTask | SortTask | OrderTask;
@@ -138,6 +142,7 @@ function stepsTask(drill: StepsDrill, seed: number): ChoiceTask {
     answer,
     options,
     page: drill.page,
+    where: drill.where,
   };
 }
 
@@ -156,6 +161,7 @@ function shareTask(drill: ShareDrill, seed: number): NumberTask {
     answerLabel: plural(answer, ...drill.unit),
     note: `Одна ${variant.per === 10 ? "десятая" : "двадцатая"} часть: ${base} ÷ ${variant.per} = ${answer}.`,
     page: drill.page,
+    where: drill.where,
   };
 }
 
@@ -191,6 +197,7 @@ function moneyTask(drill: MoneyDrill, seed: number): NumberTask {
         ? `это нисаб или больше, значит два с половиной процента: ${money(due)}.`
         : `это меньше нисаба, значит закята нет.`),
     page: drill.page,
+    where: drill.where,
   };
 }
 
@@ -221,6 +228,7 @@ function sortTask(drill: SortDrill, seed: number): SortTask {
     buckets: drill.buckets,
     items: seededShuffle(items, seed + 1),
     page: drill.page,
+    where: drill.where,
   };
 }
 
@@ -250,6 +258,7 @@ function orderTask(drill: OrderDrill, seed: number): OrderTask {
     items,
     answer,
     page: drill.page,
+    where: drill.where,
   };
 }
 
@@ -374,6 +383,7 @@ function estateTask(drill: EstateDrill, seed: number): NumberTask {
     answerLabel: answer === 0 ? "Не наследует" : formatMoney(answer, drill.currency),
     note: estateNote(drill, item, asked, total),
     page: drill.page,
+    where: drill.where,
   };
 }
 

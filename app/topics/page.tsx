@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState, useSyncExternalStore } from "react";
 import { plural, seededShuffle } from "../../content/questions";
 import { TOPIC_BOOKS, TOPIC_SUMMARIES, topicById } from "../../content/topics/catalog";
-import { isDrill, stepUnits, type Atom, type Topic, type TopicStep, type TopicUnit } from "../../content/topics/types";
+import { citeOf, citeRange, isDrill, stepUnits, type Atom, type Topic, type TopicStep, type TopicUnit } from "../../content/topics/types";
 import { examPassMark } from "../lesson-access";
 import { todayStore } from "../podcast-store";
 import { buildTask, taskSeed } from "../topic-drills";
@@ -287,7 +287,7 @@ export default function TopicsPage() {
                     <h2>{item.title}</h2>
                     <p>{item.subtitle}</p>
                     <p className="topic-source">
-                      {item.source.section} · с. {item.source.pages}
+                      {item.source.section} · {citeRange(item.source.pages)}
                     </p>
                     <div className="chips">
                       <span>{plural(item.steps, "занятие", "занятия", "занятий")}</span>
@@ -329,7 +329,7 @@ export default function TopicsPage() {
               ← Все темы
             </button>
             <p className="eyebrow">
-              {topic.source.section} · с. {topic.source.pages}
+              {topic.source.section} · {citeRange(topic.source.pages)}
             </p>
             <h1>{topic.title}</h1>
             <p className="lead">{topic.intro}</p>
@@ -390,7 +390,7 @@ export default function TopicsPage() {
                     <div className="lesson-copy">
                       <h2>{step.title}</h2>
                       <p>
-                        Книга, с. {step.pages} · {plural(step.atoms.length, "факт", "факта", "фактов")}
+                        Книга, {citeRange(step.pages)} · {plural(step.atoms.length, "факт", "факта", "фактов")}
                         {step.drills?.length ? ` · ${plural(step.drills.length, "расчёт", "расчёта", "расчётов")}` : ""}
                       </p>
                       {stepStats.due > 0 && <p className="topic-source">К повторению: {stepStats.due}</p>}
@@ -469,7 +469,7 @@ export default function TopicsPage() {
             </div>
             <div className="stage-label">
               <span>{session.mode === "learn" ? "1" : "↻"}</span>
-              {step ? `${step.title} · с. ${step.pages}` : "Повторение по расписанию"}
+              {step ? `${step.title} · ${citeRange(step.pages)}` : "Повторение по расписанию"}
             </div>
             <UnitRunner
               key={`${unitId}-${session.index}`}
@@ -666,7 +666,7 @@ function UnitRunner({
               <div className={`feedback ${chosen === task.answer ? "good" : "bad"}`}>
                 <div>
                   <strong>{chosen === task.answer ? "Верно" : task.answer}</strong>
-                  <p>Книга, с. {task.page}</p>
+                  <p>Книга, {citeOf(task)}</p>
                 </div>
                 <button className="primary" onClick={() => onGrade(chosen === task.answer ? "good" : "again")}>
                   Дальше <span>→</span>
@@ -718,7 +718,7 @@ function UnitRunner({
                 <div>
                   <strong>{correct ? `Верно — ${task.answerLabel}` : task.answerLabel}</strong>
                   <p>
-                    {task.note} Книга, с. {task.page}
+                    {task.note} Книга, {citeOf(task)}
                   </p>
                 </div>
                 <button className="primary" onClick={() => onGrade(correct ? "good" : "again")}>
@@ -789,7 +789,7 @@ function UnitRunner({
                   <strong>
                     {right} из {task.answer.length} на своём месте
                   </strong>
-                  <p>Книга, с. {task.page}</p>
+                  <p>Книга, {citeOf(task)}</p>
                 </div>
                 <button
                   className="primary"
@@ -848,7 +848,7 @@ function UnitRunner({
               <strong>
                 {right} из {task.items.length}
               </strong>
-              <p>Книга, с. {task.page}</p>
+              <p>Книга, {citeOf(task)}</p>
             </div>
             <button className="primary" onClick={() => onGrade(gradeFromRecall(right, task.items.length))}>
               Дальше <span>→</span>
@@ -870,7 +870,7 @@ function UnitRunner({
       <>
         <p className="instruction">Выберите ответ — а потом проверьте себя по книге</p>
         <div className="prompt-card topic-prompt">
-          <span>с. {atom.page}</span>
+          <span>{citeOf(atom)}</span>
           <strong>{atom.question}</strong>
         </div>
         <div className="options">
@@ -929,7 +929,7 @@ function UnitRunner({
           Перечислите вслух или на бумаге — и только потом открывайте список
         </p>
         <div className="prompt-card topic-prompt">
-          <span>с. {atom.page}</span>
+          <span>{citeOf(atom)}</span>
           <strong>{atom.question}</strong>
           <em>{atom.answer}</em>
         </div>
@@ -993,7 +993,7 @@ function UnitRunner({
     <>
       <p className="instruction">Вспомните ответ целиком, прежде чем открыть</p>
       <div className="prompt-card topic-prompt">
-        <span>с. {atom.page}</span>
+        <span>{citeOf(atom)}</span>
         <strong>{atom.question}</strong>
       </div>
       {!revealed ? (

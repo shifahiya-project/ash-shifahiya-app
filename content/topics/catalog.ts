@@ -11,6 +11,7 @@
 import { balaghaBadiTopic } from "./balagha-badi.ts";
 import { balaghaBayanTopic } from "./balagha-bayan.ts";
 import { balaghaHistoryTopic } from "./balagha-history.ts";
+import { kafwAlfazTopic } from "./kafw-alfaz.ts";
 import { balaghaMaaniTopic } from "./balagha-maani.ts";
 import { hajjTopic } from "./hajj.ts";
 import { hajjQuduriTopic } from "./hajj-quduri.ts";
@@ -28,6 +29,9 @@ export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQudur
   // «Стилистика арабского языка» идёт порядком самой книги:
   // возникновение науки, затем три её направления — баян, ма‘ани, бади‘.
   balaghaHistoryTopic, balaghaBayanTopic, balaghaMaaniTopic, balaghaBadiTopic,
+  // «Кафв аль-асар» — новая книга на полке, поэтому в конец и своим куском:
+  // разорвать её соседями значило бы дать ей два разделителя.
+  kafwAlfazTopic,
 ];
 
 export function topicById(id: string) {
