@@ -171,6 +171,14 @@ test("a place where the book does not add up is marked, not settled here", () =>
     "hajj-quduri:вопрос 87",
     "hajj-quduri:вопрос 88",
     "hajj:late-actions",
+    // «Матн Исагуджи». Три места, где перевод расходится с арабским оригиналом,
+    // напечатанным в той же книге: имя сложного высказывания, условие
+    // продуктивности первой фигуры и название шестого вида категоричных
+    // суждений. Плюс одно, где правило разошлось с собственным примером книги.
+    "isaguji:compound-term",
+    "isaguji:first-figure-condition",
+    "isaguji:istithnai-naqid-tali",
+    "isaguji:sixth-certainty",
     "mirath:c2-daughter-evidence",
     "mirath:c2-maternal-siblings-cases",
     "mirath:c2-mudmira",
