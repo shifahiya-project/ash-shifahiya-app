@@ -7,6 +7,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# The checks only read the tree. Saying so keeps the job's token read-only
+# whatever the repository default is set to.
+permissions:
+  contents: read
+
 # A fresh push to the same branch makes the previous run pointless.
 concurrency:
   group: checks-${{ github.ref }}

@@ -5,7 +5,14 @@ import type { Lesson } from "./types";
 // Vite turns each match into its own chunk, so a lesson's words only reach the
 // browser when that lesson is opened. Keep the pattern literal — the glob is
 // resolved at build time and cannot take a variable.
-const loaders = import.meta.glob<Record<string, Lesson>>("./lesson-*.ts");
+// Typed by assertion rather than by a type argument on the glob: Next 16.3
+// declares an `import.meta.glob` of its own for Turbopack, it merges with
+// Vite's, and the merged signature takes no generic. The assertion says the
+// same thing and does not care which of the two declarations wins.
+const loaders = import.meta.glob("./lesson-*.ts") as Record<
+  string,
+  () => Promise<Record<string, Lesson>>
+>;
 
 const byId = new Map<number, () => Promise<Record<string, Lesson>>>();
 for (const [path, loader] of Object.entries(loaders)) {

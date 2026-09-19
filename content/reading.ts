@@ -3,7 +3,14 @@ import type { ReadingSection } from "./types";
 
 // Same shape as the lesson loader: one chunk per text, fetched when the learner
 // opens it. Keep the pattern literal — the glob is resolved at build time.
-const loaders = import.meta.glob<Record<string, ReadingSection>>("./reading/section-*.ts");
+// Typed by assertion rather than by a type argument on the glob: Next 16.3
+// declares an `import.meta.glob` of its own for Turbopack, it merges with
+// Vite's, and the merged signature takes no generic. The assertion says the
+// same thing and does not care which of the two declarations wins.
+const loaders = import.meta.glob("./reading/section-*.ts") as Record<
+  string,
+  () => Promise<Record<string, ReadingSection>>
+>;
 
 const byLesson = new Map<number, () => Promise<Record<string, ReadingSection>>>();
 for (const [path, loader] of Object.entries(loaders)) {

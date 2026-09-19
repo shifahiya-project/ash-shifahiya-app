@@ -38,12 +38,21 @@ export type TopicCard = {
 /** How a unit is asked this time round. */
 export type TopicMode = "choice" | "recall" | "list" | "drill";
 
-/** The day a review lands on, counted from noon like every other date here. */
+/**
+ * The day a review lands on, counted from noon like every other date here, and
+ * read off the local calendar rather than through toISOString: noon answers as
+ * the same day in UTC for every offset from -11 to +12, but as the day before
+ * for +13 and +14, which would hand a learner in Samoa or Kiribati a schedule
+ * running a day behind their own.
+ */
 export function topicDate(daysFromNow = 0, today = new Date()) {
   const date = new Date(today);
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + daysFromNow);
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 /** A card's address: the topic it belongs to and the unit inside it. */
