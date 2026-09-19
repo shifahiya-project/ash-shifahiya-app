@@ -31,8 +31,8 @@ export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQudur
   // возникновение науки, затем три её направления — баян, ма‘ани, бади‘.
   balaghaHistoryTopic, balaghaBayanTopic, balaghaMaaniTopic, balaghaBadiTopic,
   uqudRasmMuftiTopic,
-  // «Кафв аль-асар» — новая книга на полке, поэтому в конец и своим куском:
-  // разорвать её соседями значило бы дать ей два разделителя.
+  // A book new to the shelf, so it goes at the end and in one run of its own:
+  // splitting it with a neighbour would give it two dividers.
   kafwAlfazTopic,
 ];
 

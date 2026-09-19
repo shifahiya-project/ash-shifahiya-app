@@ -34,10 +34,11 @@ test("a topic is a book section broken into steps, and every unit says where it 
   assert.ok(zakat && hajj, "обе темы на месте");
 
   for (const topic of TOPICS) {
-    // Книга бумажная — адрес это страница, и она обязана лежать внутри раздела.
-    // Книга без страниц (рукопись, которую ученик читает в самом приложении)
-    // называет раздел: правило то же — ответ сверяется с оригиналом в одно
-    // движение, — меняется только адрес, а безымянный адрес не проверяет ничего.
+    // A printed book is addressed by page, and the page has to fall inside the
+    // section. A book with no pages — a manuscript the learner reads inside this
+    // app — names its section instead: the rule is the same, that the answer be
+    // checkable against the original in one move, and only the address changes.
+    // An address that names nothing would check nothing.
     const paper = /^\d/.test(topic.source.pages);
     const [from, to] = paper ? topic.source.pages.split("–").map(Number) : [];
     if (paper) assert.ok(from < to, `${topic.id}: страницы раздела`);
