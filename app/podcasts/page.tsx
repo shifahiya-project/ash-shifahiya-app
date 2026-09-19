@@ -427,7 +427,7 @@ export default function PodcastsPage() {
                 className="secondary"
                 href={watchUrl(video.id)}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
               >
                 Открыть в YouTube
               </a>

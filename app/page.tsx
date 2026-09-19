@@ -106,7 +106,14 @@ function localDate(daysFromNow = 0) {
   const date = new Date();
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + daysFromNow);
-  return date.toISOString().slice(0, 10);
+  // Read off the local calendar rather than through toISOString, which answers
+  // in UTC: at noon that is the same day for every offset from -11 to +12 and
+  // the day before for +13 and +14, so a learner in Samoa or Kiribati had every
+  // date in the course — streak, review, backup name — a day behind their own.
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function streaks(activeDates: string[]) {
@@ -1494,6 +1501,10 @@ export default function Home() {
       cards: cardProgress,
       readings: savedReadings,
       exams: savedExams,
+      // The paper in progress belongs in the copy as well: restoring a backup
+      // onto a fresh device would otherwise drop it, and the restore writes
+      // whatever the file says about it.
+      examSession,
       part2Scores,
       part2Sessions,
       part3Scores,

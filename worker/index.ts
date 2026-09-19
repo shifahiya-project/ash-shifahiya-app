@@ -2,6 +2,14 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 
+// Declared here rather than pulled in from @cloudflare/workers-types, the way
+// ExecutionContext below already is: the binding is used for exactly one call,
+// and a whole ambient type package for it was the one error `tsc --noEmit` had
+// left to report.
+interface Fetcher {
+  fetch(input: Request | string, init?: RequestInit): Promise<Response>;
+}
+
 interface Env {
   ASSETS: Fetcher;
   IMAGES: {
