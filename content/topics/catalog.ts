@@ -11,6 +11,7 @@
 import { balaghaBadiTopic } from "./balagha-badi.ts";
 import { balaghaBayanTopic } from "./balagha-bayan.ts";
 import { balaghaHistoryTopic } from "./balagha-history.ts";
+import { isagujiTopic } from "./isaguji.ts";
 import { kafwAlfazTopic } from "./kafw-alfaz.ts";
 import { balaghaMaaniTopic } from "./balagha-maani.ts";
 import { hajjTopic } from "./hajj.ts";
@@ -34,6 +35,8 @@ export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQudur
   // A book new to the shelf, so it goes at the end and in one run of its own:
   // splitting it with a neighbour would give it two dividers.
   kafwAlfazTopic,
+  // Another book new to the shelf, appended for the same reason.
+  isagujiTopic,
 ];
 
 export function topicById(id: string) {
