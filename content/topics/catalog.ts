@@ -14,6 +14,7 @@ import { balaghaHistoryTopic } from "./balagha-history.ts";
 import { isagujiTopic } from "./isaguji.ts";
 import { kafwAlfazTopic } from "./kafw-alfaz.ts";
 import { qawaidTopic } from "./qawaid.ts";
+import { sanusiTopic } from "./sanusi.ts";
 import { balaghaMaaniTopic } from "./balagha-maani.ts";
 import { hajjTopic } from "./hajj.ts";
 import { hajjQuduriTopic } from "./hajj-quduri.ts";
@@ -40,6 +41,8 @@ export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQudur
   isagujiTopic,
   // One more book new to the shelf, appended so it heads its own run.
   qawaidTopic,
+  // A second logic book, new to the shelf and heading its own run.
+  sanusiTopic,
 ];
 
 export function topicById(id: string) {
