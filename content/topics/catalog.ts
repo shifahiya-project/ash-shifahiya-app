@@ -11,6 +11,7 @@
 import { balaghaBadiTopic } from "./balagha-badi.ts";
 import { balaghaBayanTopic } from "./balagha-bayan.ts";
 import { balaghaHistoryTopic } from "./balagha-history.ts";
+import { kafwAlfazTopic } from "./kafw-alfaz.ts";
 import { balaghaMaaniTopic } from "./balagha-maani.ts";
 import { hajjTopic } from "./hajj.ts";
 import { hajjQuduriTopic } from "./hajj-quduri.ts";
@@ -30,6 +31,9 @@ export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQudur
   // возникновение науки, затем три её направления — баян, ма‘ани, бади‘.
   balaghaHistoryTopic, balaghaBayanTopic, balaghaMaaniTopic, balaghaBadiTopic,
   uqudRasmMuftiTopic,
+  // A book new to the shelf, so it goes at the end and in one run of its own:
+  // splitting it with a neighbour would give it two dividers.
+  kafwAlfazTopic,
 ];
 
 export function topicById(id: string) {

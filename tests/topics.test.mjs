@@ -34,19 +34,27 @@ test("a topic is a book section broken into steps, and every unit says where it 
   assert.ok(zakat && hajj, "обе темы на месте");
 
   for (const topic of TOPICS) {
-    const [from, to] = topic.source.pages.split("–").map(Number);
-    assert.ok(from < to, `${topic.id}: страницы раздела`);
+    // A printed book is addressed by page, and the page has to fall inside the
+    // section. A book with no pages — a manuscript the learner reads inside this
+    // app — names its section instead: the rule is the same, that the answer be
+    // checkable against the original in one move, and only the address changes.
+    // An address that names nothing would check nothing.
+    const paper = /^\d/.test(topic.source.pages);
+    const [from, to] = paper ? topic.source.pages.split("–").map(Number) : [];
+    if (paper) assert.ok(from < to, `${topic.id}: страницы раздела`);
 
     for (const step of topic.steps) {
-      assert.ok(step.pages, `${step.id}: страницы книги обязательны`);
+      assert.ok(step.pages, `${step.id}: место в книге обязательно`);
       assert.ok(step.brief.length >= 2, `${step.id}: без тезисов шаг ничего не держит`);
       assert.ok(step.atoms.length >= 1);
 
-      // The text stays in the learner's own book, so the pages are the only way
-      // back to it: a unit that cannot be checked against the source is a unit
-      // the learner has to take on trust.
       for (const unit of stepUnits(step)) {
-        assert.ok(unit.page >= from && unit.page <= to, `${unit.id}: страница ${unit.page} вне раздела`);
+        if (paper) {
+          assert.ok(unit.page >= from && unit.page <= to, `${unit.id}: страница ${unit.page} вне раздела`);
+        } else {
+          assert.match(unit.where ?? "", /\S/, `${unit.id}: не сказано, в каком разделе сверять`);
+          assert.equal(unit.page, undefined, `${unit.id}: у книги без страниц страницы быть не может`);
+        }
       }
     }
   }
