@@ -226,6 +226,33 @@ test("the boxes grow and the last one holds", () => {
   assert.ok(isMastered(card));
 });
 
+test("a unit already learnt skips to the longest topic interval", () => {
+  const day = new Date("2026-09-17T09:00:00");
+  const previous = { box: 2, nextReview: "2026-09-20", lastSeen: "2026-09-16", reps: 4, lapses: 1 };
+  const mastered = masterTopicCard(previous, day);
+
+  assert.equal(mastered.box, LAST_TOPIC_BOX);
+  assert.equal(mastered.nextReview, "2026-12-16");
+  assert.equal(mastered.lastSeen, "2026-09-17");
+  assert.equal(mastered.reps, 5);
+  assert.equal(mastered.lapses, 1);
+  assert.ok(isMastered(mastered));
+});
+
+test("a unit skipped to the last box leaves today's queue and counts as mastered", () => {
+  const day = new Date("2026-09-17T09:00:00");
+  const cards = { [cardKey("zakat", "lang")]: masterTopicCard(undefined, day) };
+
+  assert.deepEqual(dueUnitIds(cards, "zakat", ["lang"], "2026-09-17"), []);
+  assert.deepEqual(topicProgress(cards, "zakat", ["lang"], "2026-09-17"), {
+    total: 1,
+    seen: 1,
+    due: 0,
+    mastered: 1,
+    shaky: 0,
+  });
+});
+
 test("forgetting sends a card back to today and is counted", () => {
   const day = new Date("2026-09-13T09:00:00");
   const known = { box: 4, nextReview: "2026-09-29", lastSeen: "2026-09-13", reps: 8, lapses: 0 };
@@ -237,55 +264,6 @@ test("forgetting sends a card back to today and is counted", () => {
 
   // A card that never got anywhere has nothing to lapse from.
   assert.equal(nextTopicCard(undefined, "again", day).lapses, 0);
-});
-
-test("«Выучил» убирает вопрос в последнюю коробку, а не удаляет его", () => {
-  const day = new Date("2026-09-13T09:00:00");
-  const fresh = masterTopicCard(undefined, day);
-
-  // Из любой коробки — сразу в последнюю: ученик знает это до того, как тема
-  // открыта, и семь шагов по расписанию отняли бы внимание у забытого.
-  assert.equal(fresh.box, LAST_TOPIC_BOX);
-  assert.equal(fresh.nextReview, topicDate(90, day), "вернётся через квартал, а не исчезнет");
-  assert.ok(isMastered(fresh));
-
-  // История карточки остаётся: потери не обнуляются, ответ засчитывается.
-  const shaky = { box: 1, nextReview: "2026-09-14", lastSeen: "2026-09-13", reps: 5, lapses: 2 };
-  const retired = masterTopicCard(shaky, day);
-  assert.equal(retired.box, LAST_TOPIC_BOX, "прыжок из первой коробки — это и есть смысл кнопки");
-  assert.equal(retired.lapses, 2, "прежние потери не стираются");
-  assert.equal(retired.reps, 6);
-
-  // И оно доходит до счётчика темы, по которому ученик видит, что убрал.
-  const before = topicProgress({}, "t", ["a", "b"], "2026-09-13");
-  assert.equal(before.mastered, 0);
-  const after = topicProgress(
-    { [cardKey("t", "a")]: retired },
-    "t",
-    ["a", "b"],
-    "2026-09-13",
-  );
-  assert.equal(after.mastered, 1);
-  assert.equal(after.due, 0, "убранное сегодня не спрашивается");
-});
-
-test("кнопка «Выучил» дошла до экрана и уносит вопрос из очереди", async () => {
-  const screen = await readFile(new URL("../app/topics/page.tsx", import.meta.url), "utf8");
-
-  // Форм вопроса семь — факт выбором, факт припоминанием, список и четыре
-  // тренажёра, — и убрать вопрос можно из любой: иначе нашлась бы карточка,
-  // которую ученик убрать не может.
-  const buttons = screen.match(/<MasterButton onMaster=\{onMaster\} \/>/g) ?? [];
-  assert.equal(buttons.length, 7, "кнопка стоит не во всех формах вопроса");
-
-  // Убранное уходит и из того, что ещё впереди: вопрос, не вспомненный раньше
-  // в этой же сессии, ждёт ниже по очереди, и спросив его снова, мы отменили бы
-  // отставку первой же оценкой.
-  assert.match(
-    screen,
-    /session\.queue\.filter\(\(id, index\) => index <= session\.index \|\| id !== unitId\)/,
-    "«Выучил» не вычищает вопрос из остатка очереди",
-  );
 });
 
 test("the exam's middle answer is one box back, not the beginning", () => {

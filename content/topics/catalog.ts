@@ -20,6 +20,7 @@ import { salahQuduriTopic } from "./salah-quduri.ts";
 import { sawmQuduriTopic } from "./sawm-quduri.ts";
 import { taharahQuduriTopic } from "./taharah-quduri.ts";
 import { tawdihatTopic } from "./tawdihat.ts";
+import { uqudRasmMuftiTopic } from "./uqud-rasm-mufti.ts";
 import { zakatQuduriTopic } from "./zakat-quduri.ts";
 import { zakatTopic } from "./zakat.ts";
 import { topicAtoms, topicDrills, topicUnits, type Topic } from "./types.ts";
@@ -29,6 +30,7 @@ export const TOPICS: Topic[] = [zakatTopic, hajjTopic, mirathTopic, taharahQudur
   // «Стилистика арабского языка» идёт порядком самой книги:
   // возникновение науки, затем три её направления — баян, ма‘ани, бади‘.
   balaghaHistoryTopic, balaghaBayanTopic, balaghaMaaniTopic, balaghaBadiTopic,
+  uqudRasmMuftiTopic,
   // «Кафв аль-асар» — новая книга на полке, поэтому в конец и своим куском:
   // разорвать её соседями значило бы дать ей два разделителя.
   kafwAlfazTopic,

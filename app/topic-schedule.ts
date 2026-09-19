@@ -38,12 +38,21 @@ export type TopicCard = {
 /** How a unit is asked this time round. */
 export type TopicMode = "choice" | "recall" | "list" | "drill";
 
-/** The day a review lands on, counted from noon like every other date here. */
+/**
+ * The day a review lands on, counted from noon like every other date here, and
+ * read off the local calendar rather than through toISOString: noon answers as
+ * the same day in UTC for every offset from -11 to +12, but as the day before
+ * for +13 and +14, which would hand a learner in Samoa or Kiribati a schedule
+ * running a day behind their own.
+ */
 export function topicDate(daysFromNow = 0, today = new Date()) {
   const date = new Date(today);
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + daysFromNow);
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 /** A card's address: the topic it belongs to and the unit inside it. */
@@ -74,6 +83,22 @@ export function nextTopicCard(
     lastSeen: topicDate(0, today),
     reps: (previous?.reps ?? 0) + 1,
     lapses: (previous?.lapses ?? 0) + (lapsed ? 1 : 0),
+  };
+}
+
+/**
+ * Puts a unit straight into the last box when the learner already owns it.
+ *
+ * It still comes back after the longest interval: «выучил» skips the walk
+ * through the shorter boxes, it does not remove the rule from the topic.
+ */
+export function masterTopicCard(previous: TopicCard | undefined, today = new Date()): TopicCard {
+  return {
+    box: LAST_TOPIC_BOX,
+    nextReview: topicDate(TOPIC_INTERVALS[LAST_TOPIC_BOX], today),
+    lastSeen: topicDate(0, today),
+    reps: (previous?.reps ?? 0) + 1,
+    lapses: previous?.lapses ?? 0,
   };
 }
 
@@ -109,29 +134,6 @@ export function demoteTopicCard(previous: TopicCard | undefined, today = new Dat
     nextReview: topicDate(TOPIC_INTERVALS[box], today),
     lastSeen: previous?.lastSeen ?? topicDate(0, today),
     reps: previous?.reps ?? 0,
-    lapses: previous?.lapses ?? 0,
-  };
-}
-
-/**
- * A card put straight into the last box, because the learner says they own it.
- *
- * Some of what a topic asks is already known before the topic is opened — a
- * date, a term met in another book, a rule the learner has taught. Walking it
- * up seven boxes one review at a time spends on it the attention the forgotten
- * cards need, and the learner is the only one who can tell the difference.
- *
- * Retiring is not deleting: the card keeps its history and comes back in a
- * quarter like anything else in the last box. Something genuinely known
- * survives that, and something mistakenly retired here gets one more chance to
- * be caught rather than disappearing on the strength of a single tap.
- */
-export function masterTopicCard(previous: TopicCard | undefined, today = new Date()): TopicCard {
-  return {
-    box: LAST_TOPIC_BOX,
-    nextReview: topicDate(TOPIC_INTERVALS[LAST_TOPIC_BOX], today),
-    lastSeen: topicDate(0, today),
-    reps: (previous?.reps ?? 0) + 1,
     lapses: previous?.lapses ?? 0,
   };
 }

@@ -26,13 +26,13 @@
     "smoke": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/smoke.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.111.0",
-    "next": "16.2.6",
-    "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "@supabase/supabase-js": "^2.116.0",
+    "next": "^16.3.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
+    "@cloudflare/vite-plugin": "^1.56.0",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
@@ -42,12 +42,12 @@
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
     "playwright-core": "1.62.1",
-    "react-server-dom-webpack": "19.2.6",
+    "react-server-dom-webpack": "^19.3.0",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
     "vinext": "0.0.50",
-    "vite": "8.0.13",
-    "wrangler": "4.92.0"
+    "vite": "^8.3.0",
+    "wrangler": "^4.135.0"
   },
   "type": "module"
 }

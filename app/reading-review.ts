@@ -10,12 +10,19 @@ export const READING_INTERVALS = [2, 4, 7, 15, 31];
 
 const LAST_BOX = READING_INTERVALS.length - 1;
 
-/** The day a review lands on, counted from today at noon like the card dates. */
+/**
+ * The day a review lands on, counted from today at noon like the card dates,
+ * and read off the local calendar rather than through toISOString — which
+ * answers in UTC and so names the day before at the +13 and +14 offsets.
+ */
 export function readingDate(daysFromNow = 0, today = new Date()) {
   const date = new Date(today);
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + daysFromNow);
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 /**

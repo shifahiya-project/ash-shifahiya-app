@@ -1,13 +1,13 @@
-import { lessonSummaries } from "../content/manifest";
-import { part2Summaries } from "../content/part2/manifest";
-import { part3Summaries } from "../content/part3/manifest";
-import { part4Summaries } from "../content/part4/manifest";
-import { part5Summaries } from "../content/part5/manifest";
-import { part6Summaries } from "../content/part6/manifest";
-import { part7Summaries } from "../content/part7/manifest";
-import { part8Summaries } from "../content/part8/manifest";
-import { part9Summaries } from "../content/part9/manifest";
-import { part10Summaries } from "../content/part10/manifest";
+import { lessonSummaries } from "../content/manifest.ts";
+import { part2Summaries } from "../content/part2/manifest.ts";
+import { part3Summaries } from "../content/part3/manifest.ts";
+import { part4Summaries } from "../content/part4/manifest.ts";
+import { part5Summaries } from "../content/part5/manifest.ts";
+import { part6Summaries } from "../content/part6/manifest.ts";
+import { part7Summaries } from "../content/part7/manifest.ts";
+import { part8Summaries } from "../content/part8/manifest.ts";
+import { part9Summaries } from "../content/part9/manifest.ts";
+import { part10Summaries } from "../content/part10/manifest.ts";
 import { GRAMMAR_ENABLED } from "./features.ts";
 
 export type SavedSession = {
@@ -613,6 +613,15 @@ export const progressStore = {
     window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(progress.cards));
     window.localStorage.setItem(READING_PROGRESS_KEY, JSON.stringify(progress.readings ?? {}));
     window.localStorage.setItem(EXAM_RESULTS_KEY, JSON.stringify(progress.exams ?? {}));
+    // The unfinished paper travels with the rest. A hundred and fifty answers
+    // are exactly what the key exists to save, and leaving it out meant the
+    // merge kept choosing the fresher paper and then threw it away: the other
+    // device never saw it, and its own empty push wiped it off the server.
+    if (progress.examSession) {
+      window.localStorage.setItem(EXAM_SESSION_KEY, JSON.stringify(progress.examSession));
+    } else {
+      window.localStorage.removeItem(EXAM_SESSION_KEY);
+    }
     for (const [id, score] of Object.entries(progress.part2Scores ?? {})) {
       window.localStorage.setItem(part2ScoreKey(id), String(score));
     }

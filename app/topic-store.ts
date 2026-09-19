@@ -87,11 +87,7 @@ export const topicStore = {
     writeCards({ ...cards, [key]: nextTopicCard(cards[key], grade) });
   },
 
-  /**
-   * Retires one unit into the last box, on the learner's word that they know
-   * it. The grades say how the recall went; this says the card should stop
-   * taking up the attention the forgotten ones need.
-   */
+  /** Skips a unit straight to the topic schedule's longest interval. */
   master(topicId: string, unitId: string) {
     const cards = topicStore.getSnapshot().cards;
     const key = cardKey(topicId, unitId);
