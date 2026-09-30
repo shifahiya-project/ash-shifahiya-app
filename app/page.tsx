@@ -50,6 +50,7 @@ import type {
   TextCourseWord,
 } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
+import { nextPopulatedDeck } from "./lesson-navigation";
 import {
   examPassMark,
   examReadiness,
@@ -787,22 +788,28 @@ export default function Home() {
     // The lesson may have grown since the session was parked, which splits it
     // in two and moves the part boundaries. Resume where the position actually
     // sits now, not where it sat then.
-    setPartIndex(
-      restored
-        ? partIndexFor(lessonParts(restored), session, session.partIndex ?? 0)
-        : session.partIndex ?? 0,
-    );
+    const restoredParts = restored ? lessonParts(restored) : [];
+    const restoredPartIndex = restored
+      ? partIndexFor(restoredParts, session, session.partIndex ?? 0)
+      : session.partIndex ?? 0;
+    const restoredPart = restoredParts[restoredPartIndex];
+    const emptyDeck = session.view === "learn" && restored && restoredPart &&
+      !restored.decks[session.deckIndex]?.words.length;
+    const nextDeck = emptyDeck
+      ? nextPopulatedDeck(restored, session.deckIndex, restoredPart.deckEnd)
+      : session.deckIndex;
+    setPartIndex(restoredPartIndex);
     setRuleIndex(session.ruleIndex ?? 0);
-    setDeckIndex(session.deckIndex);
-    setRound(session.round);
-    setCardIndex(session.cardIndex);
-    setQuestionIndex(session.questionIndex);
+    setDeckIndex(nextDeck ?? session.deckIndex);
+    setRound(emptyDeck ? 1 : session.round);
+    setCardIndex(emptyDeck ? 0 : session.cardIndex);
+    setQuestionIndex(emptyDeck && nextDeck === null ? restoredPart.questionStart : session.questionIndex);
     setScore(session.score);
     setGrammarScore(session.grammarScore ?? 0);
     setMistakes(session.mistakes);
     setSelected(null);
     setRevealed(false);
-    setView(session.view);
+    setView(emptyDeck && nextDeck === null ? "practice" : session.view);
   }
 
   // Connects the progress store to Supabase when a project is configured, and
@@ -1591,13 +1598,14 @@ export default function Home() {
 
   function nextCard() {
     if (!lesson || !part) return;
+    const nextDeck = nextPopulatedDeck(lesson, deckIndex + 1, part.deckEnd);
     if (cardIndex < words.length - 1) {
       setCardIndex((value) => value + 1);
     } else if (round === 1) {
       setRound(2);
       setCardIndex(0);
-    } else if (deckIndex < part.deckEnd - 1) {
-      setDeckIndex((value) => value + 1);
+    } else if (nextDeck !== null) {
+      setDeckIndex(nextDeck);
       setRound(1);
       setCardIndex(0);
     } else {
