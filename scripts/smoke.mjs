@@ -189,6 +189,34 @@ try {
 
   await page.goto(origin, { waitUntil: "networkidle" });
 
+  // Lesson 82 used to enter a trailing empty deck instead of its second-half
+  // questions. Check both finishing the last card and resuming that stuck deck.
+  for (const deckIndex of [7, 8]) {
+    await page.evaluate((deckIndex) => {
+      localStorage.clear();
+      for (let id = 1; id < 82; id += 1) localStorage.setItem(`shifahiya-lesson-${id}`, "10");
+      localStorage.setItem("shifahiya-session-82", JSON.stringify({
+        view: "learn", lessonId: 82, partIndex: 1, deckIndex,
+        round: 2, cardIndex: 5, questionIndex: 76, score: 60,
+        mistakes: [], updatedAt: Date.now(),
+      }));
+    }, deckIndex);
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator(".lesson-card").filter({ has: page.locator(".lesson-number", { hasText: /^82$/ }) })
+      .getByRole("button", { name: /Продолжить/ }).click();
+    if (deckIndex === 7) {
+      await page.getByRole("button", { name: "Показать перевод" }).click();
+      await page.getByRole("button", { name: /Запомнил/ }).click();
+    }
+    await page.waitForSelector(".practice-view .options button", { timeout: 15_000 });
+    await page.locator(".options button").first().click();
+    await page.locator(".feedback button").click();
+    const resumed = await page.evaluate(() => JSON.parse(localStorage.getItem("shifahiya-session-82")));
+    if (resumed.view !== "practice" || resumed.questionIndex !== 77 || resumed.score < 60) {
+      failures.push(`урок 82: задания не продолжились после колоды ${deckIndex}`);
+    }
+  }
+
   // Each course here opens on the one before it being finished, so those
   // results are seeded rather than played through.
   await page.evaluate(() => {
