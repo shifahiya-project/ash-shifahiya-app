@@ -1,5 +1,5 @@
-// Drives the published site in a real browser: walks one lesson of the fourth
-// course from its first card to its stored result, then works through a step of
+// Drives the published site in a real browser: walks lessons of the eighth and
+// eleventh courses from their first cards to stored results, then works through
 // a memorised topic and one repeat from its queue.
 //
 //   npm run build:static && npm run smoke
@@ -16,8 +16,8 @@
 // escaped hydration payload, and a miss there leaves a page that renders and
 // stays dead. Checking the Worker would step around exactly that.
 //
-// The fourth course is walked because it is the newest, and because the third
-// and fourth share one set of screens — walking the newer one exercises both.
+// The eighth covers the shared screens and poetic verse; the eleventh adds
+// Qur'anic ayat and exact preservation of partly unvowelled source text.
 // Storage is seeded so the courses it waits on count as finished.
 //
 // The topics screen is walked too, and for the same reason the course is: its
@@ -30,6 +30,9 @@
 import { access, readdir, readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join, normalize } from "node:path";
+import assert from "node:assert/strict";
+import { part11LessonOne } from "../content/part11/lesson-001.ts";
+import { part11LessonNinetyFour } from "../content/part11/lesson-094.ts";
 
 const SITE = ".static-site";
 
@@ -340,8 +343,103 @@ try {
   const tenthOpen = await page.getByRole("tab", { name: /10 · Арбаин/ }).innerText();
   if (tenthOpen.includes("🔒")) failures.push("десятая часть не открылась по пройденной девятой");
 
+  // Tafsir: the next gate, a complete lesson, resuming and transferring progress.
+  const tafsirTab = page.getByRole("tab", { name: /11 · Тафсир/ });
+  assert.match(await tafsirTab.innerText(), /🔒/u, "тафсир открылся до Арбаина");
+  await tafsirTab.click();
+  assert.equal(await page.locator(".lesson-list .lesson-card button:not(.locked)").count(), 0);
+  await page.evaluate(() => {
+    for (let id = 1; id <= 46; id += 1) localStorage.setItem(`shifahiya-p10-lesson-${id}`, "5");
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  assert.ok(!(await tafsirTab.innerText()).includes("🔒"), "тафсир не открылся по Арбаину");
+  await tafsirTab.click();
+  assert.equal(await page.locator(".lesson-card").count(), 94);
+  await page.locator(".lesson-list").getByRole("button", { name: /Начать урок/ }).first().click();
+  await page.getByRole("button", { name: "Показать перевод" }).click();
+  assert.equal(await page.locator(".arabic-word").textContent(), part11LessonOne.words[0].arabic);
+  await page.getByRole("button", { name: /Запомнил/ }).click();
+  await page.reload({ waitUntil: "networkidle" });
+  await tafsirTab.click();
+  await page.locator(".lesson-list").getByRole("button", { name: /Продолжить/ }).first().click();
+  assert.equal(await page.locator(".arabic-word").textContent(), part11LessonOne.words[1].arabic);
+  for (let index = 1; index < part11LessonOne.words.length; index += 1) {
+    await page.getByRole("button", { name: "Показать перевод" }).click();
+    await page.getByRole("button", { name: /Запомнил/ }).click();
+  }
+  for (const word of part11LessonOne.words) {
+    await page.locator(".options").getByRole("button", { name: word.russian, exact: true }).click();
+    await page.locator(".feedback button").click();
+  }
+  await page.waitForSelector(".reading-view");
+  assert.deepEqual(await page.locator(".reading-arabic").allTextContents(), part11LessonOne.fragments.map((line) => line.arabic));
+  assert.equal(await page.locator(".reading-line.is-ayah").count(), part11LessonOne.fragments.filter((line) => line.ayah).length);
+  assert.equal(await page.locator(".reading-line.is-verse").count(), 0);
+  for (let index = 0; index < part11LessonOne.fragments.length; index += 1) {
+    await page.locator(".reading-arabic").nth(index).click();
+  }
+  assert.deepEqual(await page.locator(".reading-russian").allTextContents(), part11LessonOne.fragments.map((line) => line.russian));
+  await page.getByRole("button", { name: /Урок пройден/ }).click();
+  await page.waitForSelector(".result-view");
+  const tafsirStored = await page.evaluate(() => ({
+    score: localStorage.getItem("shifahiya-p11-lesson-1"),
+    session: localStorage.getItem("shifahiya-p11-session-1"),
+    cards: Object.keys(JSON.parse(localStorage.getItem("shifahiya-card-progress-v1"))).filter((id) => id.startsWith("p11-")),
+  }));
+  assert.equal(Number(tafsirStored.score), part11LessonOne.words.length);
+  assert.equal(tafsirStored.session, null);
+  assert.equal(tafsirStored.cards.length, part11LessonOne.words.length * 2);
+  await page.evaluate(() => {
+    for (let id = 1; id < 23; id += 1) localStorage.setItem(`shifahiya-p11-lesson-${id}`, "5");
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await tafsirTab.click();
+  const tafsirWordless = page.locator(".lesson-card").filter({ has: page.locator(".lesson-number", { hasText: /^23$/ }) });
+  await tafsirWordless.getByRole("button", { name: /Начать урок/ }).click();
+  await page.waitForSelector(".reading-view");
+  assert.ok(await page.locator(".reading-line").count());
+  await page.getByRole("button", { name: /Урок пройден/ }).click();
+  assert.equal(await page.evaluate(() => localStorage.getItem("shifahiya-p11-lesson-23")), "0");
+
+  // The last chunk, which includes unvowelled commentary, must survive hydration.
+  await page.evaluate(() => {
+    for (let id = 1; id < 94; id += 1) localStorage.setItem(`shifahiya-p11-lesson-${id}`, "5");
+    localStorage.setItem("shifahiya-p11-session-94", JSON.stringify({
+      lessonId: 94, view: "reading", index: 0, score: 0, mistakes: [], updatedAt: Date.now(),
+    }));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await tafsirTab.click();
+  await page.locator(".lesson-card").last().getByRole("button", { name: /Продолжить/ }).click();
+  await page.waitForSelector(".reading-view");
+  assert.deepEqual(await page.locator(".reading-arabic").allTextContents(), part11LessonNinetyFour.fragments.map((line) => line.arabic));
+  await page.getByRole("button", { name: "Вернуться позже" }).click();
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Сохранить копию" }).click();
+  const download = await downloading;
+  const backup = JSON.parse(await readFile(await download.path(), "utf8"));
+  assert.equal(backup.part11Scores[23], 5);
+  assert.equal(backup.part11Sessions[94].view, "reading");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload({ waitUntil: "networkidle" });
+  await page.locator('input[type="file"]').setInputFiles({ name: "progress.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
+  await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("shifahiya-p11-session-94")).view), "reading");
+  // Keep only tafsir cards to prove this course participates in daily review.
+  await page.evaluate(() => {
+    const cards = JSON.parse(localStorage.getItem("shifahiya-card-progress-v1"));
+    localStorage.setItem("shifahiya-card-progress-v1", JSON.stringify(Object.fromEntries(Object.entries(cards).filter(([id]) => id.startsWith("p11-")))));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Повторить сейчас" }).click();
+  await page.getByRole("button", { name: "Показать ответ" }).click();
+  assert.ok(await page.locator(".review-arabic-answer").count(), "карточка тафсира не пришла в повторение");
+  await page.getByRole("button", { name: /^Вспомнил/ }).click();
+  console.log("Тафсир: гейт 11-й части, полный урок, точный арабский и переводы, аяты, возобновление, урок без слов, последний урок, резервная копия и повторение проверены.");
+
   // ——— Тема наизусть: отдельный экран, отдельное хранилище ———
 
+  const courseCardsBeforeTopics = await page.evaluate(() => localStorage.getItem("shifahiya-card-progress-v1"));
   await page.goto(`${origin}topics/`, { waitUntil: "networkidle" });
   await page.getByRole("button", { name: /Начать|Продолжить/ }).first().click();
   await page.waitForSelector(".topic-view h1", { timeout: 15_000 });
@@ -429,11 +527,11 @@ try {
     cards: Object.keys(JSON.parse(localStorage.getItem("shifahiya-topic-cards-v1") ?? "{}")).length,
     steps: Object.keys(JSON.parse(localStorage.getItem("shifahiya-topic-steps-v1") ?? "{}")),
     // The course's own boxes must stay exactly as the lesson above left them.
-    courseCards: Object.keys(JSON.parse(localStorage.getItem("shifahiya-card-progress-v1") ?? "{}")).length,
+    courseCards: localStorage.getItem("shifahiya-card-progress-v1"),
   }));
   if (!topicStored.cards) failures.push("карточки темы не попали в расписание");
   if (!topicStored.steps.length) failures.push("занятие темы не отмечено пройденным");
-  if (topicStored.courseCards !== stored.cards) {
+  if (topicStored.courseCards !== courseCardsBeforeTopics) {
     failures.push("разбор темы изменил коробки повторения курса");
   }
 

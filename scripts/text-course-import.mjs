@@ -26,7 +26,7 @@ export function numberName(n) {
 
 /** The glossary's own type names, kept as they come. */
 const KINDS = new Set([
-  "verb", "noun", "masdar", "adjective", "expression", "term", "proper_name", "particle",
+  "verb", "noun", "masdar", "adjective", "expression", "term", "proper_name", "particle", "adverb",
 ]);
 
 /**
@@ -90,7 +90,7 @@ function renderWord(word) {
 }
 
 function renderFragment(fragment) {
-  const marked = [fragment.heading && "heading: true", fragment.verse && "verse: true"]
+  const marked = [fragment.heading && "heading: true", fragment.verse && "verse: true", fragment.ayah && "ayah: true"]
     .filter(Boolean)
     .map((flag) => `, ${flag}`)
     .join("");
@@ -130,6 +130,9 @@ ${lesson.fragments.map(renderFragment).join("\n")}
  * @param {((named: object) => {ru: string, ar: string})=} course.titleOf
  * @param {Set<string>=} course.pairRows     rows that are the text itself (default: `pair`)
  * @param {Set<string>=} course.verseRows    rows of verse the book comments on
+ * @param {Set<string>=} course.ayahRows     Qur'anic verses, distinct from poetry
+ * @param {boolean=} course.preserveArabic keep Arabic strings exactly as exported
+ * @param {Function=} course.prepare        adapt both exports before importing
  * @param {Set<string>} course.headingRows  rows that head a piece of text
  * @param {Set<string>} course.skippedRows  rows that mark the text without being it
  * @param {object} course.fixes     TITLE_FIXES, TEXT_FIXES, GLOSSARY_FIXES, SKIPPED_IDS
@@ -139,18 +142,21 @@ ${lesson.fragments.map(renderFragment).join("\n")}
 export async function importTextCourse(course, glossaryPath, textPath) {
   const {
     prefix, directory, title: courseTitle, bookName, divide, titleOf,
-    pairRows = new Set(["pair"]), verseRows = new Set(),
+    pairRows = new Set(["pair"]), verseRows = new Set(), ayahRows = new Set(),
+    preserveArabic = false, prepare,
     headingRows, skippedRows,
     fixes: {
       TITLE_FIXES = {}, TEXT_FIXES = {}, GLOSSARY_FIXES = {}, SKIPPED_IDS = {},
     } = {},
   } = course;
 
-  const knownRows = new Set([...pairRows, ...verseRows, ...headingRows, ...skippedRows]);
+  const knownRows = new Set([...pairRows, ...verseRows, ...ayahRows, ...headingRows, ...skippedRows]);
   await mkdir(directory, { recursive: true });
 
-  const glossary = JSON.parse(await readFile(glossaryPath, "utf8"));
-  const text = JSON.parse(await readFile(textPath, "utf8"));
+  let glossary = JSON.parse(await readFile(glossaryPath, "utf8"));
+  let text = JSON.parse(await readFile(textPath, "utf8"));
+  if (prepare) ({ glossary, text } = prepare(glossary, text));
+  const arabicText = preserveArabic ? (value) => value ?? "" : (value) => nfc(value).trim();
 
   const book = nfc(bookName(text, glossary)).trim();
   // Only for the closing report. The newest export writes it as a sentence
@@ -193,7 +199,7 @@ export async function importTextCourse(course, glossaryPath, textPath) {
       byName.push(item.id);
       continue;
     }
-    const arabic = unquote(item.ar);
+    const arabic = preserveArabic ? arabicText(item.ar) : unquote(item.ar);
     let russian = unquote(item.ru);
     for (const fix of TEXT_FIXES[item.id] ?? []) {
       if (!russian.includes(fix.from)) {
@@ -217,6 +223,7 @@ export async function importTextCourse(course, glossaryPath, textPath) {
       fragment.verse = true;
       verses += 1;
     }
+    if (ayahRows.has(item.type)) fragment.ayah = true;
     fragmentsByLesson.get(item.lesson).push(fragment);
   }
 
@@ -252,7 +259,7 @@ export async function importTextCourse(course, glossaryPath, textPath) {
         throw new Error(`урок ${entry.number}: неизвестный тип слова «${word.type}» (${word.id})`);
       }
       const patch = GLOSSARY_FIXES[word.id];
-      let arabic = nfc(word.arabic).trim();
+      let arabic = arabicText(word.arabic);
       let russian = nfc(word.russian).trim();
       for (const [field, value] of [["arabic", arabic], ["russian", russian]]) {
         const rule = patch?.[field];
@@ -274,7 +281,7 @@ export async function importTextCourse(course, glossaryPath, textPath) {
       book,
       section: section || undefined,
       chapter: chapter || undefined,
-      arabicTitle: nfc(entry.title_ar ?? printed.ar ?? "").trim(),
+      arabicTitle: arabicText(entry.title_ar ?? printed.ar ?? ""),
       title: nfc(lessonTitle),
       words,
       fragments: fragmentsByLesson.get(entry.number) ?? [],

@@ -36,7 +36,7 @@ import type { Question, TextCourseLesson, TextCourseWord, TextCourseWordKind } f
  * by the option list actually coming out short, not by counting the words.
  */
 const KINDS: TextCourseWordKind[] = [
-  "verb", "noun", "masdar", "adjective", "expression", "term", "proper_name", "particle",
+  "verb", "noun", "masdar", "adjective", "expression", "term", "proper_name", "particle", "adverb",
 ];
 
 const kindIndex = (kind: TextCourseWordKind) => KINDS.indexOf(kind);
