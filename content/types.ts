@@ -109,6 +109,7 @@ export type TextCourseWordKind =
   | "noun"
   | "masdar"
   | "adjective"
+  | "adverb"
   | "expression"
   | "term"
   | "proper_name"
@@ -131,7 +132,7 @@ export type TextCourseWord = {
  * explanation: the book prints it apart, and a reader who cannot tell the مَتْن
  * from the شَرْح has lost the shape of the book.
  */
-export type TextCourseFragment = ReadingSentence & { heading?: true; verse?: true };
+export type TextCourseFragment = ReadingSentence & { heading?: true; verse?: true; ayah?: true };
 
 export type TextCourseLesson = {
   id: number;

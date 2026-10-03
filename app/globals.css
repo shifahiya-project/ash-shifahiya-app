@@ -1393,3 +1393,13 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .topic-answer .primary { width: 100%; }
   .stats-grid.topic-stats { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Qur'anic ayat keep their source text and are distinct from poetic verse. */
+.reading-line.is-ayah {
+  margin: 14px 0;
+  padding: 10px 12px;
+  border-inline-start: 3px solid var(--green-dark);
+  border-radius: 8px;
+  background: var(--cream);
+}
+.reading-line.is-ayah .reading-arabic { color: var(--green-dark); }
