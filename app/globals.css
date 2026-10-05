@@ -726,6 +726,22 @@ h1 em { color: var(--green); font-weight: inherit; }
 }
 
 .reading-link:hover { border-style: solid; color: var(--ink); }
+
+.listening-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: 1px solid var(--green);
+  border-radius: 10px;
+  background: var(--mint);
+  color: var(--green-dark);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.listening-link:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
 .reading-link.is-due { border-style: solid; background: var(--cream); color: var(--gold); }
 
 .daily-review.reading-due .daily-icon { color: var(--gold); }
