@@ -2251,6 +2251,11 @@ export default function Home() {
                     <h2>{item.title}</h2>
                     <p>{item.description}{visiblePartCount(item) > 1 ? ` · в ${visiblePartCount(item)} части` : ""}</p>
                     <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+                    {(item.id === 87 || item.id === 88) && !locked && (
+                      <a className="listening-link" href={`./text-and-audio-87-88.html?lesson=${item.id}`}>
+                        Текст и аудио
+                      </a>
+                    )}
                     {hasVisibleReading(item.id, readingByLesson) && !locked && (() => {
                       const read = savedReadings[item.id];
                       const due = read && read.nextReview <= localDate();
