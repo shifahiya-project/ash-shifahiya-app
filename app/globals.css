@@ -384,6 +384,7 @@ h1 em { color: var(--green); font-weight: inherit; }
   align-items: center;
   gap: 16px;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   box-shadow: 0 15px 35px rgba(23,107,85,.16);
   transition: transform .15s ease, box-shadow .15s ease;
@@ -758,6 +759,14 @@ h1 em { color: var(--green); font-weight: inherit; }
   text-decoration: none;
 }
 .listening-link:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+.lesson-actions .listening-link {
+  margin-top: 0;
+  justify-content: center;
+  background: var(--green);
+  color: white;
+}
+.lesson-copy .lesson-stage-status { margin-top: 10px; color: var(--green); font-weight: 600; }
+.continue-learning:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .reading-link.is-due { border-style: solid; background: var(--cream); color: var(--gold); }
 
 .daily-review.reading-due .daily-icon { color: var(--gold); }
@@ -911,6 +920,7 @@ h1 em { color: var(--green); font-weight: inherit; }
 .review-note strong { font-size: 13px; }
 .review-note small { color: var(--ink-soft); margin-top: 3px; font-size: 11px; }
 .result-actions { display: flex; justify-content: center; gap: 10px; }
+.result-listening { display: inline-flex; align-items: center; text-decoration: none; }
 
 footer {
   width: min(1120px, calc(100% - 40px));

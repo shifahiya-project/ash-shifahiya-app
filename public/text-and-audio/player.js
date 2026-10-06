@@ -10,7 +10,8 @@
   const key = () => `shifahiya-listening-${lesson.lessonId}-v1`;
   const status = get('status');
   const embedded = window.LISTENING_LESSON;
-  const rates = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  const rates = [0.5, 0.75, 0.9, 1, 1.25, 1.5, 2];
+  const progressKey = 'shifahiya-listening-progress-v1';
   async function fetchText(url) {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -34,12 +35,46 @@
       fontSize: [24, 27, 30, 33, 36, 39, 42].includes(saved.fontSize) ? saved.fontSize : 30,
     };
   }
+  function readProgress() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(progressKey));
+      if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
+      // Match app/listening-progress.ts, including records for future lessons.
+      const normalized = {};
+      for (const [id, value] of Object.entries(saved)) {
+        const lessonId = Number(id);
+        if (!/^\d+$/.test(id) || !Number.isSafeInteger(lessonId) || lessonId <= 0) continue;
+        if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+        if (typeof value.completed !== 'boolean' || typeof value.updatedAt !== 'number') continue;
+        if (!Number.isFinite(value.updatedAt) || value.updatedAt < 0) continue;
+        const previous = normalized[lessonId];
+        if (!previous || value.updatedAt > previous.updatedAt ||
+          (value.updatedAt === previous.updatedAt && value.completed)) {
+          normalized[lessonId] = { completed: value.completed, updatedAt: value.updatedAt };
+        }
+      }
+      return normalized;
+    } catch { return {}; }
+  }
+  function renderCompletion() {
+    if (!lesson) return;
+    const completed = readProgress()[lesson.lessonId]?.completed === true;
+    get('complete').textContent = completed ? 'Пройдено · Отменить отметку' : 'Текст и аудио пройдены';
+    get('complete').setAttribute('aria-pressed', String(completed));
+    get('complete').disabled = false;
+    get('completion-status').textContent = completed
+      ? 'Текст и аудио этого урока отмечены как пройденные.'
+      : 'После занятия отметьте текст и аудио как пройденные.';
+  }
   function render() {
     const transcript = get('listening-transcript');
     const nodes = lesson.paragraphs.map((text, index) => {
       const node = document.createElement(index === 0 ? 'h2' : 'p');
       // Remove only optional marks for display; never normalise the stored text.
       node.textContent = state.vocalized ? text : text.replace(/[\u064B-\u0652\u0670]/g, '');
+      if (index > 1 && lesson.paragraphNumbers && lesson.paragraphNumbers[index - 1] !== lesson.paragraphNumbers[index]) {
+        node.className = 'starts-paragraph';
+      }
       return node;
     });
     transcript.replaceChildren(...nodes);
@@ -83,6 +118,25 @@
   get('vowels').onclick = () => update({ vocalized: !state.vocalized });
   get('smaller').onclick = () => update({ fontSize: Math.max(24, state.fontSize - 3) });
   get('larger').onclick = () => update({ fontSize: Math.min(42, state.fontSize + 3) });
+  get('complete').onclick = () => {
+    if (!lesson) return;
+    const progress = readProgress();
+    const previous = progress[lesson.lessonId];
+    progress[lesson.lessonId] = {
+      completed: previous?.completed !== true,
+      updatedAt: Math.max(Date.now(), (previous?.updatedAt || 0) + 1),
+    };
+    try {
+      localStorage.setItem(progressKey, JSON.stringify(progress));
+      renderCompletion();
+    } catch {
+      get('completion-status').textContent = 'Не удалось сохранить отметку. Проверьте, разрешено ли браузеру сохранять данные.';
+    }
+  };
+  window.addEventListener('storage', (event) => {
+    if (event.key === progressKey || event.key === null) renderCompletion();
+  });
+  window.addEventListener('pageshow', renderCompletion);
   get('lesson').onchange = (event) => {
     save();
     const url = new URL(location.href);
@@ -134,6 +188,7 @@
       lesson = embedded;
       catalog = [lesson];
       get('download').hidden = true;
+      get('offline-progress-note').hidden = false;
       const courseLink = document.querySelector('nav a');
       courseLink.href = 'https://shifahiya-project.github.io/ash-shifahiya-app/';
     } else {
@@ -156,10 +211,12 @@
     audio.setAttribute('aria-label', `Аудио урока ${lesson.lessonId}`);
     state = readState();
     render();
+    renderCompletion();
     audio.src = lesson.audioSrc;
     get('audio-download').href = lesson.audioSrc;
     get('audio-download').setAttribute('download', `lesson-${lesson.lessonId}.mp3`);
     document.querySelector('.listening-player').hidden = false;
+    document.querySelector('.listening-completion').hidden = false;
     document.querySelector('footer').hidden = false;
     status.hidden = true;
   } catch {

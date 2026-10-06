@@ -2124,8 +2124,10 @@ git reset sources/     # чтобы не утащить PDF в коммит ра
   заданий он набран), `shifahiya-grammar-{id}` (счёт грамматики),
   `shifahiya-session-{id}` и
   `shifahiya-active-session` (незавершённая сессия), `shifahiya-card-progress-v1`,
-  `shifahiya-reading-v1` (расписание чтения), `shifahiya-exams-v1` (результаты
-  экзаменов), `shifahiya-exam-session` (незаконченная работа),
+  `shifahiya-reading-v1` (расписание чтения),
+  `shifahiya-listening-progress-v1` (отдельные отметки «Текст и аудио»),
+  `shifahiya-exams-v1` (результаты экзаменов),
+  `shifahiya-exam-session` (незаконченная работа),
   `shifahiya-p2-lesson-{id}` и `shifahiya-p2-session-{id}` (вторая часть),
   `shifahiya-p3-lesson-{id}` и `shifahiya-p3-session-{id}` (третья часть),
   `shifahiya-p4-lesson-{id}` и `shifahiya-p4-session-{id}` (четвёртая часть),
@@ -2139,8 +2141,13 @@ git reset sources/     # чтобы не утащить PDF в коммит ра
   `shifahiya-topic-cards-v1` (расписание по каждому вопросу темы),
   `shifahiya-topic-steps-v1` (разобранные занятия),
   `shifahiya-topic-exams-v1` (зачёты по темам). Плюс ручной экспорт/импорт JSON
-  (`format: "shifahiya-progress", version: 1`) — при изменении формата поднимать
-  `version` и суффикс `-vN` в ключах.
+  (`format: "shifahiya-progress", version: 2`, принимает также версию 1) — при
+  изменении формата поднимать `version` и суффикс `-vN` в изменённых ключах.
+  Добавление отдельного хранилища не меняет схему старых ключей.
+  Для уроков с записью главная считает полностью пройденными оба этапа:
+  слова/задания и явную отметку в плеере. Доступ к следующим урокам по-прежнему
+  определяется словами/заданиями. Отметки аудио имеют `completed` и `updatedAt`;
+  более свежая отмена отметки при синхронизации заменяет старое прохождение.
 - **Синхронизация между устройствами — Supabase, необязательная.**
   `app/supabase-config.ts` пустой по умолчанию; пока он пустой, `startSync()`
   выходит сразу, панель входа не рендерится и наружу не уходит ничего.

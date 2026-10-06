@@ -5,11 +5,13 @@ import type {
   ExamResult,
   ExamSession,
   LearningStats,
+  ListeningProgress,
   Progress,
   ReadingCourseSession,
   ReadingProgress,
   SavedSession,
 } from "./progress-store";
+import { normalizeListeningProgress } from "./listening-progress.ts";
 import type { PodcastWatch } from "./podcast-catalog";
 import type { DayPlan } from "./podcast-day";
 import type { TopicCard, TopicExamResult } from "./topic-schedule";
@@ -129,6 +131,24 @@ function mergeReadings(mine: Record<number, ReadingProgress>, theirs: Record<num
   return merged;
 }
 
+/** A later completion change wins, including explicitly marking it unfinished. */
+function mergeListening(
+  mine: Record<number, ListeningProgress>,
+  theirs: Record<number, ListeningProgress>,
+) {
+  const merged = normalizeListeningProgress(mine);
+  for (const [id, item] of Object.entries(normalizeListeningProgress(theirs))) {
+    const key = Number(id);
+    const existing = merged[key];
+    // Simultaneous changes settle on completion on both devices.
+    if (!existing || item.updatedAt > existing.updatedAt
+      || (item.updatedAt === existing.updatedAt && item.completed)) {
+      merged[key] = item;
+    }
+  }
+  return merged;
+}
+
 /**
  * Two devices can hold two papers of the same exam. The better result stands,
  * the attempts are the larger count rather than the sum — the same paper synced
@@ -222,6 +242,7 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
     sessions: mergeSessions(mine.sessions, theirs.sessions),
     cards: mergeCards(mine.cards, theirs.cards),
     readings: mergeReadings(mine.readings ?? {}, theirs.readings ?? {}),
+    listening: mergeListening(mine.listening ?? {}, theirs.listening ?? {}),
     exams: mergeExams(mine.exams ?? {}, theirs.exams ?? {}),
     examSession: laterExamSession(mine.examSession ?? null, theirs.examSession ?? null),
     part2Scores: mergeScores(mine.part2Scores ?? {}, theirs.part2Scores ?? {}),
@@ -257,6 +278,7 @@ export function normalizeProgress(value: Partial<Progress> | null | undefined): 
     sessions: value?.sessions ?? {},
     cards: value?.cards ?? {},
     readings: value?.readings ?? {},
+    listening: normalizeListeningProgress(value?.listening),
     exams: value?.exams ?? {},
     examSession: value?.examSession ?? null,
     part2Scores: value?.part2Scores ?? {},

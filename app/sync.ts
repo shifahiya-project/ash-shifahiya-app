@@ -32,10 +32,10 @@ const MAX_WAIT_MS = 60_000;
 const OFF: SyncState = { status: "off", email: null, message: null, syncedAt: null };
 
 /**
- * Everything this device would send: the course, the podcast habit and the
- * topics being memorised. They live in separate stores because they are
- * separate things, and they travel together because they belong to the same
- * learner.
+ * Everything this device would send: the course and its listening completion,
+ * the podcast habit and the topics being memorised. They live in separate
+ * stores because they are separate things, and they travel together because
+ * they belong to the same learner.
  */
 function localPayload(): SyncedProgress {
   return {

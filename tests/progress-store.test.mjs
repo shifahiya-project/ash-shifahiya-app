@@ -31,9 +31,14 @@ class FakeStorage {
   }
 }
 
-globalThis.window = { localStorage: new FakeStorage() };
+const events = new EventTarget();
+globalThis.window = {
+  localStorage: new FakeStorage(),
+  addEventListener: events.addEventListener.bind(events),
+  removeEventListener: events.removeEventListener.bind(events),
+};
 
-const { progressStore, EXAM_SESSION_KEY, EXAM_RESULTS_KEY, CARD_PROGRESS_KEY } = await import(
+const { progressStore, EXAM_SESSION_KEY, EXAM_RESULTS_KEY, CARD_PROGRESS_KEY, LISTENING_PROGRESS_KEY } = await import(
   "../app/progress-store.ts"
 );
 const { normalizeProgress } = await import("../app/merge-progress.ts");
@@ -83,4 +88,81 @@ test("the rest of a restored payload still lands where it was landing", () => {
   assert.deepEqual(JSON.parse(window.localStorage.getItem(CARD_PROGRESS_KEY)), cards);
   assert.deepEqual(JSON.parse(window.localStorage.getItem(EXAM_RESULTS_KEY)), exams);
   assert.equal(window.localStorage.getItem("shifahiya-lesson-1"), "26");
+});
+
+test("listening completion survives a JSON backup round trip independently of words", () => {
+  freshStorage();
+  const original = normalizeProgress({
+    scores: { 87: 20 },
+    listening: {
+      87: { completed: true, updatedAt: 100 },
+      88: { completed: false, updatedAt: 200 },
+    },
+  });
+  progressStore.replaceAll(original);
+  const restored = normalizeProgress(JSON.parse(JSON.stringify(progressStore.getSnapshot())));
+  freshStorage();
+  progressStore.replaceAll(restored);
+
+  assert.deepEqual(JSON.parse(window.localStorage.getItem(LISTENING_PROGRESS_KEY)), original.listening);
+  assert.deepEqual(progressStore.getSnapshot().listening, original.listening);
+  assert.equal(progressStore.getSnapshot().scores[87], 20);
+  assert.equal(progressStore.getSnapshot().scores[88], undefined);
+});
+
+test("a legacy payload does not infer listening completion from word scores", () => {
+  freshStorage();
+  progressStore.replaceAll(normalizeProgress({ scores: { 87: 20 } }));
+
+  assert.deepEqual(progressStore.getSnapshot().listening, {});
+  assert.deepEqual(JSON.parse(window.localStorage.getItem(LISTENING_PROGRESS_KEY)), {});
+  assert.equal(progressStore.getSnapshot().scores[87], 20);
+});
+
+test("malformed listening data in storage cannot complete a lesson", () => {
+  freshStorage();
+  progressStore.replaceAll(normalizeProgress({}));
+  window.localStorage.setItem(LISTENING_PROGRESS_KEY, JSON.stringify({
+    87: { completed: "true", updatedAt: 100 },
+    88: { completed: true, updatedAt: -1 },
+    91: { completed: false, updatedAt: 200 },
+  }));
+  // Invalidate the old snapshot without rewriting the listening key.
+  progressStore.updateStats((stats) => stats);
+
+  assert.deepEqual(progressStore.getSnapshot().listening, { 91: { completed: false, updatedAt: 200 } });
+});
+
+test("a standalone player in another tab refreshes the course snapshot", () => {
+  freshStorage();
+  progressStore.replaceAll(normalizeProgress({}));
+  assert.deepEqual(progressStore.getSnapshot().listening, {});
+  let notifications = 0;
+  const unsubscribe = progressStore.subscribe(() => { notifications += 1; });
+  const listening = { 87: { completed: true, updatedAt: 100 } };
+  window.localStorage.setItem(LISTENING_PROGRESS_KEY, JSON.stringify(listening));
+  const event = new Event("storage");
+  Object.defineProperty(event, "key", { value: LISTENING_PROGRESS_KEY });
+  events.dispatchEvent(event);
+
+  assert.equal(notifications, 1);
+  assert.deepEqual(progressStore.getSnapshot().listening, listening);
+  unsubscribe();
+  events.dispatchEvent(event);
+  assert.equal(notifications, 1, "the last subscriber removes the storage listener");
+});
+
+test("returning to a cached course page refreshes marks saved in the player", () => {
+  freshStorage();
+  progressStore.replaceAll(normalizeProgress({}));
+  assert.deepEqual(progressStore.getSnapshot().listening, {});
+  const unsubscribe = progressStore.subscribe(() => {});
+  const listening = { 88: { completed: true, updatedAt: 200 } };
+  window.localStorage.setItem(LISTENING_PROGRESS_KEY, JSON.stringify(listening));
+  const event = new Event("pageshow");
+  Object.defineProperty(event, "persisted", { value: true });
+  events.dispatchEvent(event);
+
+  assert.deepEqual(progressStore.getSnapshot().listening, listening);
+  unsubscribe();
 });

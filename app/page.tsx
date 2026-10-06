@@ -54,6 +54,7 @@ import type {
   TextCourseWord,
 } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
+import { normalizeListeningProgress } from "./listening-progress";
 import { nextPopulatedDeck } from "./lesson-navigation";
 import {
   examPassMark,
@@ -77,6 +78,7 @@ import {
   EMPTY_STATS,
   progressStore,
   type CardProgress,
+  type Progress,
   type SavedSession,
 } from "./progress-store";
 import { dueReadingIds, nextReadingProgress } from "./reading-review";
@@ -482,11 +484,15 @@ function currentLessonFirst<T extends { id: number }>(items: T[], id?: number) {
   return current ? [current, ...items.filter((item) => item.id !== id)] : items;
 }
 
+const listeningLessonIds = new Set(listeningCatalog.map((entry) => entry.lessonId));
+
 function listeningHref(id: number) {
-  const page = id === 87 || id === 88
-    ? "text-and-audio-87-88.html"
-    : listeningCatalog.some((entry) => entry.lessonId === id) ? "text-and-audio.html" : undefined;
-  return page ? `./${page}?lesson=${id}` : undefined;
+  return listeningLessonIds.has(id) ? `./text-and-audio.html?lesson=${id}` : undefined;
+}
+
+function isCourseLessonComplete(item: (typeof lessonSummaries)[number], progress: Progress) {
+  return isLessonComplete(item, progress) &&
+    (!listeningLessonIds.has(item.id) || progress.listening[item.id]?.completed === true);
 }
 
 export default function Home() {
@@ -815,8 +821,17 @@ export default function Home() {
   const latestSessionSummary = latestSession
     ? lessonSummaries.find((item) => item.id === latestSession.lessonId)
     : undefined;
-  const recommendedLesson = latestSessionSummary ??
+  const recommendedCoreLesson = latestSessionSummary ??
     lessonSummaries.find((item) => !isLessonComplete(item, stored) && unlockedLessons.has(item.id));
+  const pendingListeningLesson = lessonSummaries.find((item) =>
+    isLessonComplete(item, stored) && listeningLessonIds.has(item.id) &&
+    stored.listening[item.id]?.completed !== true && unlockedLessons.has(item.id));
+  // An unfinished recording belongs to its own lesson, even when the learner
+  // has already started the words and exercises of a later lesson.
+  const recommendedListeningLesson = pendingListeningLesson && (!recommendedCoreLesson ||
+    lessonSummaries.indexOf(pendingListeningLesson) < lessonSummaries.indexOf(recommendedCoreLesson))
+    ? pendingListeningLesson : undefined;
+  const recommendedLesson = recommendedListeningLesson ?? recommendedCoreLesson;
   const latestSessionPosition = latestSession && latestSessionLesson
     ? latestSession.view === "practice"
       ? `Упражнение ${latestSession.questionIndex + 1} из ${latestSessionLesson.questions.length}`
@@ -847,10 +862,12 @@ export default function Home() {
       selectedSummaries.find((item) => readingScores[item.id] === undefined && readingUnlocked.has(item.id))
     : undefined;
   const homeLesson = course === 1 ? recommendedLesson : recommendedReadingLesson;
-  const homeSession = course === 1 ? latestSession : latestReadingSession;
+  const homeIsListening = course === 1 && recommendedListeningLesson !== undefined;
+  const homeSession = course === 1 ? homeIsListening ? undefined : latestSession : latestReadingSession;
   const homeListeningHref = course === 1 && homeLesson ? listeningHref(homeLesson.id) : undefined;
+  const firstCourseCompletedCount = lessonSummaries.filter((item) => isCourseLessonComplete(item, stored)).length;
   const completedLessonCount = course === 1
-    ? lessonSummaries.filter((item) => isLessonComplete(item, stored)).length
+    ? firstCourseCompletedCount
     : selectedSummaries.filter((item) => readingScores[item.id] !== undefined).length;
   // Keep all first-course anchors so unfinished exams survive hidden lessons.
   const firstCourseSummaries = showAllLessons ? lessonSummaries : currentLessonFirst(lessonSummaries, recommendedLesson?.id);
@@ -1609,7 +1626,7 @@ export default function Home() {
   function exportProgress() {
     const payload = {
       format: "shifahiya-progress",
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       scores: savedScores,
       scoreTotals: savedScoreTotals,
@@ -1617,6 +1634,7 @@ export default function Home() {
       sessions: savedSessions,
       cards: cardProgress,
       readings: savedReadings,
+      listening: stored.listening,
       exams: savedExams,
       // The paper in progress belongs in the copy as well: restoring a backup
       // onto a fresh device would otherwise drop it, and the restore writes
@@ -1659,7 +1677,7 @@ export default function Home() {
     if (!file) return;
     try {
       const payload = JSON.parse(await file.text());
-      if (payload.format !== "shifahiya-progress" || payload.version !== 1) throw new Error("Invalid backup");
+      if (payload.format !== "shifahiya-progress" || ![1, 2].includes(payload.version)) throw new Error("Invalid backup");
       const scores = payload.scores ?? {};
       // Backups written before the totals were kept simply have none of them,
       // and the card then shows the result without a denominator.
@@ -1678,6 +1696,9 @@ export default function Home() {
         sessions,
         cards,
         readings,
+        // Older copies predate listening marks and cannot restore them.
+        listening: payload.version === 1 && payload.listening === undefined
+          ? stored.listening : normalizeListeningProgress(payload.listening),
         exams: payload.exams ?? {},
         examSession: payload.examSession ?? null,
         part2Scores: payload.part2Scores ?? {},
@@ -1951,7 +1972,17 @@ export default function Home() {
 
           {homeLesson && (
             <div className="continue-learning-group">
-              <button
+              {homeIsListening ? (
+                <a className="continue-learning" href={homeListeningHref}>
+                  <span className="continue-mark">▶</span>
+                  <span className="continue-copy">
+                    <small>Продолжить обучение</small>
+                    <strong>Урок {homeLesson.id}. {homeLesson.title}</strong>
+                    <em>Слова и задания пройдены · остались текст и аудио</em>
+                  </span>
+                  <span className="continue-action">Текст и аудио <b>→</b></span>
+                </a>
+              ) : <button
                 className="continue-learning"
                 onClick={continueHomeLesson}
               >
@@ -1963,8 +1994,8 @@ export default function Home() {
                   {course === 1 && <i><b style={{ width: `${latestSession ? Math.min(latestSessionProgress, 100) : 0}%` }} /></i>}
                 </span>
                 <span className="continue-action">{homeSession ? "Продолжить" : "Начать урок"} <b>→</b></span>
-              </button>
-              {homeListeningHref && <a className="listening-link continue-listening" href={homeListeningHref}>Текст и аудио</a>}
+              </button>}
+              {homeListeningHref && !homeIsListening && <a className="listening-link continue-listening" href={homeListeningHref}>Текст и аудио</a>}
             </div>
           )}
 
@@ -1996,7 +2027,7 @@ export default function Home() {
             </div>
             <div className="stats-grid">
               <div><strong>{learningStats.activeDates.length}</strong><span>дней занятий</span></div>
-              <div><strong>{Object.keys(savedScores).length}</strong><span>уроков завершено</span></div>
+              <div><strong>{firstCourseCompletedCount}</strong><span>уроков завершено</span></div>
               <div><strong>{formatStudyTime(learningStats.totalSeconds)}</strong><span>времени в учёбе</span></div>
               <div><strong>{wordProgress.encountered}</strong><span>новых слов пройдено</span></div>
               <div><strong>{wordProgress.mastered}</strong><span>слов выучено</span></div>
@@ -2312,9 +2343,13 @@ export default function Home() {
             {firstCourseSummaries.flatMap((item) => {
               const saved = savedScores[item.id];
               const unfinished = savedSessions[item.id];
-              const completed = isLessonComplete(item, stored);
+              const coreCompleted = isLessonComplete(item, stored);
+              const completed = isCourseLessonComplete(item, stored);
+              const audioHref = listeningHref(item.id);
+              const listeningCompleted = stored.listening[item.id]?.completed === true;
+              const listeningLeft = coreCompleted && audioHref && !listeningCompleted;
               // The words are done but the grammar block still owes an answer.
-              const grammarLeft = saved !== undefined && !completed;
+              const grammarLeft = saved !== undefined && !coreCompleted;
               const locked = !unlockedLessons.has(item.id);
               const opensAfter = lessonSummaries[lessonSummaries.findIndex((summary) => summary.id === item.id) - 1];
               const card = !showAllLessons && completed ? null : (
@@ -2325,11 +2360,12 @@ export default function Home() {
                     <h2>{item.title}</h2>
                     <p>{item.description}{visiblePartCount(item) > 1 ? ` · в ${visiblePartCount(item)} части` : ""}</p>
                     <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-                    {listeningHref(item.id) && !locked && (
-                      <a className="listening-link" href={listeningHref(item.id)}>
-                        Текст и аудио
+                    {audioHref && !locked && !listeningLeft && (
+                      <a className="listening-link" href={audioHref}>
+                        Текст и аудио{listeningCompleted && <span aria-hidden="true"> · ✓</span>}
                       </a>
                     )}
+                    {listeningLeft && <p className="lesson-stage-status">Слова и задания пройдены · остались текст и аудио</p>}
                     {hasVisibleReading(item.id, readingByLesson) && !locked && (() => {
                       const read = savedReadings[item.id];
                       const due = read && read.nextReview <= localDate();
@@ -2349,6 +2385,13 @@ export default function Home() {
                     <button className="repeat" onClick={() => startGrammar(item.id)}>
                       Грамматика <span>→</span>
                     </button>
+                  ) : listeningLeft ? (
+                    <div className="lesson-actions">
+                      <a className="primary listening-link" href={audioHref}>Текст и аудио <span aria-hidden="true">→</span></a>
+                      <button className="repeat" onClick={() => startLesson(item.id)}>
+                        Повторить слова <span>→</span>
+                      </button>
+                    </div>
                   ) : completed ? (
                     <div className="lesson-actions">
                       <button className="done" disabled>Пройден <span>✓</span></button>
@@ -2364,7 +2407,7 @@ export default function Home() {
                       {unfinished ? "Продолжить" : "Начать урок"} <span>→</span>
                     </button>
                   )}
-                  {completed && (
+                  {coreCompleted && (
                     <div className="card-score">
                       {/* A result earned before the lesson grew is shown on its
                           own: printing it over today's larger total would read
@@ -3047,6 +3090,8 @@ export default function Home() {
         const remaining = parts[partIndex + 1];
         const grammarNext = remaining?.kind === "grammar";
         const strong = score >= Math.ceil(answered * 0.75);
+        const audioHref = !remaining && stored.listening[lesson.id]?.completed !== true
+          ? listeningHref(lesson.id) : undefined;
         return (
           <section className="result-view">
             <div className="result-mark">✓</div>
@@ -3055,7 +3100,7 @@ export default function Home() {
                 ? `Урок ${lesson.id} · слова пройдены`
                 : remaining
                   ? `Урок ${lesson.id} · часть ${partIndex + 1} из ${parts.length} пройдена`
-                  : `Урок ${lesson.id} завершён`}
+                  : audioHref ? `Урок ${lesson.id} · слова и задания пройдены` : `Урок ${lesson.id} завершён`}
             </div>
             <h1>{strong ? "Материал закреплён!" : "Хороший результат"}</h1>
             <p>
@@ -3063,6 +3108,8 @@ export default function Home() {
                 ? "Осталась грамматика урока: правило, по которому построены эти формы, и задания к нему. Урок засчитывается вместе с ней."
                 : remaining
                   ? "Вторая часть вводит остальные формы урока. Можно продолжить сейчас или вернуться позже — место сохранено."
+                  : audioHref
+                    ? "Остались текст и аудио этого урока. Прочитайте текст, прослушайте запись и отметьте этот этап как пройденный в плеере."
                   : strong
                     ? "Вы дважды повторили формы и применили их в предложениях. Завтра они вернутся в коротком повторении."
                     : "Ошибочные формы стоит пройти ещё раз — повторение займёт всего несколько минут."}
@@ -3084,7 +3131,9 @@ export default function Home() {
               ) : (
                 <>
                   <button className="secondary" onClick={resetLesson}>Сбросить результат</button>
-                  {nextLesson
+                  {audioHref
+                    ? <a className="primary result-listening" href={audioHref}>Текст и аудио <span aria-hidden="true">→</span></a>
+                    : nextLesson
                     ? <button className="primary" onClick={() => startLesson(nextLesson.id)}>Перейти к уроку {nextLesson.id} <span>→</span></button>
                     : <button className="primary" onClick={() => setView("home")}>Вернуться к курсу <span>→</span></button>}
                 </>

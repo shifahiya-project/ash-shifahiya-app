@@ -108,8 +108,60 @@ test("normalizeProgress fills in what an old backup lacks", () => {
   const filled = normalizeProgress({ scores: { 1: 5 } });
   assert.deepEqual(filled.cards, {});
   assert.deepEqual(filled.sessions, {});
+  assert.deepEqual(filled.listening, {});
   assert.deepEqual(filled.stats, { activeDates: [], totalSeconds: 0, masteredPhrases: [] });
   assert.deepEqual(normalizeProgress(null).scores, {});
+});
+
+test("listening completion is independent of a word score and travels between devices", () => {
+  const phone = progress({ scores: { 87: 20 } });
+  const laptop = progress({ listening: { 87: { completed: true, updatedAt: 100 } } });
+  const merged = mergeProgress(phone, laptop);
+
+  assert.deepEqual(merged.scores, { 87: 20 });
+  assert.deepEqual(merged.listening, { 87: { completed: true, updatedAt: 100 } });
+  assert.deepEqual(mergeProgress(phone, progress()).listening, {});
+  assert.deepEqual(merged, mergeProgress(laptop, phone));
+});
+
+test("a later listening reset beats an older completion on either device", () => {
+  const completed = progress({ listening: { 87: { completed: true, updatedAt: 100 } } });
+  const reset = progress({ listening: {
+    87: { completed: false, updatedAt: 200 },
+    88: { completed: true, updatedAt: 150 },
+  } });
+
+  assert.deepEqual(mergeProgress(completed, reset).listening, reset.listening);
+  assert.deepEqual(mergeProgress(reset, completed).listening, reset.listening);
+});
+
+test("simultaneous conflicting listening marks merge deterministically", () => {
+  const completed = progress({ listening: { 87: { completed: true, updatedAt: 100 } } });
+  const reset = progress({ listening: { 87: { completed: false, updatedAt: 100 } } });
+
+  assert.deepEqual(mergeProgress(completed, reset).listening, completed.listening);
+  assert.deepEqual(mergeProgress(reset, completed).listening, completed.listening);
+});
+
+test("listening records from external payloads require a lesson id, boolean and valid timestamp", () => {
+  const listening = {
+    87: { completed: true, updatedAt: 100 },
+    88: { completed: "true", updatedAt: 200 },
+    91: { completed: true, updatedAt: Infinity },
+    92: { completed: true, updatedAt: -1 },
+    95: { completed: true },
+    96: null,
+    97: { completed: false, updatedAt: 0, ignored: "extra field" },
+    invalid: { completed: true, updatedAt: 300 },
+    0: { completed: true, updatedAt: 400 },
+    1.5: { completed: true, updatedAt: 500 },
+  };
+  assert.deepEqual(normalizeProgress({ listening }).listening, {
+    87: { completed: true, updatedAt: 100 },
+    97: { completed: false, updatedAt: 0 },
+  });
+  assert.deepEqual(normalizeProgress({ listening: [] }).listening, {});
+  assert.deepEqual(normalizeProgress({ listening: "completed" }).listening, {});
 });
 
 function session(overrides = {}) {
@@ -250,7 +302,7 @@ test("a topic keeps the further-along side, and a step done is done", () => {
 
 test("the course and the habits travel together, and old payloads still load", () => {
   const mine = {
-    ...progress({ scores: { 1: 20 } }),
+    ...progress({ scores: { 1: 20 }, listening: { 87: { completed: true, updatedAt: 100 } } }),
     podcasts: podcasts({ watches: [watch("a", "2026-08-25", 100)] }),
     topics: normalizeTopics({ cards: { "zakat:rate": topicCard() } }),
   };
@@ -262,6 +314,7 @@ test("the course and the habits travel together, and old payloads still load", (
 
   const merged = mergeSynced(mine, theirs);
   assert.deepEqual(merged.scores, { 1: 20, 2: 30 });
+  assert.deepEqual(merged.listening, { 87: { completed: true, updatedAt: 100 } });
   assert.equal(merged.watches, undefined, "the habit must not leak into the course");
   assert.equal(merged.cards["zakat:rate"], undefined, "the topics must not leak into the course either");
   assert.deepEqual(merged.podcasts.watches.map((item) => item.videoId), ["a", "b"]);
@@ -271,6 +324,7 @@ test("the course and the habits travel together, and old payloads still load", (
 
   // A payload written before podcasts or topics synced simply has none of them.
   const old = normalizeSynced({ scores: { 3: 10 } });
+  assert.deepEqual(old.listening, {});
   assert.deepEqual(old.podcasts, { watches: [], plans: {}, sources: [] });
   assert.deepEqual(old.topics, { cards: {}, steps: {}, exams: {} });
   assert.deepEqual(normalizeSynced(null).podcasts, { watches: [], plans: {}, sources: [] });
