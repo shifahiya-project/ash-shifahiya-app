@@ -110,7 +110,7 @@ try {
   const card = (id) => cards.filter({ has: page.locator(".lesson-number", { hasText: new RegExp(`^${String(id).padStart(2, "0")}$`) }) });
   const hero = page.locator(".continue-learning");
   const showAll = () => page.getByRole("button", { name: "Показать все уроки", exact: true });
-  const hideCompleted = () => page.getByRole("button", { name: "Скрыть пройденные", exact: true });
+  const collapseList = () => page.getByRole("button", { name: "Свернуть список", exact: true });
   const parts = page.locator("#course-parts");
   const showParts = () => page.getByRole("button", { name: "Показать части курса", exact: true });
   const hideParts = () => page.getByRole("button", { name: "Скрыть части курса", exact: true });
@@ -132,23 +132,68 @@ try {
     }, entries);
     await page.reload({ waitUntil: "networkidle" });
   };
-  const assertCompact = async (first, total) => {
+  const assertWindow = async (ids) => {
     await page.waitForLoadState("networkidle");
-    await card(first).waitFor();
-    assert.equal(await firstVisible(), first, "List should start at the unfinished lesson");
-    assert.equal(await cards.count(), total);
-    assert.equal(await cards.filter({ has: page.locator("button.done") }).count(), 0, "Completed lessons should be hidden");
+    await card(ids[0]).waitFor();
+    assert.deepEqual(await cards.locator(".lesson-number").evaluateAll((nodes) => nodes.map((node) => Number(node.textContent.trim()))), ids, "The lesson window should contain only the previous, current and next lessons in course order");
+    assert((await cards.count()) <= 3);
+  };
+  const assertMobileActions = async (id, screenshotPrefix) => {
+    for (const width of [390, 360, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `The homepage should fit a ${width}px viewport`);
+      const bounds = await card(id).locator(".lesson-actions > button, .lesson-actions > a").evaluateAll((nodes) => nodes.map((node) => {
+        const box = node.getBoundingClientRect();
+        return { top: box.top, left: box.left, right: box.right, height: box.height };
+      }));
+      assert.equal(bounds.length, 2);
+      assert(Math.abs(bounds[0].top - bounds[1].top) < 1, `Lesson ${id} actions should share one row at ${width}px`);
+      assert(bounds.every((box) => box.left >= 0 && box.right <= width && box.height >= 44));
+      const collisions = await cards.evaluateAll((nodes) => nodes.flatMap((node) => {
+        const label = node.querySelector(".lesson-window-label");
+        if (!label) return [];
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        const lines = [...range.getClientRects()];
+        return [...node.querySelectorAll(".card-score, .card-lock")].filter((badge) => {
+          const box = badge.getBoundingClientRect();
+          return lines.some((line) => line.left < box.right && line.right > box.left && line.top < box.bottom && line.bottom > box.top);
+        }).map((badge) => `${label.textContent}: ${badge.textContent.trim()}`);
+      }));
+      assert.deepEqual(collisions, [], `Badges must not cover lesson role labels at ${width}px`);
+      await card(id).screenshot({ path: `/tmp/${screenshotPrefix}-${width}.png` });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
   };
 
-  // A new learner still sees the whole course and a usable first step.
-  assert.equal(await firstVisible(), lessonSummaries[0].id);
+  // A new learner sees the first two lessons and can open the whole course.
+  await assertWindow([1, 2]);
+  assert(await showAll().isVisible());
+  await showAll().click();
   assert.equal(await cards.count(), lessonSummaries.length);
+  await collapseList().click();
+  await assertWindow([1, 2]);
   assert(await page.getByRole("button", { name: "Показать достижения", exact: true }).isVisible());
   assert.equal(await page.locator(".achievement-list").isVisible(), false);
   assert.equal(await parts.isVisible(), false, "Course parts should be hidden on arrival");
   assert.equal(await showParts().getAttribute("aria-expanded"), "false");
   assert.equal(await showParts().getAttribute("aria-controls"), "course-parts");
+  assert.equal(await page.locator(".selected-course").count(), 1);
   assert.equal(await page.locator(".selected-course").innerText(), "Часть 1 · Шифахия");
+  assert.equal(await page.locator(".home-extras .home-disclosure").count(), 2);
+  assert.equal(await page.locator(".home-extras .home-disclosure-toggle").count(), 2);
+  assert(await page.evaluate(() => {
+    const lessons = document.getElementById("course-lessons");
+    const principle = document.querySelector(".principle");
+    const extras = document.querySelector(".home-extras");
+    return Boolean(lessons.compareDocumentPosition(extras) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+      Boolean(principle.compareDocumentPosition(extras) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }), "Achievements and course parts should follow the lesson list");
+  const disclosureFormats = await page.locator(".home-disclosure-toggle").evaluateAll((nodes) => nodes.map((node) => {
+    const style = getComputedStyle(node);
+    return [style.backgroundColor, style.borderRadius, style.fontSize, style.padding, style.display];
+  }));
+  assert.deepEqual(disclosureFormats[0], disclosureFormats[1], "Both bottom disclosures should share the same format");
   await openCourseParts();
   assert.equal(await page.getByRole("tab").count(), 11);
   assert.equal(await hideParts().getAttribute("aria-expanded"), "true");
@@ -165,7 +210,10 @@ try {
     ["shifahiya-session-87", firstSession(87, 2000)],
   ];
   await seed(lateEntries);
-  await assertCompact(91, lessonSummaries.length - 90);
+  await assertWindow([90, 91, 92]);
+  assert.match(await card(90).innerText(), /Последний пройденный/i);
+  assert.match(await card(91).innerText(), /Текущий урок/i);
+  assert.match(await card(92).innerText(), /Следующий урок/i);
   assert.match(await hero.innerText(), /Урок 91\./);
   assert.match(await hero.innerText(), /Продолжить/);
   const heroAudio = page.locator(".continue-learning-group").getByRole("link", { name: "Текст и аудио", exact: true });
@@ -189,18 +237,18 @@ try {
   assert.equal(await firstVisible(), 1);
   const earlierAudio = card(87).getByRole("link", { name: "Текст и аудио", exact: true });
   assert.equal(await earlierAudio.getAttribute("href"), "./text-and-audio.html?lesson=87");
-  await hideCompleted().click();
-  await assertCompact(91, lessonSummaries.length - 90);
+  await collapseList().click();
+  await assertWindow([90, 91, 92]);
   const unchangedEntries = await page.evaluate((keys) => keys.map((key) => [key, localStorage.getItem(key)]), lateEntries.map(([key]) => key));
   assert.deepEqual(unchangedEntries, progressBeforeToggling, "Hiding and revealing lessons must preserve progress");
   const progressBeforeParts = await page.evaluate(() => Object.entries(localStorage).sort(([a], [b]) => a.localeCompare(b)));
-  await page.locator(".course-picker").screenshot({ path: "/tmp/course-parts-closed-mobile.png" });
+  await page.locator(".home-extras").screenshot({ path: "/tmp/home-extras-closed-mobile.png" });
   await openCourseParts();
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Expanded course parts should fit the mobile viewport");
-  await parts.screenshot({ path: "/tmp/course-parts-open-mobile.png" });
+  await page.locator(".home-extras").screenshot({ path: "/tmp/home-extras-parts-open-mobile.png" });
   await hideParts().click();
   assert.deepEqual(await page.evaluate(() => Object.entries(localStorage).sort(([a], [b]) => a.localeCompare(b))), progressBeforeParts, "Opening and collapsing course parts must preserve progress");
-  assert.equal(await firstVisible(), 91, "Collapsing course parts must preserve the active lesson list");
+  await assertWindow([90, 91, 92]);
 
   const showAchievements = page.getByRole("button", { name: "Показать достижения", exact: true });
   await showAchievements.click();
@@ -211,16 +259,20 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({ path: "/tmp/compact-home-desktop.png", fullPage: true });
 
-  // Older imported progress can contain an unfinished earlier lesson. Keep it
-  // reachable while placing the learner's actual continuation first.
+  // Older unfinished lessons remain reachable through the full list, while
+  // the compact window stays focused on the saved continuation.
   await seed([
     ...scoreEntries(lessonSummaries, "shifahiya-lesson-", 90)
       .filter(([key]) => key !== "shifahiya-lesson-80"),
     listeningEntry([87, 88]),
     ["shifahiya-session-91", firstSession(91, 1000)],
   ]);
-  await assertCompact(91, lessonSummaries.length - 89);
-  assert(await card(80).isVisible(), "An earlier unfinished lesson must remain reachable");
+  await assertWindow([90, 91, 92]);
+  assert.equal(await card(80).count(), 0);
+  await showAll().click();
+  assert(await card(80).isVisible(), "An earlier unfinished lesson must remain reachable in the full list");
+  await collapseList().click();
+  await assertWindow([90, 91, 92]);
 
   // Every recording is discoverable through the shared player at the next step.
   for (const id of [87, 88]) {
@@ -228,7 +280,7 @@ try {
       ...scoreEntries(lessonSummaries, "shifahiya-lesson-", id - 1),
       listeningEntry(listeningCatalog.filter(({ lessonId }) => lessonId < id).map(({ lessonId }) => lessonId)),
     ]);
-    await assertCompact(id, lessonSummaries.length - id + 1);
+    await assertWindow([id - 1, id, id + 1]);
     assert.equal(await heroAudio.getAttribute("href"), `./text-and-audio.html?lesson=${id}`);
   }
 
@@ -253,7 +305,7 @@ try {
   assert.equal(await page.locator(".result-view a.primary").getAttribute("href"), "./text-and-audio.html?lesson=87");
   assert.equal(await page.getByRole("button", { name: /^Перейти к уроку 88/ }).count(), 0);
   await page.getByRole("button", { name: "На главную", exact: true }).click();
-  await assertCompact(87, lessonSummaries.length - 86);
+  await assertWindow([86, 87, 88]);
   assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=87");
 
   // Completing words and exercises must not hide unfinished text and audio.
@@ -262,7 +314,7 @@ try {
     ...scoreEntries(lessonSummaries, "shifahiya-lesson-", 87),
     ["shifahiya-session-88", firstSession(88, 3000)],
   ]);
-  await assertCompact(87, lessonSummaries.length - 86);
+  await assertWindow([86, 87, 88]);
   assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=87");
   assert.match(await hero.innerText(), /Урок 87\./);
   assert.match(await hero.innerText(), /Текст и аудио/);
@@ -271,6 +323,7 @@ try {
   assert.equal(await page.getByRole("button", { name: "Показать все уроки", exact: true }).count(), 1);
   await page.setViewportSize({ width: 390, height: 844 });
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Pending audio should fit the mobile viewport");
+  await assertMobileActions(87, "pending-audio-87");
   await page.screenshot({ path: "/tmp/pending-audio-87-mobile.png", fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({ path: "/tmp/pending-audio-87-desktop.png", fullPage: true });
@@ -283,10 +336,16 @@ try {
   await page.reload({ waitUntil: "networkidle" });
   await page.locator('#complete[aria-pressed="true"]').waitFor();
   await page.goBack({ waitUntil: "networkidle" });
-  await assertCompact(88, lessonSummaries.length - 87);
+  await assertWindow([87, 88, 89]);
   assert.match(await hero.innerText(), /Урок 88\./);
   assert.equal(await hero.getAttribute("href"), null, "Words and exercises remain the primary step until they are completed");
   assert.equal(await heroAudio.getAttribute("href"), "./text-and-audio.html?lesson=88");
+  await assertMobileActions(87, "previous-lesson-87");
+  await page.screenshot({ path: "/tmp/focused-home-88-mobile.png", fullPage: true });
+  await page.locator("#course-lessons").screenshot({ path: "/tmp/focused-lessons-88-mobile.png" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({ path: "/tmp/focused-home-88-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
 
   // The explicit mark travels with the normal progress backup. Older copies
   // have no audio field, so restoring them must preserve existing marks.
@@ -300,7 +359,7 @@ try {
   await seed([]);
   await page.locator('input[type="file"]').setInputFiles({ name: "progress-v2.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
   await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
-  await assertCompact(88, lessonSummaries.length - 87);
+  await assertWindow([87, 88, 89]);
   assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key))[87].completed, listeningKey), true);
   await page.reload({ waitUntil: "networkidle" });
   const oldBackup = { ...backup, version: 1 };
@@ -308,57 +367,61 @@ try {
   await page.locator('input[type="file"]').setInputFiles({ name: "progress-v1.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(oldBackup)) });
   await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
   assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key))[87].completed, listeningKey), true);
-  await assertCompact(88, lessonSummaries.length - 87);
+  await assertWindow([87, 88, 89]);
 
   // A later saved vocabulary session must not outrank an earlier listening stage.
   await seed([
     ...scoreEntries(lessonSummaries, "shifahiya-lesson-", 90),
     ["shifahiya-session-91", firstSession(91, 5000)],
   ]);
-  await assertCompact(87, lessonSummaries.length - 88);
+  await assertWindow([86, 87, 88]);
   assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=87");
   assert(await card(88).isVisible(), "Other unfinished audio lessons stay in the same course list");
   await seed([
     ...scoreEntries(lessonSummaries, "shifahiya-lesson-", 88),
     listeningEntry([87]),
   ]);
-  await assertCompact(88, lessonSummaries.length - 87);
+  await assertWindow([87, 88, 89]);
   assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=88");
 
   // Undoing an audio completion restores its continuation without changing scores.
   await page.goto(`${origin}text-and-audio.html?lesson=87`, { waitUntil: "networkidle" });
   await page.locator('#complete[aria-pressed="true"]').click();
   await page.getByRole("link", { name: "← К курсу", exact: true }).click();
-  await assertCompact(87, lessonSummaries.length - 86);
+  await assertWindow([86, 87, 88]);
   assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=87");
   assert.equal(await page.evaluate(() => localStorage.getItem("shifahiya-lesson-87")), "10");
 
-  // Existing learners who completed all vocabulary retain every pending audio
-  // lesson together, while the original exam gates remain based on core work.
+  // Existing learners keep pending audio in their focused window and can open
+  // every recording in the full list. Exam gates remain based on core work.
   await seed(scoreEntries(lessonSummaries, "shifahiya-lesson-"));
-  await assertCompact(87, listeningCatalog.length);
-  assert.deepEqual(await cards.locator(".lesson-number").allTextContents(), listeningCatalog.map(({ lessonId }) => String(lessonId).padStart(2, "0")));
+  await assertWindow([86, 87, 88]);
   assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=87");
   for (const title of ["Промежуточный экзамен", "Итоговый экзамен"]) {
     const exam = page.locator(".exam-card").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
     assert(await exam.getByRole("button", { name: /^Начать/ }).isEnabled(), "Pending audio should not close an existing exam");
   }
+  await showAll().click();
+  assert.equal(await cards.count(), lessonSummaries.length);
+  assert.equal(await page.locator(".lesson-list").getByRole("link", { name: "Текст и аудио", exact: true }).count(), listeningCatalog.length);
+  await collapseList().click();
+  await assertWindow([86, 87, 88]);
 
-  // The final lesson being complete should leave a short, recoverable empty list.
+  // A completed course keeps the final lesson as a route back into the course.
   await seed([...scoreEntries(lessonSummaries, "shifahiya-lesson-"), listeningEntry()]);
-  assert.equal(await cards.count(), 0);
+  await assertWindow([100]);
   assert.equal(await hero.count(), 0, "A completed course should not offer a completed lesson as the next step");
   for (const title of ["Промежуточный экзамен", "Итоговый экзамен"]) {
     const exam = page.locator(".exam-card").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
-    assert(await exam.isVisible(), "An unfinished exam must remain accessible when its parent lesson is hidden");
+    assert(await exam.isVisible(), "An unfinished exam must remain accessible alongside the focused lesson list");
     assert(await exam.getByRole("button", { name: /^Начать/ }).isEnabled());
   }
   assert(await showAll().isVisible());
   await showAll().click();
   await card(1).waitFor();
   assert.equal(await cards.count(), lessonSummaries.length);
-  await hideCompleted().click();
-  assert.equal(await cards.count(), 0);
+  await collapseList().click();
+  await assertWindow([100]);
 
   // Reading-course cards share the compact behavior, and retain their book
   // and section headings when the first visible lesson falls inside a book.
@@ -375,7 +438,11 @@ try {
   await page.keyboard.press("Enter");
   assert.equal(await parts.isVisible(), false, "Choosing a course part with the keyboard should close the selector");
   assert.equal(await showParts().getAttribute("aria-expanded"), "false");
-  assert(await showParts().evaluate((element) => element === document.activeElement), "Focus should return to the course-parts toggle after selection");
+  await page.waitForFunction(() => document.activeElement?.classList.contains("selected-course"));
+  assert(await page.locator(".selected-course").evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return bounds.top >= -1 && bounds.bottom <= innerHeight;
+  }), "Selecting a course from the bottom should bring its heading into view and focus it");
   assert.equal(await page.locator(".selected-course").innerText(), "Часть 2 · Чтение");
   const readingProgressBeforeParts = await page.evaluate(() => Object.entries(localStorage).sort(([a], [b]) => a.localeCompare(b)));
   await openCourseParts();
@@ -383,8 +450,8 @@ try {
   await hideParts().click();
   assert.equal(await page.locator(".selected-course").innerText(), "Часть 2 · Чтение");
   assert.deepEqual(await page.evaluate(() => Object.entries(localStorage).sort(([a], [b]) => a.localeCompare(b))), readingProgressBeforeParts);
-  await assertCompact(21, part2Summaries.length - 20);
-  assert((await page.locator(".lesson-list .book-divider").first().innerText()).includes(part2Summaries[20].book));
+  await assertWindow([20, 21, 22]);
+  assert((await page.locator(".lesson-list .book-divider").allTextContents()).some((text) => text.includes(part2Summaries[20].book)));
   assert.match(await card(21).innerText(), /Продолжить/);
   assert.match(await hero.innerText(), /[Уу]рок 21\./);
   assert.equal(await page.locator(".continue-learning-group").getByRole("link", { name: "Текст и аудио", exact: true }).count(), 0);
@@ -393,7 +460,7 @@ try {
   assert.equal(await cards.count(), part2Summaries.length);
   await choosePart(/^1 · Шифахия/);
   await choosePart(/^2 · Чтение/);
-  await assertCompact(21, part2Summaries.length - 20);
+  await assertWindow([20, 21, 22]);
 
   await seed([
     ...scoreEntries(lessonSummaries, "shifahiya-lesson-"),
@@ -404,19 +471,19 @@ try {
     ["shifahiya-p3-session-11", readingSession(11, 1000)],
   ]);
   await choosePart(/^3 · Акыда/);
-  await assertCompact(11, part3Summaries.length - 10);
-  assert((await page.locator(".lesson-list .book-divider").first().innerText()).includes(part3Summaries[10].book));
-  assert((await page.locator(".lesson-list .book-divider.is-section").first().innerText()).includes(part3Summaries[10].section));
+  await assertWindow([10, 11, 12]);
+  assert((await page.locator(".lesson-list .book-divider").allTextContents()).some((text) => text.includes(part3Summaries[10].book)));
+  assert((await page.locator(".lesson-list .book-divider.is-section").allTextContents()).some((text) => text.includes(part3Summaries[10].section)));
   assert.match(await card(11).innerText(), /Продолжить/);
   assert.match(await hero.innerText(), /[Уу]рок 11\./);
   await showAll().click();
   await card(1).waitFor();
   assert.equal(await cards.count(), part3Summaries.length);
-  await hideCompleted().click();
-  await assertCompact(11, part3Summaries.length - 10);
+  await collapseList().click();
+  await assertWindow([10, 11, 12]);
 
   assert.deepEqual(errors, [], "The static homepage should hydrate without browser or asset errors");
-  console.log("Compact homepage passed: collapsible course parts, keyboard selection, separate audio completion, 87-to-88 continuation, completed lessons, achievements, reading courses and mobile layout");
+  console.log("Focused homepage passed: three-lesson window, full list, matching bottom disclosures, keyboard selection, 87-to-88 audio continuation, reading courses and mobile layout");
 } catch (error) {
   for (const message of errors) console.error(message);
   throw error;

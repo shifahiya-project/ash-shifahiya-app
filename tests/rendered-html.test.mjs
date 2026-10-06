@@ -23,16 +23,19 @@ async function render() {
   );
 }
 
-test("server-renders the complete one-hundred-lesson Shifahiya course", async () => {
+test("server-renders a focused Shifahiya homepage with access to the full course", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
   assert.match(html, /<title>Аш-Шифахия — арабский шаг за шагом<\/title>/i);
-  assert.match(html, /Известный правитель и занятый министр/);
-  assert.match(html, /الدَّرْسُ الخَامِسُ عَشَرَ/);
-  assert.match(html, /48 заданий/);
+  assert.match(html, /Он большой\. Мы высокие\./);
+  assert.match(html, /Текущий урок/);
+  assert.match(html, /Следующий урок/);
+  assert.equal([...html.matchAll(/class="lesson-card(?:\s[^"]*)?"/g)].length, 2);
+  assert.match(html, /Показать все уроки/);
+  assert(html.indexOf('class="home-extras"') > html.indexOf('id="course-lessons"'));
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 

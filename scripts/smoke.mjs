@@ -365,7 +365,11 @@ try {
   await openCourseParts();
   assert.ok(!(await tafsirTab.innerText()).includes("🔒"), "тафсир не открылся по Арбаину");
   await tafsirTab.click();
+  assert.deepEqual(await page.locator(".lesson-list .lesson-number").allTextContents(), ["01", "02"]);
+  await page.getByRole("button", { name: "Показать все уроки", exact: true }).click();
   assert.equal(await page.locator(".lesson-card").count(), 94);
+  await page.getByRole("button", { name: "Свернуть список", exact: true }).click();
+  assert.deepEqual(await page.locator(".lesson-list .lesson-number").allTextContents(), ["01", "02"]);
   await page.locator(".lesson-list").getByRole("button", { name: /Начать урок/ }).first().click();
   await page.getByRole("button", { name: "Показать перевод" }).click();
   assert.equal(await page.locator(".arabic-word").textContent(), part11LessonOne.words[0].arabic);
