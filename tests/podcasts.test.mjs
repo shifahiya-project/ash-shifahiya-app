@@ -404,7 +404,7 @@ test("the day's card follows the pinned episode, not the goal", async () => {
 
 test("the course home offers the podcast habit without mixing it into a lesson", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
-  assert.match(page, /className="podcast-link" href="\/podcasts\/"/);
+  assert.match(page, /<HomeShortcut label="Подкаст дня"[^>]*href="\/podcasts\/"/);
   // The daily podcast must not touch the Leitner boxes or the lesson scores.
   assert.doesNotMatch(page, /podcastStore|podcast-catalog/);
 });

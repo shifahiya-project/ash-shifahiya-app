@@ -426,27 +426,19 @@ h1 em { color: var(--green); font-weight: inherit; }
 .account-actions .text-button { margin: 0; font-size: 12px; }
 .account-panel > small { flex-basis: 100%; color: var(--green); font-size: 12px; }
 
-.backup-tools { margin: 0 0 30px; padding: 0 4px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--ink-soft); font-size: 11px; }
-.backup-tools > div { display: flex; gap: 14px; }
+.backup-tools { margin: 18px 0 0; padding: 0 4px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--ink-soft); font-size: 11px; }
+.backup-tools > div { display: flex; flex-wrap: wrap; gap: 14px; }
 .backup-tools .text-button { margin: 0; font-size: 11px; }
 .backup-tools > small { color: var(--green); }
 
-.student-progress {
-  margin: 0 0 18px;
-  padding: 26px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: rgba(255,255,255,.72);
-  box-shadow: 0 16px 45px rgba(24,60,51,.05);
-}
 .progress-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 18px; }
-.progress-heading .eyebrow { display: block; margin-bottom: 4px; }
-.progress-heading h2 { margin: 0; font: 500 27px Georgia, serif; }
+.progress-heading h2 { margin: 0; font: 500 21px Georgia, serif; }
 .progress-heading > small { color: var(--ink-soft); }
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--line); }
 .stats-grid div { min-height: 92px; padding: 17px 14px; background: rgba(255,255,255,.9); display: flex; flex-direction: column; justify-content: center; }
 .stats-grid strong { color: var(--green); font: 500 24px Georgia, serif; }
 .stats-grid span { margin-top: 5px; color: var(--ink-soft); font-size: 10px; line-height: 1.35; }
+.home-view > h1 { margin-bottom: 28px; }
 .home-extras { display: grid; gap: 12px; margin-top: 28px; }
 .home-disclosure { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.72); }
 .home-disclosure-toggle {
@@ -461,10 +453,15 @@ h1 em { color: var(--green); font-weight: inherit; }
   background: transparent;
   color: var(--ink);
   text-align: left;
+  text-decoration: none;
+  font: inherit;
   cursor: pointer;
 }
 .home-disclosure-toggle:hover, .home-disclosure-toggle[aria-expanded="true"] { background: var(--mint); }
 .home-disclosure-toggle:focus-visible { outline: 3px solid var(--green); outline-offset: -3px; }
+.home-disclosure-toggle > span:first-child { min-width: 0; }
+.home-shortcut-indicator { display: inline-flex; flex: none; align-items: center; gap: 12px; }
+.home-disclosure .topic-badge { padding: 5px 10px; border-radius: 99px; background: var(--mint); color: var(--green); font-size: 11px; font-weight: 700; }
 .home-disclosure-toggle strong, .home-disclosure-toggle small { display: block; }
 .home-disclosure-toggle strong { font-size: 16px; font-weight: 600; }
 .home-disclosure-toggle small { margin-top: 4px; color: var(--ink-soft); font-size: 12px; }
@@ -1203,30 +1200,6 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
 }
 .window-chips button.is-active { border-color: var(--green); background: var(--mint); color: var(--green); font-weight: 600; }
 
-/* The course home card that leads here. */
-.podcast-link {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  margin-bottom: 22px;
-  padding: 16px 18px;
-  border: 1px solid rgba(197,154,85,.42);
-  border-radius: 16px;
-  background: rgba(255,255,255,.82);
-  color: inherit;
-  text-align: left;
-  text-decoration: none;
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-.podcast-link:hover { transform: translateY(-1px); box-shadow: 0 14px 32px rgba(24,60,51,.09); }
-.podcast-link .daily-icon { flex: none; background: var(--gold); }
-.podcast-link div { flex: 1; min-width: 0; }
-.podcast-link strong, .podcast-link small { display: block; }
-.podcast-link strong { font: 500 17px Georgia, serif; }
-.podcast-link small { margin-top: 3px; color: var(--ink-soft); font-size: 12px; }
-.podcast-link span:last-child { color: var(--green); font-size: 18px; }
-
 @media (max-width: 720px) {
   .stats-grid.podcast-stats { grid-template-columns: repeat(2, 1fr); }
   .podcast-actions { flex-direction: column; align-items: stretch; }
@@ -1255,38 +1228,6 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
 .note-saved { color: var(--green); font-size: 12px; font-weight: 600; }
 
 /* ——— Темы наизусть ——— */
-
-.topic-link {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  margin-bottom: 22px;
-  padding: 16px 18px;
-  border: 1px solid rgba(47,98,196,.3);
-  border-radius: 16px;
-  background: rgba(255,255,255,.82);
-  color: inherit;
-  text-align: left;
-  text-decoration: none;
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-.topic-link:hover { transform: translateY(-1px); box-shadow: 0 14px 32px rgba(24,60,51,.09); }
-.topic-link .daily-icon { flex: none; background: var(--blue); }
-.topic-link div { flex: 1; min-width: 0; }
-.topic-link strong, .topic-link small { display: block; }
-.topic-link strong { font: 500 17px Georgia, serif; }
-.topic-link small { margin-top: 3px; color: var(--ink-soft); font-size: 12px; }
-.topic-link > span:last-child { color: var(--green); font-size: 18px; }
-.topic-link .topic-badge {
-  flex: none;
-  padding: 5px 10px;
-  border-radius: 99px;
-  background: var(--blue-soft);
-  color: var(--blue);
-  font-size: 11px;
-  font-weight: 700;
-}
 
 .topic-view .back { display: inline-block; margin: 0 0 18px; }
 .topic-view h1 { margin: 0 0 12px; font: 500 clamp(30px, 5vw, 42px)/1.15 Georgia, serif; }
