@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type Ref } from "react";
 import { lessonSummaries } from "../content/manifest";
 import listeningCatalog from "../public/text-and-audio/catalog.json";
 import { READING_SOURCE, readingByLesson } from "../content/reading-manifest";
@@ -54,6 +54,7 @@ import type {
   TextCourseWord,
 } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
+import { homeLessonWindow } from "./home-lesson-window";
 import { normalizeListeningProgress } from "./listening-progress";
 import { nextPopulatedDeck } from "./lesson-navigation";
 import {
@@ -479,9 +480,24 @@ function shuffle<T>(items: T[]) {
   return result;
 }
 
-function currentLessonFirst<T extends { id: number }>(items: T[], id?: number) {
-  const current = items.find((item) => item.id === id);
-  return current ? [current, ...items.filter((item) => item.id !== id)] : items;
+function HomeDisclosure({ label, detail, open, controls, onToggle, buttonRef, children }: {
+  label: string;
+  detail: string;
+  open: boolean;
+  controls: string;
+  onToggle: () => void;
+  buttonRef?: Ref<HTMLButtonElement>;
+  children: ReactNode;
+}) {
+  return (
+    <section className="home-disclosure">
+      <button ref={buttonRef} className="home-disclosure-toggle" aria-label={`${open ? "Скрыть" : "Показать"} ${label.toLowerCase()}`} aria-expanded={open} aria-controls={controls} onClick={onToggle}>
+        <span><strong>{label}</strong><small>{detail}</small></span>
+        <span className="disclosure-mark" aria-hidden="true">{open ? "−" : "+"}</span>
+      </button>
+      <div id={controls} className="home-disclosure-content" hidden={!open}>{children}</div>
+    </section>
+  );
 }
 
 const COURSE_NAMES = {
@@ -541,6 +557,7 @@ export default function Home() {
   const [course, setCourse] = useState<1 | 2 | TextCourseId>(1);
   const [showCourseParts, setShowCourseParts] = useState(false);
   const coursePartsToggle = useRef<HTMLButtonElement>(null);
+  const courseHeading = useRef<HTMLElement>(null);
   const [expandedCourse, setExpandedCourse] = useState<1 | 2 | TextCourseId | null>(null);
   const [showAchievements, setShowAchievements] = useState(false);
   const showAllLessons = expandedCourse === course;
@@ -548,7 +565,10 @@ export default function Home() {
     setCourse(id);
     setExpandedCourse(null);
     setShowCourseParts(false);
-    coursePartsToggle.current?.focus();
+    window.requestAnimationFrame(() => {
+      courseHeading.current?.focus({ preventScroll: true });
+      courseHeading.current?.scrollIntoView({ block: "start" });
+    });
   }
   const [part2, setPart2] = useState<Part2Lesson | null>(null);
   /** Which text course is on screen, and the lesson of it that is open. */
@@ -878,14 +898,22 @@ export default function Home() {
   const completedLessonCount = course === 1
     ? firstCourseCompletedCount
     : selectedSummaries.filter((item) => readingScores[item.id] !== undefined).length;
-  // Keep all first-course anchors so unfinished exams survive hidden lessons.
-  const firstCourseSummaries = showAllLessons ? lessonSummaries : currentLessonFirst(lessonSummaries, recommendedLesson?.id);
+  const firstCourseSummaries = showAllLessons ? lessonSummaries
+    : homeLessonWindow(lessonSummaries, (item) => isCourseLessonComplete(item, stored), recommendedLesson?.id);
   const visiblePart2Summaries = showAllLessons ? part2Summaries
-    : currentLessonFirst(part2Summaries.filter((item) => part2Scores[item.id] === undefined), homeLesson?.id);
+    : homeLessonWindow(part2Summaries, (item) => part2Scores[item.id] !== undefined, homeLesson?.id);
   const visibleTextSummaries = isTextCourse(course)
     ? showAllLessons ? TEXT_COURSES[course].summaries
-      : currentLessonFirst(TEXT_COURSES[course].summaries.filter((item) => textCourseProgress[course].scores[item.id] === undefined), homeLesson?.id)
+      : homeLessonWindow(TEXT_COURSES[course].summaries, (item) => textCourseProgress[course].scores[item.id] !== undefined, homeLesson?.id)
     : [];
+  const focusedCurrentId = homeLesson?.id ?? (course === 1
+    ? lessonSummaries.find((item) => !isCourseLessonComplete(item, stored))
+    : selectedSummaries.find((item) => readingScores[item.id] === undefined))?.id;
+  const focusedNextId = focusedCurrentId === undefined ? undefined
+    : selectedSummaries[selectedSummaries.findIndex((item) => item.id === focusedCurrentId) + 1]?.id;
+  function lessonWindowLabel(id: number) {
+    return id === focusedCurrentId ? "Текущий урок" : id === focusedNextId ? "Следующий урок" : "Последний пройденный";
+  }
 
   function continueHomeLesson() {
     if (!homeLesson) return;
@@ -2043,23 +2071,6 @@ export default function Home() {
               <div><strong>{learningStats.masteredPhrases.length}</strong><span>фраз освоено</span></div>
               <div><strong>{studyStreaks.longest}</strong><span>рекорд без перерыва</span></div>
             </div>
-            <div className="achievements">
-              <div className="achievements-title">
-                <button className="text-button" aria-expanded={showAchievements} aria-controls="achievement-list" onClick={() => setShowAchievements(!showAchievements)}>
-                  {showAchievements ? "Скрыть достижения" : "Показать достижения"}
-                </button>
-                <span>{achievements.filter((item) => item.unlocked).length}/{achievements.length} открыто</span>
-              </div>
-              <div className="achievement-list" id="achievement-list" hidden={!showAchievements}>
-                {achievements.map((item) => (
-                  <div className={`achievement ${item.unlocked ? "unlocked" : ""}`} key={item.id} title={`${Math.round(item.progress * 100)}%`}>
-                    <span>{item.unlocked ? "✓" : "◇"}</span>
-                    <strong>{item.label}</strong>
-                    <i><b style={{ width: `${item.progress * 100}%` }} /></i>
-                  </div>
-                ))}
-              </div>
-            </div>
           </section>
 
           <div className="backup-tools">
@@ -2073,119 +2084,16 @@ export default function Home() {
             {(backupMessage || sync.message) && <small>{backupMessage || sync.message}</small>}
           </div>
 
-          <div className="course-picker">
-            <span className="selected-course">Часть {course} · {COURSE_NAMES[course]}</span>
-            <button
-              ref={coursePartsToggle}
-              className="secondary"
-              aria-expanded={showCourseParts}
-              aria-controls="course-parts"
-              onClick={() => setShowCourseParts((value) => !value)}
-            >
-              {showCourseParts ? "Скрыть части курса" : "Показать части курса"}
-            </button>
-          </div>
-          <div id="course-parts" className="course-switch" role="tablist" aria-label="Части курса" hidden={!showCourseParts}>
-            <button
-              role="tab"
-              aria-selected={course === 1}
-              className={course === 1 ? "is-active" : ""}
-              onClick={() => chooseCourse(1)}
-            >
-              1 · Шифахия
-            </button>
-            <button
-              role="tab"
-              aria-selected={course === 2}
-              className={course === 2 ? "is-active" : ""}
-              onClick={() => chooseCourse(2)}
-            >
-              2 · Чтение {part2Ready ? "" : "🔒"}
-            </button>
-            <button
-              role="tab"
-              aria-selected={course === 3}
-              className={course === 3 ? "is-active" : ""}
-              onClick={() => chooseCourse(3)}
-            >
-              3 · Акыда {part3Ready ? "" : "🔒"}
-            </button>
-            <button
-              role="tab"
-              aria-selected={course === 4}
-              className={course === 4 ? "is-active" : ""}
-              onClick={() => chooseCourse(4)}
-            >
-              4 · Фикх {part4Ready ? "" : "🔒"}
-            </button>
-            <button
-              role="tab"
-              aria-selected={course === 5}
-              className={course === 5 ? "is-active" : ""}
-              onClick={() => chooseCourse(5)}
-            >
-              5 · Грамматика {part5Ready ? "" : "🔒"}
-            </button>
-            <button
-              role="tab"
-              aria-selected={course === 6}
-              className={course === 6 ? "is-active" : ""}
-              onClick={() => chooseCourse(6)}
-            >
-              6 · Балага {part6Ready ? "" : "🔒"}
-            </button>
-            <button
-              role="tab"
-              aria-selected={course === 7}
-              className={course === 7 ? "is-active" : ""}
-              onClick={() => chooseCourse(7)}
-            >
-              7 · Логика {part7Ready ? "" : "🔒"}
-            </button>
-            <button
-              role="tab"
-              aria-selected={course === 8}
-              className={course === 8 ? "is-active" : ""}
-              onClick={() => chooseCourse(8)}
-            >
-              8 · Хадис {part8Ready ? "" : "🔒"}
-            </button>
-            <button
-              role="tab"
-              aria-selected={course === 9}
-              className={course === 9 ? "is-active" : ""}
-              onClick={() => chooseCourse(9)}
-            >
-              9 · Усуль {part9Ready ? "" : "🔒"}
-            </button>
-            <button
-              role="tab"
-              aria-selected={course === 10}
-              className={course === 10 ? "is-active" : ""}
-              onClick={() => chooseCourse(10)}
-            >
-              10 · Арбаин {part10Ready ? "" : "🔒"}
-            </button>
-            <button
-              role="tab"
-              aria-selected={course === 11}
-              className={course === 11 ? "is-active" : ""}
-              onClick={() => chooseCourse(11)}
-            >
-              11 · Тафсир {part11Ready ? "" : "🔒"}
-            </button>
-          </div>
-
           <div className="lesson-list-toolbar">
-            <span>{showAllLessons ? "Все уроки" : "Продолжить курс"} · {completedLessonCount}/{selectedSummaries.length} пройдено</span>
-            {completedLessonCount > 0 && (
+            <span><strong ref={courseHeading} tabIndex={-1} className="selected-course">Часть {course} · {COURSE_NAMES[course]}</strong><small>{showAllLessons ? "Все уроки" : "Ваши ближайшие уроки"} · {completedLessonCount}/{selectedSummaries.length} пройдено</small></span>
+            {(showAllLessons || selectedSummaries.length > (course === 1 ? firstCourseSummaries.length : course === 2 ? visiblePart2Summaries.length : visibleTextSummaries.length)) && (
               <button className="secondary" aria-expanded={showAllLessons} aria-controls="course-lessons" onClick={() => setExpandedCourse(showAllLessons ? null : course)}>
-                {showAllLessons ? "Скрыть пройденные" : "Показать все уроки"}
+                {showAllLessons ? "Свернуть список" : "Показать все уроки"}
               </button>
             )}
           </div>
           {!showAllLessons && completedLessonCount === selectedSummaries.length && (
-            <p className="course-complete" role="status">Все уроки этой части пройдены. Откройте полный список, чтобы вернуться к ним.</p>
+            <p className="course-complete" role="status">Все уроки этой части пройдены. Можно повторить последний урок или открыть полный список.</p>
           )}
           <div id="course-lessons">
           {course === 2 && (
@@ -2212,6 +2120,7 @@ export default function Home() {
                   <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`p2-${item.id}`}>
                     <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
                     <div className="lesson-copy">
+                      {!showAllLessons && <div className="lesson-window-label">{lessonWindowLabel(item.id)}</div>}
                       {/* The book stands over the whole run of its lessons, so the card names only its own place. */}
                       <div className="lesson-label">Часть 2 · урок {item.id}</div>
                       <h2>{item.title}</h2>
@@ -2289,6 +2198,7 @@ export default function Home() {
                   <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`${key}-${item.id}`}>
                     <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
                     <div className="lesson-copy">
+                      {!showAllLessons && <div className="lesson-window-label">{lessonWindowLabel(item.id)}</div>}
                       <div className="lesson-label">
                         {/* The finer division of the book turns over too often
                             to head a run of the list, so it is named here. */}
@@ -2361,7 +2271,7 @@ export default function Home() {
 
           {course === 1 && (
           <div className="lesson-list">
-            {firstCourseSummaries.flatMap((item) => {
+            {firstCourseSummaries.map((item) => {
               const saved = savedScores[item.id];
               const unfinished = savedSessions[item.id];
               const coreCompleted = isLessonComplete(item, stored);
@@ -2373,10 +2283,11 @@ export default function Home() {
               const grammarLeft = saved !== undefined && !coreCompleted;
               const locked = !unlockedLessons.has(item.id);
               const opensAfter = lessonSummaries[lessonSummaries.findIndex((summary) => summary.id === item.id) - 1];
-              const card = !showAllLessons && completed ? null : (
+              const card = (
                 <div className={`lesson-card ${completed ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={item.id}>
                   <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
                   <div className="lesson-copy">
+                    {!showAllLessons && <div className="lesson-window-label">{lessonWindowLabel(item.id)}</div>}
                     <div className="lesson-label">Урок {item.id} · <span dir="rtl">{item.arabicTitle}</span></div>
                     <h2>{item.title}</h2>
                     <p>{item.description}{visiblePartCount(item) > 1 ? ` · в ${visiblePartCount(item)} части` : ""}</p>
@@ -2449,8 +2360,9 @@ export default function Home() {
                 </div>
               );
 
-              const declared = examSummaries.find((summary) => summary.afterLesson === item.id);
-              if (!declared) return [card];
+              return card;
+            })}
+            {examSummaries.map((declared) => {
               // While grammar is hidden the paper is shorter, and its pass mark
               // moves with it.
               const paper = visibleExamSummary(declared);
@@ -2458,13 +2370,12 @@ export default function Home() {
               const ready = examReadiness(paper, lessonSummaries, stored);
               const result = savedExams[paper.id];
               const passed = isExamPassed(paper, result?.best);
-              if (!showAllLessons && passed) return [card];
+              if (!showAllLessons && (passed || !ready.open)) return null;
               // A paper parked before grammar was hidden no longer fits the
               // shorter one, so the card must not promise to continue it.
               const written = examSession?.examId === paper.id ? examSession : null;
               const parked = written && written.order.length === paper.questionCount ? written : null;
-              return [
-                card,
+              return (
                 <div
                   className={`lesson-card exam-card ${passed ? "is-done" : ""} ${ready.open ? "" : "is-locked"}`}
                   key={`exam-${paper.id}`}
@@ -2498,8 +2409,8 @@ export default function Home() {
                   {!ready.open && (
                     <div className="card-lock">Пройдено {ready.done} из {ready.total} уроков</div>
                   )}
-                </div>,
-              ];
+                </div>
+              );
             })}
           </div>
 
@@ -2510,6 +2421,112 @@ export default function Home() {
           <div className="principle">
             <span className="quote">“</span>
             <p>Увидели слово. Вспомнили его ещё раз. Затем использовали в предложении.</p>
+          </div>
+
+          <div className="home-extras" aria-label="Дополнительно">
+            <HomeDisclosure label="Достижения" detail={`${achievements.filter((item) => item.unlocked).length} из ${achievements.length} открыто`} open={showAchievements} controls="achievement-list" onToggle={() => setShowAchievements((value) => !value)}>
+              <div className="achievement-list">
+                {achievements.map((item) => (
+                  <div className={`achievement ${item.unlocked ? "unlocked" : ""}`} key={item.id} title={`${Math.round(item.progress * 100)}%`}>
+                    <span>{item.unlocked ? "✓" : "◇"}</span>
+                    <strong>{item.label}</strong>
+                    <i><b style={{ width: `${item.progress * 100}%` }} /></i>
+                  </div>
+                ))}
+              </div>
+            </HomeDisclosure>
+            <HomeDisclosure label="Части курса" detail={`Часть ${course} · ${COURSE_NAMES[course]}`} open={showCourseParts} controls="course-parts" onToggle={() => setShowCourseParts((value) => !value)} buttonRef={coursePartsToggle}>
+              <div className="course-switch" role="tablist" aria-label="Части курса">
+                <button
+                  role="tab"
+                  aria-selected={course === 1}
+                  className={course === 1 ? "is-active" : ""}
+                  onClick={() => chooseCourse(1)}
+                >
+                  1 · Шифахия
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 2}
+                  className={course === 2 ? "is-active" : ""}
+                  onClick={() => chooseCourse(2)}
+                >
+                  2 · Чтение {part2Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 3}
+                  className={course === 3 ? "is-active" : ""}
+                  onClick={() => chooseCourse(3)}
+                >
+                  3 · Акыда {part3Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 4}
+                  className={course === 4 ? "is-active" : ""}
+                  onClick={() => chooseCourse(4)}
+                >
+                  4 · Фикх {part4Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 5}
+                  className={course === 5 ? "is-active" : ""}
+                  onClick={() => chooseCourse(5)}
+                >
+                  5 · Грамматика {part5Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 6}
+                  className={course === 6 ? "is-active" : ""}
+                  onClick={() => chooseCourse(6)}
+                >
+                  6 · Балага {part6Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 7}
+                  className={course === 7 ? "is-active" : ""}
+                  onClick={() => chooseCourse(7)}
+                >
+                  7 · Логика {part7Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 8}
+                  className={course === 8 ? "is-active" : ""}
+                  onClick={() => chooseCourse(8)}
+                >
+                  8 · Хадис {part8Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 9}
+                  className={course === 9 ? "is-active" : ""}
+                  onClick={() => chooseCourse(9)}
+                >
+                  9 · Усуль {part9Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 10}
+                  className={course === 10 ? "is-active" : ""}
+                  onClick={() => chooseCourse(10)}
+                >
+                  10 · Арбаин {part10Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 11}
+                  className={course === 11 ? "is-active" : ""}
+                  onClick={() => chooseCourse(11)}
+                >
+                  11 · Тафсир {part11Ready ? "" : "🔒"}
+                </button>
+              </div>
+            </HomeDisclosure>
           </div>
         </section>
       )}

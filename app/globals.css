@@ -447,11 +447,30 @@ h1 em { color: var(--green); font-weight: inherit; }
 .stats-grid div { min-height: 92px; padding: 17px 14px; background: rgba(255,255,255,.9); display: flex; flex-direction: column; justify-content: center; }
 .stats-grid strong { color: var(--green); font: 500 24px Georgia, serif; }
 .stats-grid span { margin-top: 5px; color: var(--ink-soft); font-size: 10px; line-height: 1.35; }
-.achievements { margin-top: 22px; }
-.achievements-title { display: flex; justify-content: space-between; margin-bottom: 11px; }
-.achievements-title strong { font: 500 17px Georgia, serif; }
-.achievements-title span { color: var(--ink-soft); font-size: 11px; }
-.achievement-list[hidden] { display: none; }
+.home-extras { display: grid; gap: 12px; margin-top: 28px; }
+.home-disclosure { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.72); }
+.home-disclosure-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 72px;
+  padding: 16px 18px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.home-disclosure-toggle:hover, .home-disclosure-toggle[aria-expanded="true"] { background: var(--mint); }
+.home-disclosure-toggle:focus-visible { outline: 3px solid var(--green); outline-offset: -3px; }
+.home-disclosure-toggle strong, .home-disclosure-toggle small { display: block; }
+.home-disclosure-toggle strong { font-size: 16px; font-weight: 600; }
+.home-disclosure-toggle small { margin-top: 4px; color: var(--ink-soft); font-size: 12px; }
+.disclosure-mark { flex: 0 0 auto; color: var(--green); font-size: 24px; line-height: 1; }
+.home-disclosure-content { padding: 16px 18px; }
+.home-disclosure-content[hidden] { display: none; }
 .lesson-list-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -463,6 +482,9 @@ h1 em { color: var(--green); font-weight: inherit; }
   font-size: 13px;
 }
 .lesson-list-toolbar button { min-height: 44px; font-size: 13px; }
+.lesson-list-toolbar strong, .lesson-list-toolbar small { display: block; }
+.lesson-list-toolbar small { margin-top: 5px; }
+.lesson-window-label { margin-bottom: 7px; color: var(--green); font-size: 11px; font-weight: 700; }
 .course-complete { margin: 20px 0; color: var(--ink-soft); line-height: 1.6; }
 .achievement-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .achievement { padding: 11px; border: 1px solid var(--line); border-radius: 11px; color: #9a988f; background: rgba(249,247,241,.8); }
@@ -514,26 +536,12 @@ h1 em { color: var(--green); font-weight: inherit; }
    broken. Three columns, counted rather than fitted — the longest label
    («5 · Грамматика») wants about 112px, and auto-fit with that minimum drops a
    360px screen to two columns, which is one row more rather than less. */
-.course-picker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 18px;
-}
 .selected-course { color: var(--ink-soft); font-size: 13px; }
-.course-picker button { min-height: 44px; }
-.course-switch[hidden] { display: none; }
+.selected-course:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; }
 .course-switch {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  margin-bottom: 18px;
-  padding: 5px;
-  background: rgba(255,255,255,.6);
-  border: 1px solid var(--line);
-  border-radius: 22px;
+  gap: 8px;
 }
 
 .course-switch button {
@@ -957,6 +965,7 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .lesson-copy h2 { font-size: 21px; }
   .lesson-card .primary, .lesson-card .locked, .lesson-card .repeat, .lesson-actions { grid-column: 1 / -1; width: 100%; }
   .lesson-actions { grid-template-columns: 1fr 1fr; }
+  .lesson-card .lesson-actions > button, .lesson-card .lesson-actions > a { grid-column: auto; min-height: 44px; padding: 12px 8px; font-size: 13px; white-space: normal; }
   .card-lock { top: 10px; right: 10px; }
   /* Three across is too tight on a phone: the rating pair keeps the row and
      the retire button takes the one below it. */
@@ -1002,6 +1011,10 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .brand small { display: none; }
   .study-actions, .study-actions.three { grid-template-columns: 1fr; }
   .result-grid div { padding: 18px 6px; }
+}
+
+@media (max-width: 360px) {
+  .lesson-window-label { margin-top: 16px; }
 }
 
 /* ── Podcasts: the habit of watching one episode a day ────────────────── */
