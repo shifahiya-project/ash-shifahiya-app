@@ -1,5 +1,17 @@
 [
   {
+    "lessonId": 87,
+    "duration": 511.944,
+    "audioSrc": "./audio/shifahiya-1/lesson-87.mp3",
+    "textSrc": "./text/shifahiya-1/lesson-87.json"
+  },
+  {
+    "lessonId": 88,
+    "duration": 497.568,
+    "audioSrc": "./audio/shifahiya-1/lesson-88.mp3",
+    "textSrc": "./text/shifahiya-1/lesson-88.json"
+  },
+  {
     "lessonId": 91,
     "duration": 444.408,
     "audioSrc": "./audio/shifahiya-1/lesson-91.mp3",
