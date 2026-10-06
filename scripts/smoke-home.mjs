@@ -182,7 +182,7 @@ try {
   assert.equal(await page.locator(".selected-course").innerText(), "Часть 1 · Шифахия");
   assert.equal(await page.locator(".home-extras .home-disclosure").count(), 5);
   assert.equal(await page.locator(".home-extras .home-disclosure-toggle").count(), 5);
-  assert.deepEqual(await page.locator(".home-extras .home-disclosure-toggle strong").allTextContents(), ["Подкаст дня", "Темы наизусть", "Личный прогресс", "Достижения", "Части курса"]);
+  assert.deepEqual(await page.locator(".home-extras .home-disclosure-toggle strong").allTextContents(), ["Личный прогресс", "Достижения", "Подкаст дня", "Темы наизусть", "Части курса"]);
   assert.equal(await page.locator("#personal-progress").isVisible(), false);
   for (const [name, href] of [[/^Подкаст дня/, "./podcasts/"], [/^Темы наизусть/, "./topics/"]]) {
     assert.equal(await page.locator(".home-extras").getByRole("link", { name }).getAttribute("href"), href);

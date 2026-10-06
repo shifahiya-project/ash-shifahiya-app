@@ -2386,8 +2386,6 @@ export default function Home() {
           </div>
 
           <div className="home-extras" aria-label="Дополнительно">
-            <HomeShortcut label="Подкаст дня" detail="Один выпуск на арабском в день — своя серия и свой календарь" href="/podcasts/" />
-            <HomeShortcut label="Темы наизусть" detail="Разбор темы по вашей книге: припоминание, расчёты и расписание" href="/topics/" badge={topicsDue} />
             <HomeDisclosure label="Личный прогресс" detail={`${firstCourseCompletedCount} из ${lessonSummaries.length} уроков завершено · ${formatStudyTime(learningStats.totalSeconds)} в учёбе`} open={showPersonalProgress} controls="personal-progress" onToggle={() => setShowPersonalProgress((value) => !value)}>
               <div className="progress-heading">
                 <h2 id="student-progress-title">Ваш путь в цифрах</h2>
@@ -2424,6 +2422,8 @@ export default function Home() {
                 ))}
               </div>
             </HomeDisclosure>
+            <HomeShortcut label="Подкаст дня" detail="Один выпуск на арабском в день — своя серия и свой календарь" href="/podcasts/" />
+            <HomeShortcut label="Темы наизусть" detail="Разбор темы по вашей книге: припоминание, расчёты и расписание" href="/topics/" badge={topicsDue} />
             <HomeDisclosure label="Части курса" detail={`Часть ${course} · ${COURSE_NAMES[course]}`} open={showCourseParts} controls="course-parts" onToggle={() => setShowCourseParts((value) => !value)} buttonRef={coursePartsToggle}>
               <div className="course-switch" role="tablist" aria-label="Части курса">
                 <button
