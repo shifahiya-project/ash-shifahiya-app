@@ -21,7 +21,11 @@ audio { display:block; width:100%; height:44px; margin:12px 0; }
 #listening-transcript h2 { margin:0 0 20px; font-size:1em; font-family:inherit; }
 #listening-transcript p { margin:0; padding:12px 0; border-bottom:1px solid var(--line); white-space:pre-wrap; }
 #listening-transcript p:last-child { border:0; }
+#listening-transcript p.starts-paragraph { margin-top:16px; }
 #hidden-note { margin:40px 0; color:var(--soft); text-align:center; line-height:1.7; }
+.listening-completion { margin-top:24px; }
+.listening-completion p { color:var(--soft); font-size:.875rem; line-height:1.5; }
+#complete { border-color:var(--green); }
 footer { margin-top:24px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
 #download-status { width:100%; }
 #audio-error { color:#b94c43; }

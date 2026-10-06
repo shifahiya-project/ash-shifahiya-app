@@ -10,6 +10,10 @@ import { part9Summaries } from "../content/part9/manifest.ts";
 import { part10Summaries } from "../content/part10/manifest.ts";
 import { part11Summaries } from "../content/part11/manifest.ts";
 import { GRAMMAR_ENABLED } from "./features.ts";
+import { LISTENING_PROGRESS_KEY, normalizeListeningProgress, type ListeningProgress } from "./listening-progress.ts";
+
+export { LISTENING_PROGRESS_KEY } from "./listening-progress.ts";
+export type { ListeningProgress } from "./listening-progress.ts";
 
 export type SavedSession = {
   view: "learn" | "practice" | "grammar";
@@ -116,6 +120,8 @@ export type Progress = {
   cards: Record<string, CardProgress>;
   /** Keyed by the lesson the text is offered from. */
   readings: Record<number, ReadingProgress>;
+  /** Completion of the independently offered text and recording. */
+  listening: Record<number, ListeningProgress>;
   exams: Record<string, ExamResult>;
   examSession: ExamSession | null;
   /** The second course keeps its own results; the review cards are shared. */
@@ -186,6 +192,7 @@ const EMPTY: Progress = {
   sessions: {},
   cards: {},
   readings: {},
+  listening: {},
   exams: {},
   examSession: null,
   part2Scores: {},
@@ -361,6 +368,7 @@ function readProgress(): Progress {
     sessions,
     cards: read<Record<string, CardProgress>>(CARD_PROGRESS_KEY, {}),
     readings: read<Record<number, ReadingProgress>>(READING_PROGRESS_KEY, {}),
+    listening: normalizeListeningProgress(read<unknown>(LISTENING_PROGRESS_KEY, {})),
     exams: read<Record<string, ExamResult>>(EXAM_RESULTS_KEY, {}),
     part2Scores,
     part2Sessions,
@@ -392,10 +400,28 @@ function publish() {
   for (const listener of listeners) listener();
 }
 
+function refreshExternalListening(event: StorageEvent) {
+  if (event.key === null || event.key === LISTENING_PROGRESS_KEY) publish();
+}
+
+function refreshRestoredPage(event: PageTransitionEvent) {
+  if (event.persisted) publish();
+}
+
 export const progressStore = {
   subscribe(listener: () => void) {
+    if (listeners.size === 0) {
+      window.addEventListener("storage", refreshExternalListening);
+      window.addEventListener("pageshow", refreshRestoredPage);
+    }
     listeners.add(listener);
-    return () => listeners.delete(listener);
+    return () => {
+      listeners.delete(listener);
+      if (listeners.size === 0) {
+        window.removeEventListener("storage", refreshExternalListening);
+        window.removeEventListener("pageshow", refreshRestoredPage);
+      }
+    };
   },
 
   /** Must keep returning the same object until something actually changes. */
@@ -645,6 +671,7 @@ export const progressStore = {
     }
     window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(progress.cards));
     window.localStorage.setItem(READING_PROGRESS_KEY, JSON.stringify(progress.readings ?? {}));
+    window.localStorage.setItem(LISTENING_PROGRESS_KEY, JSON.stringify(normalizeListeningProgress(progress.listening)));
     window.localStorage.setItem(EXAM_RESULTS_KEY, JSON.stringify(progress.exams ?? {}));
     // The unfinished paper travels with the rest. A hundred and fifty answers
     // are exactly what the key exists to save, and leaving it out meant the

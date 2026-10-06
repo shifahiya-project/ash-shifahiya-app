@@ -21,7 +21,7 @@ const server = createServer(async (req, res) => {
     assert(path.startsWith(base));
     const file = resolve(root, path.slice(base.length) || 'index.html');
     assert(file.startsWith(root + '/'));
-    const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
+    const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.mp3': 'audio/mpeg', '.svg': 'image/svg+xml' };
     res.setHeader('content-type', mime[extname(file)] ?? 'application/octet-stream');
     res.end(await readFile(file));
   } catch {
@@ -57,6 +57,8 @@ try {
   }
   for (const id of [87, 88]) {
     await page.goto(`${origin}${base}${pilot}?lesson=${id}`);
+    assert.equal(await page.getByRole('link', { name: '← К курсу' }).getAttribute('href'), './');
+    assert(await page.getByRole('link', { name: 'Скачать для занятий без интернета' }).getAttribute('download') !== null);
     await page.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
     const audio = page.locator('audio');
     assert(await audio.evaluate(a => a.duration > 400 && !a.error));
@@ -106,17 +108,17 @@ try {
     localStorage.setItem('shifahiya-lesson-88', '1');
   });
   await page.reload();
-  await page.getByRole('button', { name: 'Показать все уроки', exact: true }).click();
   const links = page.getByRole('link', { name: 'Текст и аудио', exact: true });
   await links.first().waitFor();
   assert.equal(await links.count(), 2);
   for (let index = 0; index < 2; index++) {
-    assert.equal(await links.nth(index).getAttribute('href'), `./${pilot}?lesson=${87 + index}`);
+    assert.equal(await links.nth(index).getAttribute('href'), `./text-and-audio.html?lesson=${87 + index}`);
   }
   await links.nth(1).click();
   await page.getByText('Первая часть · Урок 88', { exact: true }).waitFor();
   assert.equal(await page.getByRole('link', { name: '← К курсу' }).getAttribute('href'), './');
-  assert(await page.getByRole('link', { name: 'Скачать для занятий без интернета' }).getAttribute('download') !== null);
+  assert(await page.getByRole('button', { name: 'Скачать урок для занятий без интернета', exact: true }).isVisible());
+  assert.equal(await page.getByLabel('Выбрать урок').locator('option').count(), 10);
   await page.screenshot({ path: '/tmp/ash-listening-mobile.png' });
   assert.deepEqual(errors, []);
   console.log('Static subdirectory links, lesson gates and mobile layout verified');

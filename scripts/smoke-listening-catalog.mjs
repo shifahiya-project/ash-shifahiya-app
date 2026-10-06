@@ -10,6 +10,9 @@ const base = '/ash-shifahiya-app/';
 const catalog = JSON.parse(await readFile(resolve(root, 'text-and-audio/catalog.json'), 'utf8'));
 assert(catalog.length > 0);
 assert.equal(new Set(catalog.map(entry => entry.lessonId)).size, catalog.length);
+assert.deepEqual(catalog.map(entry => entry.lessonId), [...catalog.map(entry => entry.lessonId)].sort((a, b) => a - b));
+assert(catalog.some(entry => entry.lessonId === 87) && catalog.some(entry => entry.lessonId === 88), 'The original pilot lessons must join the shared catalog');
+const listeningKey = 'shifahiya-listening-progress-v1';
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
@@ -46,9 +49,19 @@ try {
   page.on('response', response => { if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`); });
   page.on('request', req => requests.push(req.url()));
   const offline = await browser.newContext({ viewport: { width: 390, height: 844 }, offline: true });
+  await page.goto(origin + base);
+  await page.evaluate((key) => {
+    localStorage.clear();
+    localStorage.setItem(key, JSON.stringify({ 150: { completed: true, updatedAt: 1 } }));
+  }, listeningKey);
   for (const entry of catalog) {
     const transcript = JSON.parse(await readFile(resolve(root, entry.textSrc), 'utf8'));
     assert.equal(transcript.lessonId, entry.lessonId);
+    if (entry.lessonId === 87 || entry.lessonId === 88) {
+      await page.evaluate((id) => {
+        localStorage.setItem(`shifahiya-listening-${id}-v1`, JSON.stringify({ position: 27.5, rate: 0.9, loop: false, showText: true, vocalized: true, fontSize: 30 }));
+      }, entry.lessonId);
+    }
     requests.length = 0;
     await page.goto(`${origin}${base}text-and-audio.html?lesson=${entry.lessonId}`);
     await page.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
@@ -56,9 +69,15 @@ try {
     const paragraphs = page.locator('#listening-transcript > *');
     assert.deepEqual(await paragraphs.allTextContents(), transcript.paragraphs, 'Source Unicode must be preserved');
     assert(Math.abs(await audio.evaluate(a => a.duration) - entry.duration) < 0.2);
+    if (entry.lessonId === 87 || entry.lessonId === 88) {
+      await page.waitForFunction(() => document.querySelector('audio').currentTime === 27.5);
+      assert.equal(await audio.evaluate(a => a.playbackRate), 0.9, 'The original pilot speed should survive the shared-player migration');
+      assert.equal(await page.getByLabel('Скорость').inputValue(), '0.9');
+    }
     assert(requests.filter(url => /\.mp3/.test(url)).every(url => url.endsWith(`lesson-${entry.lessonId}.mp3`)), 'Fetched another recording');
+    const startPosition = await audio.evaluate(a => a.currentTime);
     await audio.evaluate(a => a.play());
-    await page.waitForFunction(() => document.querySelector('audio').currentTime > 0.2);
+    await page.waitForFunction(start => document.querySelector('audio').currentTime > start + 0.2, startPosition);
     await audio.evaluate(a => { a.pause(); a.currentTime = 30; });
     await page.waitForFunction(() => {
       const audio = document.querySelector('audio');
@@ -89,6 +108,25 @@ try {
     assert.equal(await audio.evaluate(a => Math.round(a.currentTime)), 30);
     assert.equal(await audio.evaluate(a => a.playbackRate), 1.25);
     assert(await audio.evaluate(a => a.loop));
+    assert.notEqual(await page.evaluate(({ key, id }) => JSON.parse(localStorage.getItem(key) ?? '{}')[id]?.completed, { key: listeningKey, id: entry.lessonId }), true, 'Playback alone must not mark text and audio as completed');
+    await page.getByRole('button', { name: 'Текст и аудио пройдены', exact: true }).click();
+    const marked = await page.evaluate(({ key, id }) => JSON.parse(localStorage.getItem(key))[id], { key: listeningKey, id: entry.lessonId });
+    assert.equal(marked.completed, true);
+    assert(Number.isFinite(marked.updatedAt) && marked.updatedAt > 0);
+    assert.deepEqual(await page.evaluate((key) => JSON.parse(localStorage.getItem(key))[150], listeningKey), { completed: true, updatedAt: 1 }, 'Marking a lesson must preserve other and future lesson records');
+    await page.reload();
+    await page.locator('#complete[aria-pressed="true"]').waitFor();
+    await page.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
+    if (entry.lessonId === 87) {
+      const otherTab = await context.newPage();
+      otherTab.on('pageerror', error => errors.push(error.message));
+      await otherTab.goto(`${origin}${base}text-and-audio.html?lesson=87`);
+      await otherTab.locator('#complete[aria-pressed="true"]').click();
+      await page.locator('#complete[aria-pressed="false"]').waitFor();
+      await page.getByRole('button', { name: 'Текст и аудио пройдены', exact: true }).click();
+      await otherTab.locator('#complete[aria-pressed="true"]').waitFor();
+      await otherTab.close();
+    }
     const downloadEvent = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Скачать урок для занятий без интернета', exact: true }).click();
     const download = await downloadEvent;
@@ -109,7 +147,7 @@ try {
     await savedPage.locator('audio').evaluate(a => a.play());
     await savedPage.waitForFunction(() => document.querySelector('audio').currentTime > 0.2);
     await savedPage.close();
-    console.log(`Lesson ${entry.lessonId}: exact text, audio, controls, resume and offline download passed`);
+    console.log(`Lesson ${entry.lessonId}: exact text, audio, controls, separate completion, resume and offline download passed`);
   }
   await page.goto(origin + base);
   assert.equal(await page.getByRole('link', { name: 'Текст и аудио', exact: true }).count(), 0);
@@ -118,10 +156,15 @@ try {
   await page.getByRole('button', { name: 'Показать все уроки', exact: true }).click();
   const links = page.getByRole('link', { name: 'Текст и аудио', exact: true });
   await links.first().waitFor();
-  assert.equal(await links.count(), catalog.length + 2);
+  assert.equal(await links.count(), catalog.length);
   const hrefs = await links.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
   for (const entry of catalog) assert(hrefs.includes(`./text-and-audio.html?lesson=${entry.lessonId}`));
   await page.goto(`${origin}${base}text-and-audio.html?lesson=91`);
+  assert.equal(await page.getByLabel('Выбрать урок').locator('option').count(), catalog.length);
+  await page.getByLabel('Выбрать урок').selectOption('87');
+  await page.getByText('Первая часть · Урок 87', { exact: true }).waitFor();
+  await page.getByLabel('Выбрать урок').selectOption('88');
+  await page.getByText('Первая часть · Урок 88', { exact: true }).waitFor();
   await page.getByLabel('Выбрать урок').selectOption('100');
   await page.getByText('Первая часть · Урок 100', { exact: true }).waitFor();
   await page.screenshot({ path: '/tmp/more-audio-mobile.png' });

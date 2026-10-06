@@ -37,7 +37,7 @@ def main():
         parser.error('Lesson already exists; review updates manually instead of overwriting')
     catalog_path = ROOT / 'public/text-and-audio/catalog.json'
     catalog = json.loads(catalog_path.read_text()) if catalog_path.exists() else []
-    if args.lesson in {87, 88} or any(item['lessonId'] == args.lesson for item in catalog):
+    if any(item['lessonId'] == args.lesson for item in catalog):
         parser.error('Lesson already has listening materials; review updates manually')
     for path in [audio_path, text_path, catalog_path]:
         path.parent.mkdir(parents=True, exist_ok=True)
