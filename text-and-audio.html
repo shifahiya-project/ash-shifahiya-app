@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Аш-Шифахия — текст и аудио</title>
+  <link rel="stylesheet" href="./text-and-audio/player.css">
+</head>
+<body>
+  <main class="listening-view">
+    <nav><a href="./">← К курсу</a><label>Урок <select id="lesson" aria-label="Выбрать урок"></select></label></nav>
+    <p id="lesson-label">Первая часть</p>
+    <h1>Текст и аудио</h1>
+    <p id="status" role="status">Загрузка урока…</p>
+    <section class="listening-player" aria-label="Плеер" hidden>
+      <strong id="audio-label"></strong>
+      <audio controls preload="metadata"></audio>
+      <p id="audio-error" role="alert" hidden>Не удалось загрузить запись. <button id="retry">Попробовать ещё раз</button></p>
+      <div class="controls">
+        <button id="rewind" aria-label="Назад на 10 секунд">−10 с</button>
+        <button id="forward" aria-label="Вперёд на 10 секунд">+10 с</button>
+        <label>Скорость <select id="rate"><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label>
+        <button id="loop" aria-pressed="false">Повтор записи</button>
+      </div>
+      <div class="controls text-controls">
+        <button id="text-toggle" aria-expanded="true" aria-controls="listening-transcript">Скрыть текст</button>
+        <button id="vowels" aria-pressed="true">Огласовки</button>
+        <button id="smaller" aria-label="Уменьшить текст">А−</button>
+        <button id="larger" aria-label="Увеличить текст">А+</button>
+      </div>
+    </section>
+    <article id="listening-transcript" lang="ar" dir="rtl" hidden></article>
+    <p id="hidden-note" hidden>Слушайте и повторяйте вслух. Текст можно открыть в любой момент.</p>
+    <footer hidden><button id="download">Скачать урок для занятий без интернета</button><a id="audio-download" download>Скачать MP3</a><p id="download-status" role="status"></p></footer>
+  </main>
+  <script src="./text-and-audio/player.js" defer></script>
+</body>
+</html>
