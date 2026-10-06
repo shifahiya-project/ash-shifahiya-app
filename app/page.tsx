@@ -500,6 +500,25 @@ function HomeDisclosure({ label, detail, open, controls, onToggle, buttonRef, ch
   );
 }
 
+function HomeShortcut({ label, detail, href, badge }: {
+  label: string;
+  detail: string;
+  href: string;
+  badge?: number;
+}) {
+  return (
+    <section className="home-disclosure">
+      <a className="home-disclosure-toggle" href={href}>
+        <span><strong>{label}</strong><small>{detail}</small></span>
+        <span className="home-shortcut-indicator">
+          {!!badge && <span className="topic-badge" aria-label={`${badge} на повторение`}>{badge}</span>}
+          <span className="disclosure-mark" aria-hidden="true">→</span>
+        </span>
+      </a>
+    </section>
+  );
+}
+
 const COURSE_NAMES = {
   1: "Шифахия", 2: "Чтение", 3: "Акыда", 4: "Фикх", 5: "Грамматика",
   6: "Балага", 7: "Логика", 8: "Хадис", 9: "Усуль", 10: "Арбаин", 11: "Тафсир",
@@ -560,6 +579,7 @@ export default function Home() {
   const courseHeading = useRef<HTMLElement>(null);
   const [expandedCourse, setExpandedCourse] = useState<1 | 2 | TextCourseId | null>(null);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showPersonalProgress, setShowPersonalProgress] = useState(false);
   const showAllLessons = expandedCourse === course;
   function chooseCourse(id: 1 | 2 | TextCourseId) {
     setCourse(id);
@@ -1950,7 +1970,6 @@ export default function Home() {
       {view === "home" && (
         <section className="home-view">
           <h1>Учимся через<br /><em>повторение и практику</em></h1>
-          <p className="lead">Каждая форма встречается дважды в карточках, затем возвращается в переводах и предложениях. Второй урок продолжает первый и вводит женский род.</p>
 
           <div className="daily-review">
             <div>
@@ -1964,33 +1983,6 @@ export default function Home() {
               {dueCards.length ? "Повторить сейчас" : "Готово ✓"}
             </button>
           </div>
-
-          {/* A separate habit, kept on its own screen: watching a podcast is
-              not a lesson, and it must not compete with the review queue.
-              A plain link rather than next/link — the deployed site is static
-              files under a subdirectory, and the static build rewrites this
-              href to a relative one. */}
-          <a className="podcast-link" href="/podcasts/">
-            <span className="daily-icon">▶</span>
-            <div>
-              <strong>Подкаст дня</strong>
-              <small>Один выпуск на арабском в день — своя серия и свой календарь</small>
-            </div>
-            <span>→</span>
-          </a>
-
-          {/* И третья дверь рядом: тема из своей книги, разобранная до фактов.
-              Счётчик — только напоминание; повторение темы не входит ни в счёт
-              урока, ни в коробки Лейтнера, ни в статистику курса. */}
-          <a className="topic-link" href="/topics/">
-            <span className="daily-icon">ح</span>
-            <div>
-              <strong>Темы наизусть</strong>
-              <small>Разбор темы по вашей книге: припоминание, расчёты и расписание</small>
-            </div>
-            {topicsDue > 0 && <span className="topic-badge">{topicsDue}</span>}
-            <span>→</span>
-          </a>
 
           {dueReadings.length > 0 && (
             <div className="daily-review reading-due">
@@ -2053,36 +2045,6 @@ export default function Home() {
               {sync.message && <small>{sync.message}</small>}
             </div>
           )}
-
-          <section className="student-progress" aria-labelledby="student-progress-title">
-            <div className="progress-heading">
-              <div>
-                <span className="eyebrow">Личный прогресс</span>
-                <h2 id="student-progress-title">Ваш путь в цифрах</h2>
-              </div>
-              <small>Статистика обновляется во время занятий</small>
-            </div>
-            <div className="stats-grid">
-              <div><strong>{learningStats.activeDates.length}</strong><span>дней занятий</span></div>
-              <div><strong>{firstCourseCompletedCount}</strong><span>уроков завершено</span></div>
-              <div><strong>{formatStudyTime(learningStats.totalSeconds)}</strong><span>времени в учёбе</span></div>
-              <div><strong>{wordProgress.encountered}</strong><span>новых слов пройдено</span></div>
-              <div><strong>{wordProgress.mastered}</strong><span>слов выучено</span></div>
-              <div><strong>{learningStats.masteredPhrases.length}</strong><span>фраз освоено</span></div>
-              <div><strong>{studyStreaks.longest}</strong><span>рекорд без перерыва</span></div>
-            </div>
-          </section>
-
-          <div className="backup-tools">
-            <span>{sync.email ? `Прогресс синхронизируется · ${sync.email}` : "Прогресс хранится на этом устройстве"}</span>
-            <div>
-              <button className="text-button" onClick={exportProgress}>Сохранить копию</button>
-              <button className="text-button" onClick={() => importInput.current?.click()}>Восстановить</button>
-              <input ref={importInput} type="file" accept="application/json" onChange={importProgress} hidden />
-              {sync.email && <button className="text-button" onClick={() => void signOut()}>Выйти</button>}
-            </div>
-            {(backupMessage || sync.message) && <small>{backupMessage || sync.message}</small>}
-          </div>
 
           <div className="lesson-list-toolbar">
             <span><strong ref={courseHeading} tabIndex={-1} className="selected-course">Часть {course} · {COURSE_NAMES[course]}</strong><small>{showAllLessons ? "Все уроки" : "Ваши ближайшие уроки"} · {completedLessonCount}/{selectedSummaries.length} пройдено</small></span>
@@ -2424,6 +2386,33 @@ export default function Home() {
           </div>
 
           <div className="home-extras" aria-label="Дополнительно">
+            <HomeShortcut label="Подкаст дня" detail="Один выпуск на арабском в день — своя серия и свой календарь" href="/podcasts/" />
+            <HomeShortcut label="Темы наизусть" detail="Разбор темы по вашей книге: припоминание, расчёты и расписание" href="/topics/" badge={topicsDue} />
+            <HomeDisclosure label="Личный прогресс" detail={`${firstCourseCompletedCount} из ${lessonSummaries.length} уроков завершено · ${formatStudyTime(learningStats.totalSeconds)} в учёбе`} open={showPersonalProgress} controls="personal-progress" onToggle={() => setShowPersonalProgress((value) => !value)}>
+              <div className="progress-heading">
+                <h2 id="student-progress-title">Ваш путь в цифрах</h2>
+                <small>Статистика обновляется во время занятий</small>
+              </div>
+              <div className="stats-grid">
+                <div><strong>{learningStats.activeDates.length}</strong><span>дней занятий</span></div>
+                <div><strong>{firstCourseCompletedCount}</strong><span>уроков завершено</span></div>
+                <div><strong>{formatStudyTime(learningStats.totalSeconds)}</strong><span>времени в учёбе</span></div>
+                <div><strong>{wordProgress.encountered}</strong><span>новых слов пройдено</span></div>
+                <div><strong>{wordProgress.mastered}</strong><span>слов выучено</span></div>
+                <div><strong>{learningStats.masteredPhrases.length}</strong><span>фраз освоено</span></div>
+                <div><strong>{studyStreaks.longest}</strong><span>рекорд без перерыва</span></div>
+              </div>
+              <div className="backup-tools">
+                <span>{sync.email ? `Прогресс синхронизируется · ${sync.email}` : "Прогресс хранится на этом устройстве"}</span>
+                <div>
+                  <button className="text-button" onClick={exportProgress}>Сохранить копию</button>
+                  <button className="text-button" onClick={() => importInput.current?.click()}>Восстановить</button>
+                  <input ref={importInput} type="file" accept="application/json" onChange={importProgress} hidden />
+                  {sync.email && <button className="text-button" onClick={() => void signOut()}>Выйти</button>}
+                </div>
+                {(backupMessage || sync.message) && <small>{backupMessage || sync.message}</small>}
+              </div>
+            </HomeDisclosure>
             <HomeDisclosure label="Достижения" detail={`${achievements.filter((item) => item.unlocked).length} из ${achievements.length} открыто`} open={showAchievements} controls="achievement-list" onToggle={() => setShowAchievements((value) => !value)}>
               <div className="achievement-list">
                 {achievements.map((item) => (

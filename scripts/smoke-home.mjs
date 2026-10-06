@@ -54,7 +54,7 @@ const server = createServer(async (request, response) => {
     const pathname = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
     assert(pathname.startsWith(base), "Outside the Pages subdirectory");
     const relative = pathname.slice(base.length);
-    const file = resolve(root, relative || "index.html");
+    const file = resolve(root, !relative || relative.endsWith("/") ? `${relative}index.html` : relative);
     assert(file.startsWith(root + sep), "Outside the static directory");
     const body = await readFile(file);
     response.setHeader("content-type", mime[extname(file)] ?? "application/octet-stream");
@@ -180,20 +180,43 @@ try {
   assert.equal(await showParts().getAttribute("aria-controls"), "course-parts");
   assert.equal(await page.locator(".selected-course").count(), 1);
   assert.equal(await page.locator(".selected-course").innerText(), "Часть 1 · Шифахия");
-  assert.equal(await page.locator(".home-extras .home-disclosure").count(), 2);
-  assert.equal(await page.locator(".home-extras .home-disclosure-toggle").count(), 2);
+  assert.equal(await page.locator(".home-extras .home-disclosure").count(), 5);
+  assert.equal(await page.locator(".home-extras .home-disclosure-toggle").count(), 5);
+  assert.deepEqual(await page.locator(".home-extras .home-disclosure-toggle strong").allTextContents(), ["Подкаст дня", "Темы наизусть", "Личный прогресс", "Достижения", "Части курса"]);
+  assert.equal(await page.locator("#personal-progress").isVisible(), false);
+  for (const [name, href] of [[/^Подкаст дня/, "./podcasts/"], [/^Темы наизусть/, "./topics/"]]) {
+    assert.equal(await page.locator(".home-extras").getByRole("link", { name }).getAttribute("href"), href);
+    assert.equal((await page.request.get(new URL(href, origin).href)).status(), 200, "The shortcut should resolve within the Pages subdirectory");
+  }
+  assert.doesNotMatch(await page.locator(".home-view").innerText(), /Каждая форма встречается дважды|Второй урок продолжает первый/);
   assert(await page.evaluate(() => {
     const lessons = document.getElementById("course-lessons");
     const principle = document.querySelector(".principle");
     const extras = document.querySelector(".home-extras");
     return Boolean(lessons.compareDocumentPosition(extras) & Node.DOCUMENT_POSITION_FOLLOWING) &&
       Boolean(principle.compareDocumentPosition(extras) & Node.DOCUMENT_POSITION_FOLLOWING);
-  }), "Achievements and course parts should follow the lesson list");
+  }), "All five additional blocks should follow the lesson list");
   const disclosureFormats = await page.locator(".home-disclosure-toggle").evaluateAll((nodes) => nodes.map((node) => {
     const style = getComputedStyle(node);
     return [style.backgroundColor, style.borderRadius, style.fontSize, style.padding, style.display];
   }));
-  assert.deepEqual(disclosureFormats[0], disclosureFormats[1], "Both bottom disclosures should share the same format");
+  for (const format of disclosureFormats) assert.deepEqual(format, disclosureFormats[0], "All five bottom blocks should share the same format");
+  const showProgress = () => page.getByRole("button", { name: "Показать личный прогресс", exact: true });
+  const hideProgress = () => page.getByRole("button", { name: "Скрыть личный прогресс", exact: true });
+  await showProgress().focus();
+  await page.keyboard.press("Enter");
+  assert(await page.locator("#personal-progress").isVisible());
+  assert(await page.getByRole("button", { name: "Сохранить копию", exact: true }).isVisible());
+  assert(await page.getByRole("button", { name: "Восстановить", exact: true }).isVisible());
+  for (const width of [390, 360, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Expanded personal progress should fit ${width}px`);
+  }
+  await page.locator(".home-extras").screenshot({ path: "/tmp/unified-home-extras-progress-320.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await hideProgress().click();
+  assert.equal(await page.locator("#personal-progress").isVisible(), false);
+  await page.locator(".home-extras").screenshot({ path: "/tmp/unified-home-extras-mobile.png" });
   await openCourseParts();
   assert.equal(await page.getByRole("tab").count(), 11);
   assert.equal(await hideParts().getAttribute("aria-expanded"), "true");
@@ -349,6 +372,7 @@ try {
 
   // The explicit mark travels with the normal progress backup. Older copies
   // have no audio field, so restoring them must preserve existing marks.
+  await showProgress().click();
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "Сохранить копию", exact: true }).click();
   const download = await downloading;
@@ -357,6 +381,7 @@ try {
   assert.equal(backup.version, 2);
   assert.equal(backup.listening[87].completed, true);
   await seed([]);
+  await showProgress().click();
   await page.locator('input[type="file"]').setInputFiles({ name: "progress-v2.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
   await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
   await assertWindow([87, 88, 89]);
@@ -364,6 +389,7 @@ try {
   await page.reload({ waitUntil: "networkidle" });
   const oldBackup = { ...backup, version: 1 };
   delete oldBackup.listening;
+  await showProgress().click();
   await page.locator('input[type="file"]').setInputFiles({ name: "progress-v1.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(oldBackup)) });
   await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
   assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key))[87].completed, listeningKey), true);

@@ -432,6 +432,7 @@ try {
   await page.waitForSelector(".reading-view");
   assert.deepEqual(await page.locator(".reading-arabic").allTextContents(), part11LessonNinetyFour.fragments.map((line) => line.arabic));
   await page.getByRole("button", { name: "Вернуться позже" }).click();
+  await page.getByRole("button", { name: "Показать личный прогресс", exact: true }).click();
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "Сохранить копию" }).click();
   const download = await downloading;
@@ -440,6 +441,7 @@ try {
   assert.equal(backup.part11Sessions[94].view, "reading");
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Показать личный прогресс", exact: true }).click();
   await page.locator('input[type="file"]').setInputFiles({ name: "progress.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
   await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("shifahiya-p11-session-94")).view), "reading");
