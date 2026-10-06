@@ -509,12 +509,22 @@ h1 em { color: var(--green); font-weight: inherit; }
 .grammar-view .stage-label span { background: var(--blue); font: 600 13px "Traditional Arabic", serif; }
 .grammar-view .repeat-badge.active { border-color: rgba(47,98,196,.22); background: var(--blue-soft); color: var(--blue); }
 
-/* Seven courses live on one screen, so the strip says which one is open before
-   the cards do. It has long since stopped fitting one row, so it wraps, and its
-   corners are rounded like a card rather than a pill: a two-row pill looks
+/* The expanded course picker wraps its tabs because they no longer fit one row.
+   Its corners are rounded like a card rather than a pill: a two-row pill looks
    broken. Three columns, counted rather than fitted — the longest label
    («5 · Грамматика») wants about 112px, and auto-fit with that minimum drops a
    360px screen to two columns, which is one row more rather than less. */
+.course-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.selected-course { color: var(--ink-soft); font-size: 13px; }
+.course-picker button { min-height: 44px; }
+.course-switch[hidden] { display: none; }
 .course-switch {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

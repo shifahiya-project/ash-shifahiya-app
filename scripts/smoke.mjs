@@ -191,6 +191,11 @@ try {
   });
 
   await page.goto(origin, { waitUntil: "networkidle" });
+  const openCourseParts = async () => {
+    const button = page.getByRole("button", { name: "Показать части курса", exact: true });
+    if (await button.isVisible()) await button.click();
+    await page.locator("#course-parts").waitFor();
+  };
 
   // Lesson 82 used to enter a trailing empty deck instead of its second-half
   // questions. Check both finishing the last card and resuming that stuck deck.
@@ -236,8 +241,9 @@ try {
   });
   await page.reload({ waitUntil: "networkidle" });
 
-  // Clicking the tab is the first thing that needs React alive: a page that
-  // rendered but never hydrated gets no further than this.
+  // Opening the course selector needs React alive: a page that rendered but
+  // never hydrated gets no further than this.
+  await openCourseParts();
   await page.getByRole("tab", { name: /8 · Хадис/ }).click();
   const list = page.locator(".lesson-list");
   await list.getByRole("button", { name: /Начать урок/ }).first().click();
@@ -306,6 +312,7 @@ try {
     for (let id = 1; id <= 27; id += 1) localStorage.setItem(`shifahiya-p8-lesson-${id}`, "5");
   });
   await page.reload({ waitUntil: "networkidle" });
+  await openCourseParts();
   await page.getByRole("tab", { name: /8 · Хадис/ }).click();
   const wordless = page.locator(".lesson-card").filter({ hasText: "только чтение" }).first();
   if (!(await wordless.count())) failures.push("урока без новых слов нет в списке");
@@ -323,12 +330,14 @@ try {
   // that reads open in both states is not testing the gate.
   // The walk is standing inside a lesson; the tabs live on the home screen.
   await page.reload({ waitUntil: "networkidle" });
+  await openCourseParts();
   const locked = await page.getByRole("tab", { name: /9 · Усуль/ }).innerText();
   if (!locked.includes("🔒")) failures.push("девятая часть открыта до того, как пройдена восьмая");
   await page.evaluate(() => {
     for (let id = 1; id <= 77; id += 1) localStorage.setItem(`shifahiya-p8-lesson-${id}`, "5");
   });
   await page.reload({ waitUntil: "networkidle" });
+  await openCourseParts();
   const opened = await page.getByRole("tab", { name: /9 · Усуль/ }).innerText();
   if (opened.includes("🔒")) failures.push("девятая часть не открылась по пройденной восьмой");
 
@@ -340,6 +349,7 @@ try {
     for (let id = 1; id <= 117; id += 1) localStorage.setItem(`shifahiya-p9-lesson-${id}`, "5");
   });
   await page.reload({ waitUntil: "networkidle" });
+  await openCourseParts();
   const tenthOpen = await page.getByRole("tab", { name: /10 · Арбаин/ }).innerText();
   if (tenthOpen.includes("🔒")) failures.push("десятая часть не открылась по пройденной девятой");
 
@@ -352,6 +362,7 @@ try {
     for (let id = 1; id <= 46; id += 1) localStorage.setItem(`shifahiya-p10-lesson-${id}`, "5");
   });
   await page.reload({ waitUntil: "networkidle" });
+  await openCourseParts();
   assert.ok(!(await tafsirTab.innerText()).includes("🔒"), "тафсир не открылся по Арбаину");
   await tafsirTab.click();
   assert.equal(await page.locator(".lesson-card").count(), 94);
@@ -360,6 +371,7 @@ try {
   assert.equal(await page.locator(".arabic-word").textContent(), part11LessonOne.words[0].arabic);
   await page.getByRole("button", { name: /Запомнил/ }).click();
   await page.reload({ waitUntil: "networkidle" });
+  await openCourseParts();
   await tafsirTab.click();
   await page.locator(".lesson-list").getByRole("button", { name: /Продолжить/ }).first().click();
   assert.equal(await page.locator(".arabic-word").textContent(), part11LessonOne.words[1].arabic);
@@ -393,6 +405,7 @@ try {
     for (let id = 1; id < 23; id += 1) localStorage.setItem(`shifahiya-p11-lesson-${id}`, "5");
   });
   await page.reload({ waitUntil: "networkidle" });
+  await openCourseParts();
   await tafsirTab.click();
   const tafsirWordless = page.locator(".lesson-card").filter({ has: page.locator(".lesson-number", { hasText: /^23$/ }) });
   await tafsirWordless.getByRole("button", { name: /Начать урок/ }).click();
@@ -409,6 +422,7 @@ try {
     }));
   });
   await page.reload({ waitUntil: "networkidle" });
+  await openCourseParts();
   await tafsirTab.click();
   await page.locator(".lesson-card").last().getByRole("button", { name: /Продолжить/ }).click();
   await page.waitForSelector(".reading-view");

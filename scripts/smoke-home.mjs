@@ -111,6 +111,19 @@ try {
   const hero = page.locator(".continue-learning");
   const showAll = () => page.getByRole("button", { name: "Показать все уроки", exact: true });
   const hideCompleted = () => page.getByRole("button", { name: "Скрыть пройденные", exact: true });
+  const parts = page.locator("#course-parts");
+  const showParts = () => page.getByRole("button", { name: "Показать части курса", exact: true });
+  const hideParts = () => page.getByRole("button", { name: "Скрыть части курса", exact: true });
+  const openCourseParts = async () => {
+    if (await showParts().isVisible()) await showParts().click();
+    await parts.waitFor();
+  };
+  const choosePart = async (name) => {
+    await openCourseParts();
+    await page.getByRole("tab", { name }).click();
+    assert.equal(await parts.isVisible(), false, "Choosing a course part should close the selector");
+    assert.equal(await showParts().getAttribute("aria-expanded"), "false");
+  };
   const firstVisible = async () => Number((await cards.first().locator(".lesson-number").innerText()).trim());
   const seed = async (entries) => {
     await page.evaluate((entries) => {
@@ -132,6 +145,16 @@ try {
   assert.equal(await cards.count(), lessonSummaries.length);
   assert(await page.getByRole("button", { name: "Показать достижения", exact: true }).isVisible());
   assert.equal(await page.locator(".achievement-list").isVisible(), false);
+  assert.equal(await parts.isVisible(), false, "Course parts should be hidden on arrival");
+  assert.equal(await showParts().getAttribute("aria-expanded"), "false");
+  assert.equal(await showParts().getAttribute("aria-controls"), "course-parts");
+  assert.equal(await page.locator(".selected-course").innerText(), "Часть 1 · Шифахия");
+  await openCourseParts();
+  assert.equal(await page.getByRole("tab").count(), 11);
+  assert.equal(await hideParts().getAttribute("aria-expanded"), "true");
+  assert(await page.getByRole("tab", { name: /^1 · Шифахия/ }).getAttribute("aria-selected") === "true");
+  await hideParts().click();
+  assert.equal(await parts.isVisible(), false);
 
   // The latest saved session can be an abandoned repeat of a completed lesson.
   // It must not take the learner away from the unfinished lesson or its audio.
@@ -170,6 +193,14 @@ try {
   await assertCompact(91, lessonSummaries.length - 90);
   const unchangedEntries = await page.evaluate((keys) => keys.map((key) => [key, localStorage.getItem(key)]), lateEntries.map(([key]) => key));
   assert.deepEqual(unchangedEntries, progressBeforeToggling, "Hiding and revealing lessons must preserve progress");
+  const progressBeforeParts = await page.evaluate(() => Object.entries(localStorage).sort(([a], [b]) => a.localeCompare(b)));
+  await page.locator(".course-picker").screenshot({ path: "/tmp/course-parts-closed-mobile.png" });
+  await openCourseParts();
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Expanded course parts should fit the mobile viewport");
+  await parts.screenshot({ path: "/tmp/course-parts-open-mobile.png" });
+  await hideParts().click();
+  assert.deepEqual(await page.evaluate(() => Object.entries(localStorage).sort(([a], [b]) => a.localeCompare(b))), progressBeforeParts, "Opening and collapsing course parts must preserve progress");
+  assert.equal(await firstVisible(), 91, "Collapsing course parts must preserve the active lesson list");
 
   const showAchievements = page.getByRole("button", { name: "Показать достижения", exact: true });
   await showAchievements.click();
@@ -339,7 +370,19 @@ try {
     ...scoreEntries(part2Summaries, "shifahiya-p2-lesson-", 20),
     ["shifahiya-p2-session-21", readingSession(21, 1000)],
   ]);
-  await page.getByRole("tab", { name: /^2 · Чтение/ }).click();
+  await openCourseParts();
+  await page.getByRole("tab", { name: /^2 · Чтение/ }).focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await parts.isVisible(), false, "Choosing a course part with the keyboard should close the selector");
+  assert.equal(await showParts().getAttribute("aria-expanded"), "false");
+  assert(await showParts().evaluate((element) => element === document.activeElement), "Focus should return to the course-parts toggle after selection");
+  assert.equal(await page.locator(".selected-course").innerText(), "Часть 2 · Чтение");
+  const readingProgressBeforeParts = await page.evaluate(() => Object.entries(localStorage).sort(([a], [b]) => a.localeCompare(b)));
+  await openCourseParts();
+  assert.equal(await page.getByRole("tab", { name: /^2 · Чтение/ }).getAttribute("aria-selected"), "true");
+  await hideParts().click();
+  assert.equal(await page.locator(".selected-course").innerText(), "Часть 2 · Чтение");
+  assert.deepEqual(await page.evaluate(() => Object.entries(localStorage).sort(([a], [b]) => a.localeCompare(b))), readingProgressBeforeParts);
   await assertCompact(21, part2Summaries.length - 20);
   assert((await page.locator(".lesson-list .book-divider").first().innerText()).includes(part2Summaries[20].book));
   assert.match(await card(21).innerText(), /Продолжить/);
@@ -348,8 +391,8 @@ try {
   await showAll().click();
   await card(1).waitFor();
   assert.equal(await cards.count(), part2Summaries.length);
-  await page.getByRole("tab", { name: /^1 · Шифахия/ }).click();
-  await page.getByRole("tab", { name: /^2 · Чтение/ }).click();
+  await choosePart(/^1 · Шифахия/);
+  await choosePart(/^2 · Чтение/);
   await assertCompact(21, part2Summaries.length - 20);
 
   await seed([
@@ -360,7 +403,7 @@ try {
     ...scoreEntries(part3Summaries, "shifahiya-p3-lesson-", 10),
     ["shifahiya-p3-session-11", readingSession(11, 1000)],
   ]);
-  await page.getByRole("tab", { name: /^3 · Акыда/ }).click();
+  await choosePart(/^3 · Акыда/);
   await assertCompact(11, part3Summaries.length - 10);
   assert((await page.locator(".lesson-list .book-divider").first().innerText()).includes(part3Summaries[10].book));
   assert((await page.locator(".lesson-list .book-divider.is-section").first().innerText()).includes(part3Summaries[10].section));
@@ -373,7 +416,7 @@ try {
   await assertCompact(11, part3Summaries.length - 10);
 
   assert.deepEqual(errors, [], "The static homepage should hydrate without browser or asset errors");
-  console.log("Compact homepage passed: separate audio completion, 87-to-88 continuation, unified recordings, completed lessons, achievements, reading courses and mobile layout");
+  console.log("Compact homepage passed: collapsible course parts, keyboard selection, separate audio completion, 87-to-88 continuation, completed lessons, achievements, reading courses and mobile layout");
 } catch (error) {
   for (const message of errors) console.error(message);
   throw error;

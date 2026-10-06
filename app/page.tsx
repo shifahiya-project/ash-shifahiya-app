@@ -484,6 +484,11 @@ function currentLessonFirst<T extends { id: number }>(items: T[], id?: number) {
   return current ? [current, ...items.filter((item) => item.id !== id)] : items;
 }
 
+const COURSE_NAMES = {
+  1: "Шифахия", 2: "Чтение", 3: "Акыда", 4: "Фикх", 5: "Грамматика",
+  6: "Балага", 7: "Логика", 8: "Хадис", 9: "Усуль", 10: "Арбаин", 11: "Тафсир",
+};
+
 const listeningLessonIds = new Set(listeningCatalog.map((entry) => entry.lessonId));
 
 function listeningHref(id: number) {
@@ -534,12 +539,16 @@ export default function Home() {
   const [reading, setReading] = useState<ReadingSection | null>(null);
   const [openLines, setOpenLines] = useState<string[]>([]);
   const [course, setCourse] = useState<1 | 2 | TextCourseId>(1);
+  const [showCourseParts, setShowCourseParts] = useState(false);
+  const coursePartsToggle = useRef<HTMLButtonElement>(null);
   const [expandedCourse, setExpandedCourse] = useState<1 | 2 | TextCourseId | null>(null);
   const [showAchievements, setShowAchievements] = useState(false);
   const showAllLessons = expandedCourse === course;
   function chooseCourse(id: 1 | 2 | TextCourseId) {
     setCourse(id);
     setExpandedCourse(null);
+    setShowCourseParts(false);
+    coursePartsToggle.current?.focus();
   }
   const [part2, setPart2] = useState<Part2Lesson | null>(null);
   /** Which text course is on screen, and the lesson of it that is open. */
@@ -2064,7 +2073,19 @@ export default function Home() {
             {(backupMessage || sync.message) && <small>{backupMessage || sync.message}</small>}
           </div>
 
-          <div className="course-switch" role="tablist" aria-label="Части курса">
+          <div className="course-picker">
+            <span className="selected-course">Часть {course} · {COURSE_NAMES[course]}</span>
+            <button
+              ref={coursePartsToggle}
+              className="secondary"
+              aria-expanded={showCourseParts}
+              aria-controls="course-parts"
+              onClick={() => setShowCourseParts((value) => !value)}
+            >
+              {showCourseParts ? "Скрыть части курса" : "Показать части курса"}
+            </button>
+          </div>
+          <div id="course-parts" className="course-switch" role="tablist" aria-label="Части курса" hidden={!showCourseParts}>
             <button
               role="tab"
               aria-selected={course === 1}
