@@ -477,6 +477,18 @@ function shuffle<T>(items: T[]) {
   return result;
 }
 
+function currentLessonFirst<T extends { id: number }>(items: T[], id?: number) {
+  const current = items.find((item) => item.id === id);
+  return current ? [current, ...items.filter((item) => item.id !== id)] : items;
+}
+
+function listeningHref(id: number) {
+  const page = id === 87 || id === 88
+    ? "text-and-audio-87-88.html"
+    : listeningCatalog.some((entry) => entry.lessonId === id) ? "text-and-audio.html" : undefined;
+  return page ? `./${page}?lesson=${id}` : undefined;
+}
+
 export default function Home() {
   const [view, setView] = useState<
     | "home" | "learn" | "practice" | "grammar" | "reading" | "review" | "result"
@@ -516,6 +528,13 @@ export default function Home() {
   const [reading, setReading] = useState<ReadingSection | null>(null);
   const [openLines, setOpenLines] = useState<string[]>([]);
   const [course, setCourse] = useState<1 | 2 | TextCourseId>(1);
+  const [expandedCourse, setExpandedCourse] = useState<1 | 2 | TextCourseId | null>(null);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const showAllLessons = expandedCourse === course;
+  function chooseCourse(id: 1 | 2 | TextCourseId) {
+    setCourse(id);
+    setExpandedCourse(null);
+  }
   const [part2, setPart2] = useState<Part2Lesson | null>(null);
   /** Which text course is on screen, and the lesson of it that is open. */
   const [textCourseId, setTextCourseId] = useState<TextCourseId>(3);
@@ -782,9 +801,13 @@ export default function Home() {
   // prompt, which is there to carry the learner forward through the course.
   const latestSession = useMemo(
     () => Object.values(savedSessions)
-      .filter((session) => savedScores[session.lessonId] === undefined)
+      .filter((session) => {
+        const summary = lessonSummaries.find((item) => item.id === session.lessonId);
+        return summary && !isLessonComplete(summary, stored) && unlockedLessons.has(session.lessonId) &&
+          (GRAMMAR_ENABLED || session.view !== "grammar");
+      })
       .sort((a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId))[0],
-    [savedSessions, savedScores],
+    [savedSessions, stored, unlockedLessons],
   );
   // The course order is the manifest order, which need not be a run of 1..N.
   const nextLesson = lessonSummaries[lessonSummaries.findIndex((item) => item.id === lessonId) + 1];
@@ -793,8 +816,7 @@ export default function Home() {
     ? lessonSummaries.find((item) => item.id === latestSession.lessonId)
     : undefined;
   const recommendedLesson = latestSessionSummary ??
-    lessonSummaries.find((item) => savedScores[item.id] === undefined) ??
-    lessonSummaries.at(-1);
+    lessonSummaries.find((item) => !isLessonComplete(item, stored) && unlockedLessons.has(item.id));
   const latestSessionPosition = latestSession && latestSessionLesson
     ? latestSession.view === "practice"
       ? `Упражнение ${latestSession.questionIndex + 1} из ${latestSessionLesson.questions.length}`
@@ -811,6 +833,42 @@ export default function Home() {
           1,
         ) * 70
     : 0;
+
+  const selectedSummaries = course === 1 ? lessonSummaries : course === 2 ? part2Summaries : TEXT_COURSES[course].summaries;
+  const readingScores = course === 2 ? part2Scores : isTextCourse(course) ? textCourseProgress[course].scores : {};
+  const readingSessions = course === 2 ? part2Sessions : isTextCourse(course) ? textCourseProgress[course].sessions : {};
+  const readingUnlocked = course === 2 ? unlockedPart2 : isTextCourse(course) ? textCourseProgress[course].unlocked : new Set<number>();
+  const latestReadingSession = Object.values(readingSessions)
+    .filter((session) => readingScores[session.lessonId] === undefined && readingUnlocked.has(session.lessonId) &&
+      selectedSummaries.some((item) => item.id === session.lessonId))
+    .sort((a, b) => (b.updatedAt ?? b.lessonId) - (a.updatedAt ?? a.lessonId))[0];
+  const recommendedReadingLesson = course !== 1
+    ? selectedSummaries.find((item) => item.id === latestReadingSession?.lessonId) ??
+      selectedSummaries.find((item) => readingScores[item.id] === undefined && readingUnlocked.has(item.id))
+    : undefined;
+  const homeLesson = course === 1 ? recommendedLesson : recommendedReadingLesson;
+  const homeSession = course === 1 ? latestSession : latestReadingSession;
+  const homeListeningHref = course === 1 && homeLesson ? listeningHref(homeLesson.id) : undefined;
+  const completedLessonCount = course === 1
+    ? lessonSummaries.filter((item) => isLessonComplete(item, stored)).length
+    : selectedSummaries.filter((item) => readingScores[item.id] !== undefined).length;
+  // Keep all first-course anchors so unfinished exams survive hidden lessons.
+  const firstCourseSummaries = showAllLessons ? lessonSummaries : currentLessonFirst(lessonSummaries, recommendedLesson?.id);
+  const visiblePart2Summaries = showAllLessons ? part2Summaries
+    : currentLessonFirst(part2Summaries.filter((item) => part2Scores[item.id] === undefined), homeLesson?.id);
+  const visibleTextSummaries = isTextCourse(course)
+    ? showAllLessons ? TEXT_COURSES[course].summaries
+      : currentLessonFirst(TEXT_COURSES[course].summaries.filter((item) => textCourseProgress[course].scores[item.id] === undefined), homeLesson?.id)
+    : [];
+
+  function continueHomeLesson() {
+    if (!homeLesson) return;
+    if (course === 1) {
+      if (latestSession) void restoreSession(latestSession);
+      else void startLesson(homeLesson.id);
+    } else if (course === 2) void startPart2(homeLesson.id);
+    else void startTextCourse(course, homeLesson.id);
+  }
 
   async function restoreSession(session: SavedSession) {
     const [restored] = await openLessonsById([session.lessonId]);
@@ -1891,22 +1949,23 @@ export default function Home() {
             </div>
           )}
 
-          {recommendedLesson && (
-            <button
-              className="continue-learning"
-              onClick={() => latestSession && latestSessionLesson
-                ? restoreSession(latestSession)
-                : startLesson(recommendedLesson.id)}
-            >
-              <span className="continue-mark">▶</span>
-              <span className="continue-copy">
-                <small>{latestSession ? "Продолжить обучение" : "Следующий шаг"}</small>
-                <strong>Урок {recommendedLesson.id}. {recommendedLesson.title}</strong>
-                <em>{latestSession ? latestSessionPosition : "Начните урок — прогресс будет сохранён автоматически"}</em>
-                <i><b style={{ width: `${latestSession ? Math.min(latestSessionProgress, 100) : 0}%` }} /></i>
-              </span>
-              <span className="continue-action">{latestSession ? "Продолжить" : "Начать урок"} <b>→</b></span>
-            </button>
+          {homeLesson && (
+            <div className="continue-learning-group">
+              <button
+                className="continue-learning"
+                onClick={continueHomeLesson}
+              >
+                <span className="continue-mark">▶</span>
+                <span className="continue-copy">
+                  <small>{homeSession ? "Продолжить обучение" : "Следующий шаг"}</small>
+                  <strong>{course !== 1 ? `Часть ${course} · ` : ""}Урок {homeLesson.id}. {homeLesson.title}</strong>
+                  <em>{homeSession ? (course === 1 ? latestSessionPosition || "Продолжите с места остановки" : "Продолжите с места остановки") : "Начните урок — прогресс будет сохранён автоматически"}</em>
+                  {course === 1 && <i><b style={{ width: `${latestSession ? Math.min(latestSessionProgress, 100) : 0}%` }} /></i>}
+                </span>
+                <span className="continue-action">{homeSession ? "Продолжить" : "Начать урок"} <b>→</b></span>
+              </button>
+              {homeListeningHref && <a className="listening-link continue-listening" href={homeListeningHref}>Текст и аудио</a>}
+            </div>
           )}
 
           {/* Once signed in the panel has nothing left to say, so it goes away
@@ -1946,10 +2005,12 @@ export default function Home() {
             </div>
             <div className="achievements">
               <div className="achievements-title">
-                <strong>Достижения</strong>
+                <button className="text-button" aria-expanded={showAchievements} aria-controls="achievement-list" onClick={() => setShowAchievements(!showAchievements)}>
+                  {showAchievements ? "Скрыть достижения" : "Показать достижения"}
+                </button>
                 <span>{achievements.filter((item) => item.unlocked).length}/{achievements.length} открыто</span>
               </div>
-              <div className="achievement-list">
+              <div className="achievement-list" id="achievement-list" hidden={!showAchievements}>
                 {achievements.map((item) => (
                   <div className={`achievement ${item.unlocked ? "unlocked" : ""}`} key={item.id} title={`${Math.round(item.progress * 100)}%`}>
                     <span>{item.unlocked ? "✓" : "◇"}</span>
@@ -1977,7 +2038,7 @@ export default function Home() {
               role="tab"
               aria-selected={course === 1}
               className={course === 1 ? "is-active" : ""}
-              onClick={() => setCourse(1)}
+              onClick={() => chooseCourse(1)}
             >
               1 · Шифахия
             </button>
@@ -1985,7 +2046,7 @@ export default function Home() {
               role="tab"
               aria-selected={course === 2}
               className={course === 2 ? "is-active" : ""}
-              onClick={() => setCourse(2)}
+              onClick={() => chooseCourse(2)}
             >
               2 · Чтение {part2Ready ? "" : "🔒"}
             </button>
@@ -1993,7 +2054,7 @@ export default function Home() {
               role="tab"
               aria-selected={course === 3}
               className={course === 3 ? "is-active" : ""}
-              onClick={() => setCourse(3)}
+              onClick={() => chooseCourse(3)}
             >
               3 · Акыда {part3Ready ? "" : "🔒"}
             </button>
@@ -2001,7 +2062,7 @@ export default function Home() {
               role="tab"
               aria-selected={course === 4}
               className={course === 4 ? "is-active" : ""}
-              onClick={() => setCourse(4)}
+              onClick={() => chooseCourse(4)}
             >
               4 · Фикх {part4Ready ? "" : "🔒"}
             </button>
@@ -2009,7 +2070,7 @@ export default function Home() {
               role="tab"
               aria-selected={course === 5}
               className={course === 5 ? "is-active" : ""}
-              onClick={() => setCourse(5)}
+              onClick={() => chooseCourse(5)}
             >
               5 · Грамматика {part5Ready ? "" : "🔒"}
             </button>
@@ -2017,7 +2078,7 @@ export default function Home() {
               role="tab"
               aria-selected={course === 6}
               className={course === 6 ? "is-active" : ""}
-              onClick={() => setCourse(6)}
+              onClick={() => chooseCourse(6)}
             >
               6 · Балага {part6Ready ? "" : "🔒"}
             </button>
@@ -2025,7 +2086,7 @@ export default function Home() {
               role="tab"
               aria-selected={course === 7}
               className={course === 7 ? "is-active" : ""}
-              onClick={() => setCourse(7)}
+              onClick={() => chooseCourse(7)}
             >
               7 · Логика {part7Ready ? "" : "🔒"}
             </button>
@@ -2033,7 +2094,7 @@ export default function Home() {
               role="tab"
               aria-selected={course === 8}
               className={course === 8 ? "is-active" : ""}
-              onClick={() => setCourse(8)}
+              onClick={() => chooseCourse(8)}
             >
               8 · Хадис {part8Ready ? "" : "🔒"}
             </button>
@@ -2041,7 +2102,7 @@ export default function Home() {
               role="tab"
               aria-selected={course === 9}
               className={course === 9 ? "is-active" : ""}
-              onClick={() => setCourse(9)}
+              onClick={() => chooseCourse(9)}
             >
               9 · Усуль {part9Ready ? "" : "🔒"}
             </button>
@@ -2049,7 +2110,7 @@ export default function Home() {
               role="tab"
               aria-selected={course === 10}
               className={course === 10 ? "is-active" : ""}
-              onClick={() => setCourse(10)}
+              onClick={() => chooseCourse(10)}
             >
               10 · Арбаин {part10Ready ? "" : "🔒"}
             </button>
@@ -2057,12 +2118,24 @@ export default function Home() {
               role="tab"
               aria-selected={course === 11}
               className={course === 11 ? "is-active" : ""}
-              onClick={() => setCourse(11)}
+              onClick={() => chooseCourse(11)}
             >
               11 · Тафсир {part11Ready ? "" : "🔒"}
             </button>
           </div>
 
+          <div className="lesson-list-toolbar">
+            <span>{showAllLessons ? "Все уроки" : "Продолжить курс"} · {completedLessonCount}/{selectedSummaries.length} пройдено</span>
+            {completedLessonCount > 0 && (
+              <button className="secondary" aria-expanded={showAllLessons} aria-controls="course-lessons" onClick={() => setExpandedCourse(showAllLessons ? null : course)}>
+                {showAllLessons ? "Скрыть пройденные" : "Показать все уроки"}
+              </button>
+            )}
+          </div>
+          {!showAllLessons && completedLessonCount === selectedSummaries.length && (
+            <p className="course-complete" role="status">Все уроки этой части пройдены. Откройте полный список, чтобы вернуться к ним.</p>
+          )}
+          <div id="course-lessons">
           {course === 2 && (
             <div className="lesson-list">
               {!part2Ready && (
@@ -2074,14 +2147,14 @@ export default function Home() {
                   </span>
                 </div>
               )}
-              {part2Summaries.flatMap((item, index) => {
+              {visiblePart2Summaries.flatMap((item, index) => {
                 const score = part2Scores[item.id];
                 const done = score !== undefined;
                 const parked = part2Sessions[item.id];
                 const locked = !unlockedPart2.has(item.id);
                 // The course runs through one book after another, so the list
                 // says where each one starts.
-                const opensBook = part2Summaries[index - 1]?.book !== item.book;
+                const opensBook = visiblePart2Summaries[index - 1]?.book !== item.book;
                 const shelf = part2Summaries.filter((other) => other.book === item.book);
                 const card = (
                   <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`p2-${item.id}`}>
@@ -2115,7 +2188,7 @@ export default function Home() {
                 );
                 if (!opensBook) return [card];
                 return [
-                  <div className="book-divider" key={`book-${item.book}`}>
+                  <div className="book-divider" key={`book-${item.book}-${item.id}`}>
                     <strong>{item.book}</strong>
                     <span>
                       уроки {shelf[0].id}–{shelf[shelf.length - 1].id} ·{" "}
@@ -2136,7 +2209,7 @@ export default function Home() {
                   <span>{TEXT_COURSE_GATES[course].explains}</span>
                 </div>
               )}
-              {TEXT_COURSES[course].summaries.flatMap((item, index, all) => {
+              {visibleTextSummaries.flatMap((item, index, all) => {
                 const { scores, sessions, unlocked } = textCourseProgress[course];
                 const score = scores[item.id];
                 const done = score !== undefined;
@@ -2145,7 +2218,7 @@ export default function Home() {
                 // The course runs through one book after another, so the list
                 // says where each one starts.
                 const opensBook = all[index - 1]?.book !== item.book;
-                const shelf = all.filter((other) => other.book === item.book);
+                const shelf = TEXT_COURSES[course].summaries.filter((other) => other.book === item.book);
                 // A book that runs straight through has no division to draw:
                 // only the creed book has بَاب chapters, only the fiqh one
                 // كِتَاب sections.
@@ -2156,7 +2229,7 @@ export default function Home() {
                 // into parts of the same name — both logic books open with
                 // «Введение и основы» — and a range spanning both would count
                 // lessons the divider does not head.
-                const chapter = all.filter(
+                const chapter = TEXT_COURSES[course].summaries.filter(
                   (other) => other.book === item.book && other.section === item.section,
                 );
                 const key = `p${course}`;
@@ -2207,7 +2280,7 @@ export default function Home() {
                 return [
                   ...(opensBook
                     ? [
-                        <div className="book-divider" key={textCourseDividerKey(course, item, "book")}>
+                        <div className="book-divider" key={`${textCourseDividerKey(course, item, "book")}-${item.id}`}>
                           <strong>{item.book}</strong>
                           <span>
                             уроки {shelf[0].id}–{shelf[shelf.length - 1].id} ·{" "}
@@ -2218,7 +2291,7 @@ export default function Home() {
                     : []),
                   ...(opensSection
                     ? [
-                        <div className="book-divider is-section" key={textCourseDividerKey(course, item, "section")}>
+                        <div className="book-divider is-section" key={`${textCourseDividerKey(course, item, "section")}-${item.id}`}>
                           <strong>{item.section}</strong>
                           <span>
                             {chapter.length > 1
@@ -2236,15 +2309,15 @@ export default function Home() {
 
           {course === 1 && (
           <div className="lesson-list">
-            {lessonSummaries.flatMap((item, index) => {
+            {firstCourseSummaries.flatMap((item) => {
               const saved = savedScores[item.id];
               const unfinished = savedSessions[item.id];
               const completed = isLessonComplete(item, stored);
               // The words are done but the grammar block still owes an answer.
               const grammarLeft = saved !== undefined && !completed;
               const locked = !unlockedLessons.has(item.id);
-              const opensAfter = lessonSummaries[index - 1];
-              const card = (
+              const opensAfter = lessonSummaries[lessonSummaries.findIndex((summary) => summary.id === item.id) - 1];
+              const card = !showAllLessons && completed ? null : (
                 <div className={`lesson-card ${completed ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={item.id}>
                   <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
                   <div className="lesson-copy">
@@ -2252,8 +2325,8 @@ export default function Home() {
                     <h2>{item.title}</h2>
                     <p>{item.description}{visiblePartCount(item) > 1 ? ` · в ${visiblePartCount(item)} части` : ""}</p>
                     <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-                    {(item.id === 87 || item.id === 88 || listeningCatalog.some((entry) => entry.lessonId === item.id)) && !locked && (
-                      <a className="listening-link" href={`./${item.id === 87 || item.id === 88 ? "text-and-audio-87-88.html" : "text-and-audio.html"}?lesson=${item.id}`}>
+                    {listeningHref(item.id) && !locked && (
+                      <a className="listening-link" href={listeningHref(item.id)}>
                         Текст и аудио
                       </a>
                     )}
@@ -2321,6 +2394,7 @@ export default function Home() {
               const ready = examReadiness(paper, lessonSummaries, stored);
               const result = savedExams[paper.id];
               const passed = isExamPassed(paper, result?.best);
+              if (!showAllLessons && passed) return [card];
               // A paper parked before grammar was hidden no longer fits the
               // shorter one, so the card must not promise to continue it.
               const written = examSession?.examId === paper.id ? examSession : null;
@@ -2366,6 +2440,8 @@ export default function Home() {
           </div>
 
           )}
+
+          </div>
 
           <div className="principle">
             <span className="quote">“</span>

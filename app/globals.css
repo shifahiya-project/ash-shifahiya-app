@@ -389,6 +389,9 @@ h1 em { color: var(--green); font-weight: inherit; }
   transition: transform .15s ease, box-shadow .15s ease;
 }
 .continue-learning:hover { transform: translateY(-2px); box-shadow: 0 19px 42px rgba(23,107,85,.22); }
+.continue-learning-group { margin-bottom: 18px; }
+.continue-learning-group .continue-learning { margin-bottom: 0; }
+.continue-listening { margin-top: 10px; }
 .continue-mark { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.14); color: var(--gold); }
 .continue-copy { min-width: 0; }
 .continue-copy small, .continue-copy strong, .continue-copy em { display: block; }
@@ -447,6 +450,19 @@ h1 em { color: var(--green); font-weight: inherit; }
 .achievements-title { display: flex; justify-content: space-between; margin-bottom: 11px; }
 .achievements-title strong { font: 500 17px Georgia, serif; }
 .achievements-title span { color: var(--ink-soft); font-size: 11px; }
+.achievement-list[hidden] { display: none; }
+.lesson-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 16px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.lesson-list-toolbar button { min-height: 44px; font-size: 13px; }
+.course-complete { margin: 20px 0; color: var(--ink-soft); line-height: 1.6; }
 .achievement-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .achievement { padding: 11px; border: 1px solid var(--line); border-radius: 11px; color: #9a988f; background: rgba(249,247,241,.8); }
 .achievement > span { margin-right: 5px; }
