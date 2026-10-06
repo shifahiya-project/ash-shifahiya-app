@@ -2,6 +2,7 @@
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { lessonSummaries } from "../content/manifest";
+import listeningCatalog from "../public/text-and-audio/catalog.json";
 import { READING_SOURCE, readingByLesson } from "../content/reading-manifest";
 import { loadLessons } from "../content/lessons";
 import { loadReading } from "../content/reading";
@@ -2251,8 +2252,8 @@ export default function Home() {
                     <h2>{item.title}</h2>
                     <p>{item.description}{visiblePartCount(item) > 1 ? ` · в ${visiblePartCount(item)} части` : ""}</p>
                     <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-                    {(item.id === 87 || item.id === 88) && !locked && (
-                      <a className="listening-link" href={`./text-and-audio-87-88.html?lesson=${item.id}`}>
+                    {(item.id === 87 || item.id === 88 || listeningCatalog.some((entry) => entry.lessonId === item.id)) && !locked && (
+                      <a className="listening-link" href={`./${item.id === 87 || item.id === 88 ? "text-and-audio-87-88.html" : "text-and-audio.html"}?lesson=${item.id}`}>
                         Текст и аудио
                       </a>
                     )}
