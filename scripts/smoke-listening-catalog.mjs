@@ -69,6 +69,11 @@ try {
     const paragraphs = page.locator('#listening-transcript > *');
     assert.deepEqual(await paragraphs.allTextContents(), transcript.paragraphs, 'Source Unicode must be preserved');
     assert(Math.abs(await audio.evaluate(a => a.duration) - entry.duration) < 0.2);
+    const settings = page.getByRole('button', { name: 'Настройки', exact: true });
+    assert(await page.locator('#player-settings').isHidden(), 'Settings must start collapsed');
+    assert.equal(await settings.getAttribute('aria-expanded'), 'false');
+    assert(await audio.isVisible(), 'Audio controls must stay visible');
+    const compactHeight = await page.locator('.listening-player').evaluate(e => e.offsetHeight);
     if (entry.lessonId === 87 || entry.lessonId === 88) {
       await page.waitForFunction(() => document.querySelector('audio').currentTime === 27.5);
       assert.equal(await audio.evaluate(a => a.playbackRate), 0.9, 'The original pilot speed should survive the shared-player migration');
@@ -78,6 +83,15 @@ try {
     const startPosition = await audio.evaluate(a => a.currentTime);
     await audio.evaluate(a => a.play());
     await page.waitForFunction(start => document.querySelector('audio').currentTime > start + 0.2, startPosition);
+    await settings.focus();
+    await page.keyboard.press('Enter');
+    assert(await page.locator('#player-settings').isVisible());
+    assert.equal(await settings.getAttribute('aria-expanded'), 'true');
+    assert.equal(await audio.evaluate(a => a.paused), false, 'Opening settings must not interrupt playback');
+    await settings.click();
+    assert(await page.locator('#player-settings').isHidden());
+    assert.equal(await audio.evaluate(a => a.paused), false, 'Closing settings must not interrupt playback');
+    await settings.click();
     await audio.evaluate(a => { a.pause(); a.currentTime = 30; });
     await page.waitForFunction(() => {
       const audio = document.querySelector('audio');
@@ -103,8 +117,31 @@ try {
     await page.evaluate(() => scrollTo(0, 700));
     assert(Math.abs(await page.locator('.listening-player').evaluate(e => e.getBoundingClientRect().top) - 8) < 2);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    assert(await page.locator('.listening-player').evaluate(e => e.offsetHeight) > compactHeight);
+    await settings.click();
+    assert(await page.locator('#player-settings').isHidden());
+    assert.equal(await audio.evaluate(a => Math.round(a.currentTime)), 30);
+    assert.equal(await audio.evaluate(a => a.playbackRate), 1.25);
+    assert(await audio.evaluate(a => a.loop));
+    assert(Math.abs(await page.locator('.listening-player').evaluate(e => e.getBoundingClientRect().top) - 8) < 2, 'Collapsed player must stay sticky');
+    if (entry.lessonId === 87) {
+      for (const width of [320, 390, 1280]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.evaluate(() => scrollTo(0, 700));
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Collapsed player overflows');
+        assert(await audio.isVisible());
+        await page.screenshot({ path: `/tmp/listening-compact-${width}.png` });
+        await settings.click();
+        assert(await page.getByRole('button', { name: 'Увеличить текст' }).isVisible());
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Expanded settings overflow');
+        await page.screenshot({ path: `/tmp/listening-settings-${width}.png` });
+        await settings.click();
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+    }
     await page.reload();
     await page.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
+    assert(await page.locator('#player-settings').isHidden(), 'Reload must restore compact player');
     assert.equal(await audio.evaluate(a => Math.round(a.currentTime)), 30);
     assert.equal(await audio.evaluate(a => a.playbackRate), 1.25);
     assert(await audio.evaluate(a => a.loop));
@@ -143,6 +180,10 @@ try {
     });
     await savedPage.goto(`${origin}/offline-${entry.lessonId}.html`);
     await savedPage.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
+    assert(await savedPage.locator('#player-settings').isHidden(), 'Offline player must start compact');
+    await savedPage.getByRole('button', { name: 'Настройки', exact: true }).click();
+    assert(await savedPage.getByRole('button', { name: 'Вперёд на 10 секунд' }).isVisible());
+    await savedPage.getByRole('button', { name: 'Настройки', exact: true }).click();
     assert.deepEqual(await savedPage.locator('#listening-transcript > *').allTextContents(), transcript.paragraphs);
     await savedPage.locator('audio').evaluate(a => a.play());
     await savedPage.waitForFunction(() => document.querySelector('audio').currentTime > 0.2);
@@ -162,6 +203,7 @@ try {
   const hrefs = await links.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
   for (const entry of catalog) assert(hrefs.includes(`./text-and-audio.html?lesson=${entry.lessonId}`));
   await page.goto(`${origin}${base}text-and-audio.html?lesson=91`);
+  await page.getByText('Первая часть · Урок 91', { exact: true }).waitFor();
   assert.equal(await page.getByLabel('Выбрать урок').locator('option').count(), catalog.length);
   await page.getByLabel('Выбрать урок').selectOption('87');
   await page.getByText('Первая часть · Урок 87', { exact: true }).waitFor();
