@@ -58,12 +58,14 @@ python scripts/import-listening.py 93 '/path/to/урок 93.docx' '/path/to/ур
 ```json
 {
   "lessonId": 93,
+  "courseTitle": "Шифахия",
   "duration": 420,
   "audioSrc": "./audio/shifahiya-1/lesson-93.mp3",
   "textSrc": "./text/shifahiya-1/lesson-93.json"
 }
 ```
 
+`courseTitle` — название части в крупном заголовке плеера, без номера части.
 `duration` — длительность в секундах. Каталог держится в порядке уроков.
 Одного аудиофайла недостаточно: кнопка появляется по каталогу после добавления
 и записи, и текста. Изменения отправляются отдельной веткой через PR.

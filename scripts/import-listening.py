@@ -51,7 +51,7 @@ def main():
                 'sourceSha256': hashlib.sha256(args.document.read_bytes()).hexdigest()}
         text_path.write_text(json.dumps(text, ensure_ascii=False, indent=2) + '\n')
         encoded.replace(audio_path)
-    catalog.append({'lessonId': args.lesson, 'duration': round(duration, 3),
+    catalog.append({'lessonId': args.lesson, 'courseTitle': 'Шифахия', 'duration': round(duration, 3),
                     'audioSrc': f'./audio/shifahiya-1/lesson-{args.lesson}.mp3',
                     'textSrc': f'./text/shifahiya-1/lesson-{args.lesson}.json'})
     catalog.sort(key=lambda item: item['lessonId'])

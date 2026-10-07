@@ -118,7 +118,7 @@ try {
     assert.equal(await links.nth(index).getAttribute('href'), `./text-and-audio.html?lesson=${87 + index}`);
   }
   await links.nth(1).click();
-  await page.getByText('Первая часть · Урок 88', { exact: true }).waitFor();
+  await page.getByText('Шифахия · Урок 88', { exact: true }).waitFor();
   assert.equal(await page.getByRole('link', { name: '← К курсу' }).getAttribute('href'), './');
   assert(await page.getByRole('button', { name: 'Скачать урок для занятий без интернета', exact: true }).isVisible());
   assert.equal(await page.getByLabel('Выбрать урок').locator('option').count(), 10);

@@ -65,6 +65,13 @@ try {
     requests.length = 0;
     await page.goto(`${origin}${base}text-and-audio.html?lesson=${entry.lessonId}`);
     await page.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
+    assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), `${entry.courseTitle} · Урок ${entry.lessonId}`);
+    if (entry.lessonId === 88) {
+      await page.screenshot({ path: '/tmp/course-heading-mobile.png' });
+      await page.setViewportSize({ width: 1280, height: 844 });
+      await page.screenshot({ path: '/tmp/course-heading-desktop.png' });
+      await page.setViewportSize({ width: 390, height: 844 });
+    }
     const audio = page.locator('audio');
     const paragraphs = page.locator('#listening-transcript > *');
     assert.deepEqual(await paragraphs.allTextContents(), transcript.paragraphs, 'Source Unicode must be preserved');
@@ -189,6 +196,7 @@ try {
     });
     await savedPage.goto(`${origin}/offline-${entry.lessonId}.html`);
     await savedPage.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
+    assert.equal(await savedPage.getByRole('heading', { level: 1 }).textContent(), `${entry.courseTitle} · Урок ${entry.lessonId}`, 'Offline heading must retain the course name');
     assert(await savedPage.locator('#player-settings').isHidden(), 'Offline player must start compact');
     await savedPage.getByRole('button', { name: 'Настройки', exact: true }).click();
     assert(await savedPage.getByRole('button', { name: 'Вперёд на 10 секунд' }).isVisible());
@@ -212,14 +220,14 @@ try {
   const hrefs = await links.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
   for (const entry of catalog) assert(hrefs.includes(`./text-and-audio.html?lesson=${entry.lessonId}`));
   await page.goto(`${origin}${base}text-and-audio.html?lesson=91`);
-  await page.getByText('Первая часть · Урок 91', { exact: true }).waitFor();
+  await page.getByText('Шифахия · Урок 91', { exact: true }).waitFor();
   assert.equal(await page.getByLabel('Выбрать урок').locator('option').count(), catalog.length);
   await page.getByLabel('Выбрать урок').selectOption('87');
-  await page.getByText('Первая часть · Урок 87', { exact: true }).waitFor();
+  await page.getByText('Шифахия · Урок 87', { exact: true }).waitFor();
   await page.getByLabel('Выбрать урок').selectOption('88');
-  await page.getByText('Первая часть · Урок 88', { exact: true }).waitFor();
+  await page.getByText('Шифахия · Урок 88', { exact: true }).waitFor();
   await page.getByLabel('Выбрать урок').selectOption('100');
-  await page.getByText('Первая часть · Урок 100', { exact: true }).waitFor();
+  await page.getByText('Шифахия · Урок 100', { exact: true }).waitFor();
   await page.screenshot({ path: '/tmp/more-audio-mobile.png' });
   const missing = Array.from({ length: 100 }, (_, index) => index + 1).find(id => !catalog.some(entry => entry.lessonId === id));
   await page.goto(`${origin}${base}text-and-audio.html?lesson=${missing ?? 101}`);
