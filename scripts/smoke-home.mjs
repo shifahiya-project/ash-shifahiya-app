@@ -106,6 +106,39 @@ try {
   });
   await page.goto(origin, { waitUntil: "networkidle" });
 
+  const menu = page.locator("#main-menu");
+  const menuToggle = page.getByRole("button", { name: "Меню", exact: true });
+  const openMainMenu = async () => {
+    if (!(await menu.evaluate((element) => element.matches(":popover-open")))) await menuToggle.click();
+    await menu.waitFor();
+  };
+  const closeMainMenu = async () => {
+    if (await menu.isVisible()) await menu.getByRole("button", { name: "Закрыть меню", exact: true }).click();
+    await menu.waitFor({ state: "hidden" });
+  };
+  assert.equal(await menu.isVisible(), false, "All five blocks should be hidden on arrival");
+  assert.equal(await menuToggle.getAttribute("aria-expanded"), "false");
+  assert.equal(await page.locator(".home-view .home-extras").count(), 0);
+  assert.equal(await page.locator(".topbar .streak").count(), 0);
+  const menuBox = await menuToggle.boundingBox();
+  assert(menuBox.x > 390 * 0.7 && menuBox.width >= 44 && menuBox.height >= 44);
+  await menuToggle.focus();
+  await page.keyboard.press("Enter");
+  await menu.waitFor();
+  await menu.getByRole("button", { name: "Закрыть меню", exact: true }).focus();
+  await page.keyboard.press("Escape");
+  await menu.waitFor({ state: "hidden" });
+  assert(await menuToggle.evaluate((element) => element === document.activeElement), "Escape should restore focus to the menu button");
+  await openMainMenu();
+  await page.mouse.click(2, 2);
+  await menu.waitFor({ state: "hidden" });
+  await openMainMenu();
+  await menuToggle.click();
+  await menu.waitFor({ state: "hidden" });
+  await page.screenshot({ path: "/tmp/header-menu-closed-mobile.png", fullPage: true });
+  await openMainMenu();
+  await menu.screenshot({ path: "/tmp/header-menu-open-mobile.png" });
+
   const cards = page.locator(".lesson-list .lesson-card:not(.exam-card)");
   const card = (id) => cards.filter({ has: page.locator(".lesson-number", { hasText: new RegExp(`^${String(id).padStart(2, "0")}$`) }) });
   const hero = page.locator(".continue-learning");
@@ -116,6 +149,7 @@ try {
   const showLessons = () => page.getByRole("button", { name: "Показать уроки", exact: true });
   const hideLessons = () => page.getByRole("button", { name: "Скрыть уроки", exact: true });
   const openLessons = async () => {
+    await openMainMenu();
     if (await showLessons().isVisible()) await showLessons().click();
     await lessonPanel.waitFor();
   };
@@ -210,11 +244,9 @@ try {
   assert.doesNotMatch(await page.locator(".home-view").innerText(), /Каждая форма встречается дважды|Второй урок продолжает первый/);
   assert(await page.evaluate(() => {
     const lessons = document.getElementById("course-lessons");
-    const principle = document.querySelector(".principle");
     const extras = document.querySelector(".home-extras");
-    return extras.contains(lessons) &&
-      Boolean(principle.compareDocumentPosition(extras) & Node.DOCUMENT_POSITION_FOLLOWING);
-  }), "Lessons should be inside the matching bottom panels");
+    return extras.contains(lessons) && Boolean(extras.closest("#main-menu"));
+  }), "All five blocks should live inside the header menu");
   await hideLessons().click();
   await page.mouse.move(0, 0);
   const disclosureFormats = await page.locator(".home-disclosure-toggle").evaluateAll((nodes) => nodes.map((node) => {
@@ -285,11 +317,16 @@ try {
   await page.screenshot({ path: "/tmp/compact-home-mobile.png", fullPage: true });
 
   // Continue really resumes the unfinished session, rather than merely naming it.
+  await closeMainMenu();
   await hero.click();
   await page.locator(".word-card .arabic-word").waitFor();
   assert.equal(await page.locator(".word-card .arabic-word").innerText(), lessonNinetyOne.decks[0].words[2].arabic);
   assert.match(await page.locator(".lesson-progress .counter").innerText(), /^3\//);
+  await openMainMenu();
+  await closeMainMenu();
+  assert.equal(await page.locator(".word-card .arabic-word").innerText(), lessonNinetyOne.decks[0].words[2].arabic, "Opening the menu during a lesson should preserve the current card");
   await page.getByRole("button", { name: "На главную", exact: true }).click();
+  await openLessons();
   await card(91).waitFor();
   const progressBeforeToggling = await page.evaluate((keys) => keys.map((key) => [key, localStorage.getItem(key)]), lateEntries.map(([key]) => key));
   await showAll().click();
@@ -357,6 +394,7 @@ try {
       score: expanded87.questions.length - 1,
     })],
   ]);
+  await closeMainMenu();
   await hero.click();
   await page.locator(".practice-view .prompt-card").waitFor();
   await page.locator(".practice-view .options").getByRole("button", { name: closing87.answer, exact: true }).click();
@@ -389,6 +427,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({ path: "/tmp/pending-audio-87-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
+  await closeMainMenu();
   await hero.click();
   await page.waitForFunction(() => document.querySelector("audio")?.readyState > 0);
   assert.equal(await page.getByLabel("Выбрать урок").locator("option").count(), listeningCatalog.length);
@@ -410,6 +449,7 @@ try {
 
   // The explicit mark travels with the normal progress backup. Older copies
   // have no audio field, so restoring them must preserve existing marks.
+  await openMainMenu();
   await showProgress().click();
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "Сохранить копию", exact: true }).click();
@@ -419,6 +459,7 @@ try {
   assert.equal(backup.version, 2);
   assert.equal(backup.listening[87].completed, true);
   await seed([]);
+  await openMainMenu();
   await showProgress().click();
   await page.locator('input[type="file"]').setInputFiles({ name: "progress-v2.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
   await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
@@ -427,6 +468,7 @@ try {
   await page.reload({ waitUntil: "networkidle" });
   const oldBackup = { ...backup, version: 1 };
   delete oldBackup.listening;
+  await openMainMenu();
   await showProgress().click();
   await page.locator('input[type="file"]').setInputFiles({ name: "progress-v1.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(oldBackup)) });
   await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
