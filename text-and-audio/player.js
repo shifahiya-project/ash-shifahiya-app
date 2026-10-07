@@ -109,6 +109,11 @@
   audio.addEventListener('timeupdate', () => { if (Date.now() - lastSave > 5000) save(); });
   window.addEventListener('pagehide', save);
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+  get('settings-toggle').onclick = () => {
+    const settings = get('player-settings');
+    settings.hidden = !settings.hidden;
+    get('settings-toggle').setAttribute('aria-expanded', String(!settings.hidden));
+  };
   get('rewind').onclick = () => seek(-10);
   get('forward').onclick = () => seek(10);
   get('retry').onclick = () => { save(); get('audio-error').hidden = true; audio.load(); };
