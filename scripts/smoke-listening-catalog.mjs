@@ -74,6 +74,8 @@ try {
     assert.equal(await settings.getAttribute('aria-expanded'), 'false');
     assert(await audio.isVisible(), 'Audio controls must stay visible');
     const compactHeight = await page.locator('.listening-player').evaluate(e => e.offsetHeight);
+    assert(compactHeight <= 64, 'Collapsed player must fit in one thin row');
+    assert.equal(await page.locator('#audio-label').count(), 0, 'The player must not repeat the lesson title');
     if (entry.lessonId === 87 || entry.lessonId === 88) {
       await page.waitForFunction(() => document.querySelector('audio').currentTime === 27.5);
       assert.equal(await audio.evaluate(a => a.playbackRate), 0.9, 'The original pilot speed should survive the shared-player migration');
@@ -130,6 +132,13 @@ try {
         await page.evaluate(() => scrollTo(0, 700));
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Collapsed player overflows');
         assert(await audio.isVisible());
+        const bar = await page.locator('.player-bar').evaluate(e => {
+          const audio = e.querySelector('audio').getBoundingClientRect();
+          const button = e.querySelector('button').getBoundingClientRect();
+          return { audioTop: audio.top, buttonTop: button.top, audioRight: audio.right, buttonLeft: button.left, target: button.width };
+        });
+        assert(Math.abs(bar.audioTop - bar.buttonTop) < 1 && bar.audioRight < bar.buttonLeft, 'Settings must sit beside the audio controls');
+        assert(bar.target >= 44, 'Settings must keep an accessible touch target');
         await page.screenshot({ path: `/tmp/listening-compact-${width}.png` });
         await settings.click();
         assert(await page.getByRole('button', { name: 'Увеличить текст' }).isVisible());
