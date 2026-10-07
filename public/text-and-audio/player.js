@@ -163,7 +163,7 @@
         reader.readAsDataURL(blob);
       });
       const [html, css, script] = await Promise.all([
-        fetchText('./text-and-audio.html?v=3'), fetchText('./text-and-audio/player.css?v=3'), fetchText('./text-and-audio/player.js?v=3'),
+        fetchText('./text-and-audio.html?v=4'), fetchText('./text-and-audio/player.css?v=4'), fetchText('./text-and-audio/player.js?v=4'),
       ]);
       const doc = new DOMParser().parseFromString(html, 'text/html');
       doc.querySelector('link[rel="stylesheet"]').remove();
@@ -210,8 +210,10 @@
       get('lesson').append(option);
     }
     get('lesson').value = String(lesson.lessonId);
-    document.title = `Аш-Шифахия — текст и аудио урока ${lesson.lessonId}`;
-    get('lesson-label').textContent = `Первая часть · Урок ${lesson.lessonId}`;
+    const courseTitle = lesson.courseTitle || 'Шифахия';
+    const heading = `${courseTitle} · Урок ${lesson.lessonId}`;
+    document.title = heading;
+    get('lesson-label').textContent = heading;
     audio.setAttribute('aria-label', `Аудио урока ${lesson.lessonId}`);
     state = readState();
     render();

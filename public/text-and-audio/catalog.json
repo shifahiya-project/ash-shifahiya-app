@@ -1,60 +1,70 @@
 [
   {
     "lessonId": 87,
+    "courseTitle": "Шифахия",
     "duration": 511.944,
     "audioSrc": "./audio/shifahiya-1/lesson-87.mp3",
     "textSrc": "./text/shifahiya-1/lesson-87.json"
   },
   {
     "lessonId": 88,
+    "courseTitle": "Шифахия",
     "duration": 497.568,
     "audioSrc": "./audio/shifahiya-1/lesson-88.mp3",
     "textSrc": "./text/shifahiya-1/lesson-88.json"
   },
   {
     "lessonId": 91,
+    "courseTitle": "Шифахия",
     "duration": 444.408,
     "audioSrc": "./audio/shifahiya-1/lesson-91.mp3",
     "textSrc": "./text/shifahiya-1/lesson-91.json"
   },
   {
     "lessonId": 92,
+    "courseTitle": "Шифахия",
     "duration": 458.976,
     "audioSrc": "./audio/shifahiya-1/lesson-92.mp3",
     "textSrc": "./text/shifahiya-1/lesson-92.json"
   },
   {
     "lessonId": 95,
+    "courseTitle": "Шифахия",
     "duration": 426.096,
     "audioSrc": "./audio/shifahiya-1/lesson-95.mp3",
     "textSrc": "./text/shifahiya-1/lesson-95.json"
   },
   {
     "lessonId": 96,
+    "courseTitle": "Шифахия",
     "duration": 526.008,
     "audioSrc": "./audio/shifahiya-1/lesson-96.mp3",
     "textSrc": "./text/shifahiya-1/lesson-96.json"
   },
   {
     "lessonId": 97,
+    "courseTitle": "Шифахия",
     "duration": 392.904,
     "audioSrc": "./audio/shifahiya-1/lesson-97.mp3",
     "textSrc": "./text/shifahiya-1/lesson-97.json"
   },
   {
     "lessonId": 98,
+    "courseTitle": "Шифахия",
     "duration": 348.024,
     "audioSrc": "./audio/shifahiya-1/lesson-98.mp3",
     "textSrc": "./text/shifahiya-1/lesson-98.json"
   },
   {
     "lessonId": 99,
+    "courseTitle": "Шифахия",
     "duration": 301.728,
     "audioSrc": "./audio/shifahiya-1/lesson-99.mp3",
     "textSrc": "./text/shifahiya-1/lesson-99.json"
   },
   {
     "lessonId": 100,
+    "courseTitle": "Шифахия",
     "duration": 303.408,
     "audioSrc": "./audio/shifahiya-1/lesson-100.mp3",
     "textSrc": "./text/shifahiya-1/lesson-100.json"
