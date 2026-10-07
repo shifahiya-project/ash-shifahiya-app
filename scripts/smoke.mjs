@@ -191,7 +191,13 @@ try {
   });
 
   await page.goto(origin, { waitUntil: "networkidle" });
+  const openMainMenu = async () => {
+    const menu = page.locator("#main-menu");
+    if (!(await menu.evaluate((element) => element.matches(":popover-open")))) await page.getByRole("button", { name: "Меню", exact: true }).click();
+    await menu.waitFor();
+  };
   const openCourseParts = async () => {
+    await openMainMenu();
     const lessonsButton = page.getByRole("button", { name: "Показать уроки", exact: true });
     if (await lessonsButton.isVisible()) await lessonsButton.click();
     const button = page.getByRole("button", { name: "Показать части курса", exact: true });
@@ -212,6 +218,7 @@ try {
       }));
     }, deckIndex);
     await page.reload({ waitUntil: "networkidle" });
+    await openMainMenu();
     await page.getByRole("button", { name: "Показать уроки", exact: true }).click();
     await page.locator(".lesson-card").filter({ has: page.locator(".lesson-number", { hasText: /^82$/ }) })
       .getByRole("button", { name: /Продолжить/ }).click();
@@ -435,6 +442,7 @@ try {
   await page.waitForSelector(".reading-view");
   assert.deepEqual(await page.locator(".reading-arabic").allTextContents(), part11LessonNinetyFour.fragments.map((line) => line.arabic));
   await page.getByRole("button", { name: "Вернуться позже" }).click();
+  await openMainMenu();
   await page.getByRole("button", { name: "Показать личный прогресс", exact: true }).click();
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "Сохранить копию" }).click();
@@ -444,6 +452,7 @@ try {
   assert.equal(backup.part11Sessions[94].view, "reading");
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: "networkidle" });
+  await openMainMenu();
   await page.getByRole("button", { name: "Показать личный прогресс", exact: true }).click();
   await page.locator('input[type="file"]').setInputFiles({ name: "progress.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
   await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
