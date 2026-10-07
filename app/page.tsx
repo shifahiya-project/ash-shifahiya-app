@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type Ref } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { lessonSummaries } from "../content/manifest";
 import listeningCatalog from "../public/text-and-audio/catalog.json";
 import { READING_SOURCE, readingByLesson } from "../content/reading-manifest";
@@ -480,18 +480,17 @@ function shuffle<T>(items: T[]) {
   return result;
 }
 
-function HomeDisclosure({ label, detail, open, controls, onToggle, buttonRef, children }: {
+function HomeDisclosure({ label, detail, open, controls, onToggle, children }: {
   label: string;
   detail: string;
   open: boolean;
   controls: string;
   onToggle: () => void;
-  buttonRef?: Ref<HTMLButtonElement>;
   children: ReactNode;
 }) {
   return (
     <section className="home-disclosure">
-      <button ref={buttonRef} className="home-disclosure-toggle" aria-label={`${open ? "Скрыть" : "Показать"} ${label.toLowerCase()}`} aria-expanded={open} aria-controls={controls} onClick={onToggle}>
+      <button className="home-disclosure-toggle" aria-label={`${open ? "Скрыть" : "Показать"} ${label.toLowerCase()}`} aria-expanded={open} aria-controls={controls} onClick={onToggle}>
         <span><strong>{label}</strong><small>{detail}</small></span>
         <span className="disclosure-mark" aria-hidden="true">{open ? "−" : "+"}</span>
       </button>
@@ -575,7 +574,6 @@ export default function Home() {
   const [openLines, setOpenLines] = useState<string[]>([]);
   const [course, setCourse] = useState<1 | 2 | TextCourseId>(1);
   const [showCourseParts, setShowCourseParts] = useState(false);
-  const coursePartsToggle = useRef<HTMLButtonElement>(null);
   const courseHeading = useRef<HTMLElement>(null);
   const [expandedCourse, setExpandedCourse] = useState<1 | 2 | TextCourseId | null>(null);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -583,6 +581,7 @@ export default function Home() {
   const [showLessons, setShowLessons] = useState(false);
   const showAllLessons = expandedCourse === course;
   function toggleLessons() {
+    setShowCourseParts(false);
     if (!showLessons) setExpandedCourse(null);
     setShowLessons((value) => !value);
   }
@@ -2096,12 +2095,110 @@ export default function Home() {
             </HomeDisclosure>
             <HomeDisclosure label="Уроки" detail={`Часть ${course} · ${COURSE_NAMES[course]} · ${completedLessonCount}/${selectedSummaries.length} пройдено`} open={showLessons} controls="lesson-panel" onToggle={toggleLessons}>
               <div className="lesson-list-toolbar">
-                <span><strong ref={courseHeading} tabIndex={-1} className="selected-course">Часть {course} · {COURSE_NAMES[course]}</strong><small>{showAllLessons ? "Все уроки" : "Ваши ближайшие уроки"} · {completedLessonCount}/{selectedSummaries.length} пройдено</small></span>
+                <span>
+                  <span className="lesson-course-title">
+                    <strong ref={courseHeading} tabIndex={-1} className="selected-course">Часть {course} · {COURSE_NAMES[course]}</strong>
+                    <button className="text-button course-parts-button" aria-label={`${showCourseParts ? "Скрыть" : "Показать"} части курса`} aria-expanded={showCourseParts} aria-controls="course-parts" onClick={() => setShowCourseParts((value) => !value)}>
+                      Части курса <span aria-hidden="true">{showCourseParts ? "−" : "+"}</span>
+                    </button>
+                  </span>
+                  <small>{showAllLessons ? "Все уроки" : "Ваши ближайшие уроки"} · {completedLessonCount}/{selectedSummaries.length} пройдено</small>
+                </span>
                 {(showAllLessons || selectedSummaries.length > (course === 1 ? firstCourseSummaries.length : course === 2 ? visiblePart2Summaries.length : visibleTextSummaries.length)) && (
                   <button className="secondary" aria-expanded={showAllLessons} aria-controls="course-lessons" onClick={() => setExpandedCourse(showAllLessons ? null : course)}>
                     {showAllLessons ? "Свернуть список" : "Показать все уроки"}
                   </button>
                 )}
+              </div>
+              <div id="course-parts" className="course-switch" role="tablist" aria-label="Части курса" hidden={!showCourseParts}>
+                <button
+                  role="tab"
+                  aria-selected={course === 1}
+                  className={course === 1 ? "is-active" : ""}
+                  onClick={() => chooseCourse(1)}
+                >
+                  1 · Шифахия
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 2}
+                  className={course === 2 ? "is-active" : ""}
+                  onClick={() => chooseCourse(2)}
+                >
+                  2 · Чтение {part2Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 3}
+                  className={course === 3 ? "is-active" : ""}
+                  onClick={() => chooseCourse(3)}
+                >
+                  3 · Акыда {part3Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 4}
+                  className={course === 4 ? "is-active" : ""}
+                  onClick={() => chooseCourse(4)}
+                >
+                  4 · Фикх {part4Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 5}
+                  className={course === 5 ? "is-active" : ""}
+                  onClick={() => chooseCourse(5)}
+                >
+                  5 · Грамматика {part5Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 6}
+                  className={course === 6 ? "is-active" : ""}
+                  onClick={() => chooseCourse(6)}
+                >
+                  6 · Балага {part6Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 7}
+                  className={course === 7 ? "is-active" : ""}
+                  onClick={() => chooseCourse(7)}
+                >
+                  7 · Логика {part7Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 8}
+                  className={course === 8 ? "is-active" : ""}
+                  onClick={() => chooseCourse(8)}
+                >
+                  8 · Хадис {part8Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 9}
+                  className={course === 9 ? "is-active" : ""}
+                  onClick={() => chooseCourse(9)}
+                >
+                  9 · Усуль {part9Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 10}
+                  className={course === 10 ? "is-active" : ""}
+                  onClick={() => chooseCourse(10)}
+                >
+                  10 · Арбаин {part10Ready ? "" : "🔒"}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={course === 11}
+                  className={course === 11 ? "is-active" : ""}
+                  onClick={() => chooseCourse(11)}
+                >
+                  11 · Тафсир {part11Ready ? "" : "🔒"}
+                </button>
               </div>
               {!showAllLessons && completedLessonCount === selectedSummaries.length && (
                 <p className="course-complete" role="status">Все уроки этой части пройдены. Можно повторить последний урок или открыть полный список.</p>
@@ -2431,98 +2528,6 @@ export default function Home() {
             </HomeDisclosure>
             <HomeShortcut label="Подкаст дня" detail="Один выпуск на арабском в день — своя серия и свой календарь" href="/podcasts/" />
             <HomeShortcut label="Темы наизусть" detail="Разбор темы по вашей книге: припоминание, расчёты и расписание" href="/topics/" badge={topicsDue} />
-            <HomeDisclosure label="Части курса" detail={`Часть ${course} · ${COURSE_NAMES[course]}`} open={showCourseParts} controls="course-parts" onToggle={() => setShowCourseParts((value) => !value)} buttonRef={coursePartsToggle}>
-              <div className="course-switch" role="tablist" aria-label="Части курса">
-                <button
-                  role="tab"
-                  aria-selected={course === 1}
-                  className={course === 1 ? "is-active" : ""}
-                  onClick={() => chooseCourse(1)}
-                >
-                  1 · Шифахия
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={course === 2}
-                  className={course === 2 ? "is-active" : ""}
-                  onClick={() => chooseCourse(2)}
-                >
-                  2 · Чтение {part2Ready ? "" : "🔒"}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={course === 3}
-                  className={course === 3 ? "is-active" : ""}
-                  onClick={() => chooseCourse(3)}
-                >
-                  3 · Акыда {part3Ready ? "" : "🔒"}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={course === 4}
-                  className={course === 4 ? "is-active" : ""}
-                  onClick={() => chooseCourse(4)}
-                >
-                  4 · Фикх {part4Ready ? "" : "🔒"}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={course === 5}
-                  className={course === 5 ? "is-active" : ""}
-                  onClick={() => chooseCourse(5)}
-                >
-                  5 · Грамматика {part5Ready ? "" : "🔒"}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={course === 6}
-                  className={course === 6 ? "is-active" : ""}
-                  onClick={() => chooseCourse(6)}
-                >
-                  6 · Балага {part6Ready ? "" : "🔒"}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={course === 7}
-                  className={course === 7 ? "is-active" : ""}
-                  onClick={() => chooseCourse(7)}
-                >
-                  7 · Логика {part7Ready ? "" : "🔒"}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={course === 8}
-                  className={course === 8 ? "is-active" : ""}
-                  onClick={() => chooseCourse(8)}
-                >
-                  8 · Хадис {part8Ready ? "" : "🔒"}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={course === 9}
-                  className={course === 9 ? "is-active" : ""}
-                  onClick={() => chooseCourse(9)}
-                >
-                  9 · Усуль {part9Ready ? "" : "🔒"}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={course === 10}
-                  className={course === 10 ? "is-active" : ""}
-                  onClick={() => chooseCourse(10)}
-                >
-                  10 · Арбаин {part10Ready ? "" : "🔒"}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={course === 11}
-                  className={course === 11 ? "is-active" : ""}
-                  onClick={() => chooseCourse(11)}
-                >
-                  11 · Тафсир {part11Ready ? "" : "🔒"}
-                </button>
-              </div>
-            </HomeDisclosure>
           </div>
         </section>
       )}

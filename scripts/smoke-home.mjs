@@ -122,6 +122,7 @@ try {
   const showParts = () => page.getByRole("button", { name: "Показать части курса", exact: true });
   const hideParts = () => page.getByRole("button", { name: "Скрыть части курса", exact: true });
   const openCourseParts = async () => {
+    await openLessons();
     if (await showParts().isVisible()) await showParts().click();
     await parts.waitFor();
   };
@@ -196,9 +197,11 @@ try {
   assert.equal(await showParts().getAttribute("aria-controls"), "course-parts");
   assert.equal(await page.locator(".selected-course").count(), 1);
   assert.equal(await page.locator(".selected-course").innerText(), "Часть 1 · Шифахия");
-  assert.equal(await page.locator(".home-extras .home-disclosure").count(), 6);
-  assert.equal(await page.locator(".home-extras .home-disclosure-toggle").count(), 6);
-  assert.deepEqual(await page.locator(".home-extras .home-disclosure-toggle strong").allTextContents(), ["Личный прогресс", "Достижения", "Уроки", "Подкаст дня", "Темы наизусть", "Части курса"]);
+  assert.equal(await page.locator(".home-extras .home-disclosure").count(), 5);
+  assert.equal(await page.locator(".home-extras .home-disclosure-toggle").count(), 5);
+  assert.deepEqual(await page.locator(".home-extras .home-disclosure-toggle strong").allTextContents(), ["Личный прогресс", "Достижения", "Уроки", "Подкаст дня", "Темы наизусть"]);
+  assert(await parts.evaluate((element) => Boolean(element.closest("#lesson-panel"))), "Course parts should live inside the lessons panel");
+  assert(await showParts().evaluate((element) => Boolean(element.closest(".lesson-course-title"))), "The compact course-parts button should sit beside the current part title");
   assert.equal(await page.locator("#personal-progress").isVisible(), false);
   for (const [name, href] of [[/^Подкаст дня/, "./podcasts/"], [/^Темы наизусть/, "./topics/"]]) {
     assert.equal(await page.locator(".home-extras").getByRole("link", { name }).getAttribute("href"), href);
@@ -218,7 +221,7 @@ try {
     const style = getComputedStyle(node);
     return [style.backgroundColor, style.borderRadius, style.fontSize, style.padding, style.display];
   }));
-  for (const format of disclosureFormats) assert.deepEqual(format, disclosureFormats[0], "All six bottom blocks should share the same format");
+  for (const format of disclosureFormats) assert.deepEqual(format, disclosureFormats[0], "All five bottom blocks should share the same format");
   const showProgress = () => page.getByRole("button", { name: "Показать личный прогресс", exact: true });
   const hideProgress = () => page.getByRole("button", { name: "Скрыть личный прогресс", exact: true });
   await showProgress().focus();
@@ -239,8 +242,25 @@ try {
   assert.equal(await page.getByRole("tab").count(), 11);
   assert.equal(await hideParts().getAttribute("aria-expanded"), "true");
   assert(await page.getByRole("tab", { name: /^1 · Шифахия/ }).getAttribute("aria-selected") === "true");
-  await hideParts().click();
+  for (const width of [390, 360, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    const boxes = await page.getByRole("tab").evaluateAll((nodes) => nodes.map((node) => {
+      const box = node.getBoundingClientRect();
+      return { left: box.left, right: box.right, scroll: node.scrollWidth, width: node.clientWidth };
+    }));
+    assert(boxes.every((box) => box.left >= 0 && box.right <= width && box.scroll <= box.width), `Course-part labels should fit at ${width}px`);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  }
+  await page.locator("#lesson-panel").screenshot({ path: "/tmp/lessons-course-picker-open-320.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await hideLessons().click();
+  await openLessons();
   assert.equal(await parts.isVisible(), false);
+  assert.equal(await showParts().getAttribute("aria-expanded"), "false", "Reopening lessons should reset the hidden course selector");
+  await showParts().focus();
+  await page.keyboard.press("Enter");
+  assert(await parts.isVisible(), "Course parts should open with the keyboard");
+  await hideParts().click();
 
   // The latest saved session can be an abandoned repeat of a completed lesson.
   // It must not take the learner away from the unfinished lesson or its audio.

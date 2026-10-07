@@ -484,6 +484,12 @@ h1 em { color: var(--green); font-weight: inherit; }
 .lesson-list-toolbar button { min-height: 44px; font-size: 13px; }
 .lesson-list-toolbar strong, .lesson-list-toolbar small { display: block; }
 .lesson-list-toolbar small { margin-top: 5px; }
+.lesson-course-title { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.lesson-list-toolbar .course-parts-button { margin: 0; padding: 0 4px; color: var(--ink-soft); font-size: 11px; white-space: nowrap; }
+.course-parts-button:hover { color: var(--green); }
+.course-parts-button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 4px; }
+#course-parts { margin: 0 8px 16px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.6); }
+#course-parts[hidden] { display: none; }
 .lesson-window-label { margin-bottom: 7px; color: var(--green); font-size: 11px; font-weight: 700; }
 .course-complete { margin: 20px 0; color: var(--ink-soft); line-height: 1.6; }
 .achievement-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -557,6 +563,7 @@ h1 em { color: var(--green); font-weight: inherit; }
 
 @media (max-width: 420px) {
   .course-switch button { padding: 10px 4px; font-size: 11px; }
+  #lesson-panel .course-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .course-switch button.is-active { background: var(--green); color: white; }
