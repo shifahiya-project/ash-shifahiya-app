@@ -580,9 +580,15 @@ export default function Home() {
   const [expandedCourse, setExpandedCourse] = useState<1 | 2 | TextCourseId | null>(null);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showPersonalProgress, setShowPersonalProgress] = useState(false);
+  const [showLessons, setShowLessons] = useState(false);
   const showAllLessons = expandedCourse === course;
+  function toggleLessons() {
+    if (!showLessons) setExpandedCourse(null);
+    setShowLessons((value) => !value);
+  }
   function chooseCourse(id: 1 | 2 | TextCourseId) {
     setCourse(id);
+    setShowLessons(true);
     setExpandedCourse(null);
     setShowCourseParts(false);
     window.requestAnimationFrame(() => {
@@ -2046,340 +2052,6 @@ export default function Home() {
             </div>
           )}
 
-          <div className="lesson-list-toolbar">
-            <span><strong ref={courseHeading} tabIndex={-1} className="selected-course">Часть {course} · {COURSE_NAMES[course]}</strong><small>{showAllLessons ? "Все уроки" : "Ваши ближайшие уроки"} · {completedLessonCount}/{selectedSummaries.length} пройдено</small></span>
-            {(showAllLessons || selectedSummaries.length > (course === 1 ? firstCourseSummaries.length : course === 2 ? visiblePart2Summaries.length : visibleTextSummaries.length)) && (
-              <button className="secondary" aria-expanded={showAllLessons} aria-controls="course-lessons" onClick={() => setExpandedCourse(showAllLessons ? null : course)}>
-                {showAllLessons ? "Свернуть список" : "Показать все уроки"}
-              </button>
-            )}
-          </div>
-          {!showAllLessons && completedLessonCount === selectedSummaries.length && (
-            <p className="course-complete" role="status">Все уроки этой части пройдены. Можно повторить последний урок или открыть полный список.</p>
-          )}
-          <div id="course-lessons">
-          {course === 2 && (
-            <div className="lesson-list">
-              {!part2Ready && (
-                <div className="part2-gate">
-                  <strong>Вторая часть открывается по итоговому экзамену</strong>
-                  <span>
-                    Напишите итоговую работу первой части на проходной балл — и уроки второй части
-                    станут доступны. Пересдавать можно сколько угодно раз.
-                  </span>
-                </div>
-              )}
-              {visiblePart2Summaries.flatMap((item, index) => {
-                const score = part2Scores[item.id];
-                const done = score !== undefined;
-                const parked = part2Sessions[item.id];
-                const locked = !unlockedPart2.has(item.id);
-                // The course runs through one book after another, so the list
-                // says where each one starts.
-                const opensBook = visiblePart2Summaries[index - 1]?.book !== item.book;
-                const shelf = part2Summaries.filter((other) => other.book === item.book);
-                const card = (
-                  <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`p2-${item.id}`}>
-                    <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
-                    <div className="lesson-copy">
-                      {!showAllLessons && <div className="lesson-window-label">{lessonWindowLabel(item.id)}</div>}
-                      {/* The book stands over the whole run of its lessons, so the card names only its own place. */}
-                      <div className="lesson-label">Часть 2 · урок {item.id}</div>
-                      <h2>{item.title}</h2>
-                      <p>
-                        {plural(item.wordCount, "новое слово", "новых слова", "новых слов")} ·{" "}
-                        {plural(item.sentenceCount, "фраза", "фразы", "фраз")} для чтения
-                      </p>
-                      <div className="chips">{item.storyTitles.map((title) => <span key={title}>{title}</span>)}</div>
-                    </div>
-                    {locked ? (
-                      <button className="locked" disabled>Закрыто <span>🔒</span></button>
-                    ) : done ? (
-                      <div className="lesson-actions">
-                        <button className="done" disabled>Пройден <span>✓</span></button>
-                        <button className="repeat" onClick={() => startPart2(item.id, "start")}>
-                          Повторить <span>→</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <button className="primary" onClick={() => startPart2(item.id)}>
-                        {parked ? "Продолжить" : "Начать урок"} <span>→</span>
-                      </button>
-                    )}
-                    {done && <div className="card-score">✓ {score}/{item.wordCount}</div>}
-                  </div>
-                );
-                if (!opensBook) return [card];
-                return [
-                  <div className="book-divider" key={`book-${item.book}-${item.id}`}>
-                    <strong>{item.book}</strong>
-                    <span>
-                      уроки {shelf[0].id}–{shelf[shelf.length - 1].id} ·{" "}
-                      {plural(shelf.length, "урок", "урока", "уроков")}
-                    </span>
-                  </div>,
-                  card,
-                ];
-              })}
-            </div>
-          )}
-
-          {isTextCourse(course) && (
-            <div className="lesson-list">
-              {textCourseProgress[course].ready || (
-                <div className="part2-gate">
-                  <strong>{TEXT_COURSE_GATES[course].title}</strong>
-                  <span>{TEXT_COURSE_GATES[course].explains}</span>
-                </div>
-              )}
-              {visibleTextSummaries.flatMap((item, index, all) => {
-                const { scores, sessions, unlocked } = textCourseProgress[course];
-                const score = scores[item.id];
-                const done = score !== undefined;
-                const parked = sessions[item.id];
-                const locked = !unlocked.has(item.id);
-                // The course runs through one book after another, so the list
-                // says where each one starts.
-                const opensBook = all[index - 1]?.book !== item.book;
-                const shelf = TEXT_COURSES[course].summaries.filter((other) => other.book === item.book);
-                // A book that runs straight through has no division to draw:
-                // only the creed book has بَاب chapters, only the fiqh one
-                // كِتَاب sections.
-                const opensSection =
-                  item.section !== undefined &&
-                  (opensBook || all[index - 1]?.section !== item.section);
-                // Within its book: two books of one course can divide themselves
-                // into parts of the same name — both logic books open with
-                // «Введение и основы» — and a range spanning both would count
-                // lessons the divider does not head.
-                const chapter = TEXT_COURSES[course].summaries.filter(
-                  (other) => other.book === item.book && other.section === item.section,
-                );
-                const key = `p${course}`;
-                const card = (
-                  <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`${key}-${item.id}`}>
-                    <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
-                    <div className="lesson-copy">
-                      {!showAllLessons && <div className="lesson-window-label">{lessonWindowLabel(item.id)}</div>}
-                      <div className="lesson-label">
-                        {/* The finer division of the book turns over too often
-                            to head a run of the list, so it is named here. */}
-                        Часть {course} · урок {item.id}
-                        {item.chapter ? ` · ${item.chapter}` : ""}
-                      </div>
-                      <h2>{item.title}</h2>
-                      <p className="lesson-arabic-title" lang="ar" dir="rtl">{item.arabicTitle}</p>
-                      <p>
-                        {/* A lesson can bring no new words: the glossary is
-                            cumulative, and the card says so rather than
-                            printing «0 новых слов». */}
-                        {item.wordCount
-                          ? `${plural(item.wordCount, "новое слово", "новых слова", "новых слов")} · `
-                          : "только чтение · "}
-                        {plural(item.fragmentCount, "фрагмент", "фрагмента", "фрагментов")} текста
-                      </p>
-                    </div>
-                    {locked ? (
-                      <button className="locked" disabled>Закрыто <span>🔒</span></button>
-                    ) : done ? (
-                      <div className="lesson-actions">
-                        <button className="done" disabled>Пройден <span>✓</span></button>
-                        <button className="repeat" onClick={() => startTextCourse(course, item.id, "start")}>
-                          Повторить <span>→</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <button className="primary" onClick={() => startTextCourse(course, item.id)}>
-                        {parked ? "Продолжить" : "Начать урок"} <span>→</span>
-                      </button>
-                    )}
-                    {done && (
-                      <div className="card-score">
-                        {item.wordCount ? `✓ ${score}/${item.wordCount}` : "✓ прочитан"}
-                      </div>
-                    )}
-                  </div>
-                );
-                if (!opensBook && !opensSection) return [card];
-                return [
-                  ...(opensBook
-                    ? [
-                        <div className="book-divider" key={`${textCourseDividerKey(course, item, "book")}-${item.id}`}>
-                          <strong>{item.book}</strong>
-                          <span>
-                            уроки {shelf[0].id}–{shelf[shelf.length - 1].id} ·{" "}
-                            {plural(shelf.length, "урок", "урока", "уроков")}
-                          </span>
-                        </div>,
-                      ]
-                    : []),
-                  ...(opensSection
-                    ? [
-                        <div className="book-divider is-section" key={`${textCourseDividerKey(course, item, "section")}-${item.id}`}>
-                          <strong>{item.section}</strong>
-                          <span>
-                            {chapter.length > 1
-                              ? `уроки ${chapter[0].id}–${chapter[chapter.length - 1].id} · ${plural(chapter.length, "урок", "урока", "уроков")}`
-                              : `урок ${chapter[0].id}`}
-                          </span>
-                        </div>,
-                      ]
-                    : []),
-                  card,
-                ];
-              })}
-            </div>
-          )}
-
-          {course === 1 && (
-          <div className="lesson-list">
-            {firstCourseSummaries.map((item) => {
-              const saved = savedScores[item.id];
-              const unfinished = savedSessions[item.id];
-              const coreCompleted = isLessonComplete(item, stored);
-              const completed = isCourseLessonComplete(item, stored);
-              const audioHref = listeningHref(item.id);
-              const listeningCompleted = stored.listening[item.id]?.completed === true;
-              const listeningLeft = coreCompleted && audioHref && !listeningCompleted;
-              // The words are done but the grammar block still owes an answer.
-              const grammarLeft = saved !== undefined && !coreCompleted;
-              const locked = !unlockedLessons.has(item.id);
-              const opensAfter = lessonSummaries[lessonSummaries.findIndex((summary) => summary.id === item.id) - 1];
-              const card = (
-                <div className={`lesson-card ${completed ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={item.id}>
-                  <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
-                  <div className="lesson-copy">
-                    {!showAllLessons && <div className="lesson-window-label">{lessonWindowLabel(item.id)}</div>}
-                    <div className="lesson-label">Урок {item.id} · <span dir="rtl">{item.arabicTitle}</span></div>
-                    <h2>{item.title}</h2>
-                    <p>{item.description}{visiblePartCount(item) > 1 ? ` · в ${visiblePartCount(item)} части` : ""}</p>
-                    <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-                    {audioHref && !locked && !listeningLeft && (
-                      <a className="listening-link" href={audioHref}>
-                        Текст и аудио{listeningCompleted && <span aria-hidden="true"> · ✓</span>}
-                      </a>
-                    )}
-                    {listeningLeft && <p className="lesson-stage-status">Слова и задания пройдены · остались текст и аудио</p>}
-                    {hasVisibleReading(item.id, readingByLesson) && !locked && (() => {
-                      const read = savedReadings[item.id];
-                      const due = read && read.nextReview <= localDate();
-                      return (
-                        <button className={`reading-link ${due ? "is-due" : ""}`} onClick={() => startReading(item.id)}>
-                          ◫ Чтение
-                          {read ? (due ? " · сегодня повтор" : ` · следующее чтение ${read.nextReview}`) : ""}
-                        </button>
-                      );
-                    })()}
-                  </div>
-                  {locked ? (
-                    <button className="locked" disabled title={`Откроется после урока ${opensAfter?.id}`}>
-                      Закрыто <span>🔒</span>
-                    </button>
-                  ) : grammarLeft ? (
-                    <button className="repeat" onClick={() => startGrammar(item.id)}>
-                      Грамматика <span>→</span>
-                    </button>
-                  ) : listeningLeft ? (
-                    <div className="lesson-actions">
-                      <a className="primary listening-link" href={audioHref}>Текст и аудио <span aria-hidden="true">→</span></a>
-                      <button className="repeat" onClick={() => startLesson(item.id)}>
-                        Повторить слова <span>→</span>
-                      </button>
-                    </div>
-                  ) : completed ? (
-                    <div className="lesson-actions">
-                      <button className="done" disabled>Пройден <span>✓</span></button>
-                      {/* A repeat resumes silently where it stopped, so the
-                          label stays a repeat rather than turning into a
-                          "continue" the learner never asked for. */}
-                      <button className="repeat" onClick={() => startLesson(item.id)}>
-                        Повторить <span>→</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <button className="primary" onClick={() => startLesson(item.id)}>
-                      {unfinished ? "Продолжить" : "Начать урок"} <span>→</span>
-                    </button>
-                  )}
-                  {coreCompleted && (
-                    <div className="card-score">
-                      {/* A result earned before the lesson grew is shown on its
-                          own: printing it over today's larger total would read
-                          as a loss the learner never suffered. */}
-                      ✓ {saved}{savedScoreTotals[item.id] === undefined ? " верных" : `/${savedScoreTotals[item.id]}`}
-                      {GRAMMAR_ENABLED && item.grammarQuestionCount > 0 &&
-                        ` · грамматика ${savedGrammarScores[item.id]}/${item.grammarQuestionCount}`}
-                    </div>
-                  )}
-                  {grammarLeft && (
-                    <div className="card-lock">
-                      {savedGrammarScores[item.id] === undefined
-                        ? "Осталась грамматика"
-                        : `Грамматика ${savedGrammarScores[item.id]}/${item.grammarQuestionCount} · нужно ${grammarPassMark(item.grammarQuestionCount)}`}
-                    </div>
-                  )}
-                  {locked && opensAfter && <div className="card-lock">Сначала урок {opensAfter.id}</div>}
-                </div>
-              );
-
-              return card;
-            })}
-            {examSummaries.map((declared) => {
-              // While grammar is hidden the paper is shorter, and its pass mark
-              // moves with it.
-              const paper = visibleExamSummary(declared);
-
-              const ready = examReadiness(paper, lessonSummaries, stored);
-              const result = savedExams[paper.id];
-              const passed = isExamPassed(paper, result?.best);
-              if (!showAllLessons && (passed || !ready.open)) return null;
-              // A paper parked before grammar was hidden no longer fits the
-              // shorter one, so the card must not promise to continue it.
-              const written = examSession?.examId === paper.id ? examSession : null;
-              const parked = written && written.order.length === paper.questionCount ? written : null;
-              return (
-                <div
-                  className={`lesson-card exam-card ${passed ? "is-done" : ""} ${ready.open ? "" : "is-locked"}`}
-                  key={`exam-${paper.id}`}
-                >
-                  <div className="lesson-number">✦</div>
-                  <div className="lesson-copy">
-                    <div className="lesson-label">Экзамен · после урока {paper.afterLesson}</div>
-                    <h2>{paper.title}</h2>
-                    <p>
-                      {plural(paper.questionCount, "вопрос", "вопроса", "вопросов")}
-                      {paper.grammarCount > 0 ? ` · грамматики ${paper.grammarCount}` : ""} · проходной
-                      балл {examPassMark(paper.questionCount)}
-                    </p>
-                    <div className="chips">
-                      <span>Лексика</span>
-                      {paper.grammarCount > 0 && <span>Грамматика</span>}
-                    </div>
-                  </div>
-                  {ready.open ? (
-                    <button className={passed ? "repeat" : "primary"} onClick={() => startExam(paper.id)}>
-                      {parked ? "Продолжить" : passed || result ? "Пересдать" : "Начать"} <span>→</span>
-                    </button>
-                  ) : (
-                    <button className="locked" disabled>Закрыто <span>🔒</span></button>
-                  )}
-                  {result && (
-                    <div className="card-score">
-                      {passed ? "✓" : "•"} {result.best}/{paper.questionCount}
-                    </div>
-                  )}
-                  {!ready.open && (
-                    <div className="card-lock">Пройдено {ready.done} из {ready.total} уроков</div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          )}
-
-          </div>
-
           <div className="principle">
             <span className="quote">“</span>
             <p>Увидели слово. Вспомнили его ещё раз. Затем использовали в предложении.</p>
@@ -2420,6 +2092,341 @@ export default function Home() {
                     <i><b style={{ width: `${item.progress * 100}%` }} /></i>
                   </div>
                 ))}
+              </div>
+            </HomeDisclosure>
+            <HomeDisclosure label="Уроки" detail={`Часть ${course} · ${COURSE_NAMES[course]} · ${completedLessonCount}/${selectedSummaries.length} пройдено`} open={showLessons} controls="lesson-panel" onToggle={toggleLessons}>
+              <div className="lesson-list-toolbar">
+                <span><strong ref={courseHeading} tabIndex={-1} className="selected-course">Часть {course} · {COURSE_NAMES[course]}</strong><small>{showAllLessons ? "Все уроки" : "Ваши ближайшие уроки"} · {completedLessonCount}/{selectedSummaries.length} пройдено</small></span>
+                {(showAllLessons || selectedSummaries.length > (course === 1 ? firstCourseSummaries.length : course === 2 ? visiblePart2Summaries.length : visibleTextSummaries.length)) && (
+                  <button className="secondary" aria-expanded={showAllLessons} aria-controls="course-lessons" onClick={() => setExpandedCourse(showAllLessons ? null : course)}>
+                    {showAllLessons ? "Свернуть список" : "Показать все уроки"}
+                  </button>
+                )}
+              </div>
+              {!showAllLessons && completedLessonCount === selectedSummaries.length && (
+                <p className="course-complete" role="status">Все уроки этой части пройдены. Можно повторить последний урок или открыть полный список.</p>
+              )}
+              <div id="course-lessons">
+              {course === 2 && (
+                <div className="lesson-list">
+                  {!part2Ready && (
+                    <div className="part2-gate">
+                      <strong>Вторая часть открывается по итоговому экзамену</strong>
+                      <span>
+                        Напишите итоговую работу первой части на проходной балл — и уроки второй части
+                        станут доступны. Пересдавать можно сколько угодно раз.
+                      </span>
+                    </div>
+                  )}
+                  {visiblePart2Summaries.flatMap((item, index) => {
+                    const score = part2Scores[item.id];
+                    const done = score !== undefined;
+                    const parked = part2Sessions[item.id];
+                    const locked = !unlockedPart2.has(item.id);
+                    // The course runs through one book after another, so the list
+                    // says where each one starts.
+                    const opensBook = visiblePart2Summaries[index - 1]?.book !== item.book;
+                    const shelf = part2Summaries.filter((other) => other.book === item.book);
+                    const card = (
+                      <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`p2-${item.id}`}>
+                        <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
+                        <div className="lesson-copy">
+                          {!showAllLessons && <div className="lesson-window-label">{lessonWindowLabel(item.id)}</div>}
+                          {/* The book stands over the whole run of its lessons, so the card names only its own place. */}
+                          <div className="lesson-label">Часть 2 · урок {item.id}</div>
+                          <h2>{item.title}</h2>
+                          <p>
+                            {plural(item.wordCount, "новое слово", "новых слова", "новых слов")} ·{" "}
+                            {plural(item.sentenceCount, "фраза", "фразы", "фраз")} для чтения
+                          </p>
+                          <div className="chips">{item.storyTitles.map((title) => <span key={title}>{title}</span>)}</div>
+                        </div>
+                        {locked ? (
+                          <button className="locked" disabled>Закрыто <span>🔒</span></button>
+                        ) : done ? (
+                          <div className="lesson-actions">
+                            <button className="done" disabled>Пройден <span>✓</span></button>
+                            <button className="repeat" onClick={() => startPart2(item.id, "start")}>
+                              Повторить <span>→</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button className="primary" onClick={() => startPart2(item.id)}>
+                            {parked ? "Продолжить" : "Начать урок"} <span>→</span>
+                          </button>
+                        )}
+                        {done && <div className="card-score">✓ {score}/{item.wordCount}</div>}
+                      </div>
+                    );
+                    if (!opensBook) return [card];
+                    return [
+                      <div className="book-divider" key={`book-${item.book}-${item.id}`}>
+                        <strong>{item.book}</strong>
+                        <span>
+                          уроки {shelf[0].id}–{shelf[shelf.length - 1].id} ·{" "}
+                          {plural(shelf.length, "урок", "урока", "уроков")}
+                        </span>
+                      </div>,
+                      card,
+                    ];
+                  })}
+                </div>
+              )}
+
+              {isTextCourse(course) && (
+                <div className="lesson-list">
+                  {textCourseProgress[course].ready || (
+                    <div className="part2-gate">
+                      <strong>{TEXT_COURSE_GATES[course].title}</strong>
+                      <span>{TEXT_COURSE_GATES[course].explains}</span>
+                    </div>
+                  )}
+                  {visibleTextSummaries.flatMap((item, index, all) => {
+                    const { scores, sessions, unlocked } = textCourseProgress[course];
+                    const score = scores[item.id];
+                    const done = score !== undefined;
+                    const parked = sessions[item.id];
+                    const locked = !unlocked.has(item.id);
+                    // The course runs through one book after another, so the list
+                    // says where each one starts.
+                    const opensBook = all[index - 1]?.book !== item.book;
+                    const shelf = TEXT_COURSES[course].summaries.filter((other) => other.book === item.book);
+                    // A book that runs straight through has no division to draw:
+                    // only the creed book has بَاب chapters, only the fiqh one
+                    // كِتَاب sections.
+                    const opensSection =
+                      item.section !== undefined &&
+                      (opensBook || all[index - 1]?.section !== item.section);
+                    // Within its book: two books of one course can divide themselves
+                    // into parts of the same name — both logic books open with
+                    // «Введение и основы» — and a range spanning both would count
+                    // lessons the divider does not head.
+                    const chapter = TEXT_COURSES[course].summaries.filter(
+                      (other) => other.book === item.book && other.section === item.section,
+                    );
+                    const key = `p${course}`;
+                    const card = (
+                      <div className={`lesson-card ${done ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={`${key}-${item.id}`}>
+                        <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
+                        <div className="lesson-copy">
+                          {!showAllLessons && <div className="lesson-window-label">{lessonWindowLabel(item.id)}</div>}
+                          <div className="lesson-label">
+                            {/* The finer division of the book turns over too often
+                                to head a run of the list, so it is named here. */}
+                            Часть {course} · урок {item.id}
+                            {item.chapter ? ` · ${item.chapter}` : ""}
+                          </div>
+                          <h2>{item.title}</h2>
+                          <p className="lesson-arabic-title" lang="ar" dir="rtl">{item.arabicTitle}</p>
+                          <p>
+                            {/* A lesson can bring no new words: the glossary is
+                                cumulative, and the card says so rather than
+                                printing «0 новых слов». */}
+                            {item.wordCount
+                              ? `${plural(item.wordCount, "новое слово", "новых слова", "новых слов")} · `
+                              : "только чтение · "}
+                            {plural(item.fragmentCount, "фрагмент", "фрагмента", "фрагментов")} текста
+                          </p>
+                        </div>
+                        {locked ? (
+                          <button className="locked" disabled>Закрыто <span>🔒</span></button>
+                        ) : done ? (
+                          <div className="lesson-actions">
+                            <button className="done" disabled>Пройден <span>✓</span></button>
+                            <button className="repeat" onClick={() => startTextCourse(course, item.id, "start")}>
+                              Повторить <span>→</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button className="primary" onClick={() => startTextCourse(course, item.id)}>
+                            {parked ? "Продолжить" : "Начать урок"} <span>→</span>
+                          </button>
+                        )}
+                        {done && (
+                          <div className="card-score">
+                            {item.wordCount ? `✓ ${score}/${item.wordCount}` : "✓ прочитан"}
+                          </div>
+                        )}
+                      </div>
+                    );
+                    if (!opensBook && !opensSection) return [card];
+                    return [
+                      ...(opensBook
+                        ? [
+                            <div className="book-divider" key={`${textCourseDividerKey(course, item, "book")}-${item.id}`}>
+                              <strong>{item.book}</strong>
+                              <span>
+                                уроки {shelf[0].id}–{shelf[shelf.length - 1].id} ·{" "}
+                                {plural(shelf.length, "урок", "урока", "уроков")}
+                              </span>
+                            </div>,
+                          ]
+                        : []),
+                      ...(opensSection
+                        ? [
+                            <div className="book-divider is-section" key={`${textCourseDividerKey(course, item, "section")}-${item.id}`}>
+                              <strong>{item.section}</strong>
+                              <span>
+                                {chapter.length > 1
+                                  ? `уроки ${chapter[0].id}–${chapter[chapter.length - 1].id} · ${plural(chapter.length, "урок", "урока", "уроков")}`
+                                  : `урок ${chapter[0].id}`}
+                              </span>
+                            </div>,
+                          ]
+                        : []),
+                      card,
+                    ];
+                  })}
+                </div>
+              )}
+
+              {course === 1 && (
+              <div className="lesson-list">
+                {firstCourseSummaries.map((item) => {
+                  const saved = savedScores[item.id];
+                  const unfinished = savedSessions[item.id];
+                  const coreCompleted = isLessonComplete(item, stored);
+                  const completed = isCourseLessonComplete(item, stored);
+                  const audioHref = listeningHref(item.id);
+                  const listeningCompleted = stored.listening[item.id]?.completed === true;
+                  const listeningLeft = coreCompleted && audioHref && !listeningCompleted;
+                  // The words are done but the grammar block still owes an answer.
+                  const grammarLeft = saved !== undefined && !coreCompleted;
+                  const locked = !unlockedLessons.has(item.id);
+                  const opensAfter = lessonSummaries[lessonSummaries.findIndex((summary) => summary.id === item.id) - 1];
+                  const card = (
+                    <div className={`lesson-card ${completed ? "is-done" : ""} ${locked ? "is-locked" : ""}`} key={item.id}>
+                      <div className="lesson-number">{String(item.id).padStart(2, "0")}</div>
+                      <div className="lesson-copy">
+                        {!showAllLessons && <div className="lesson-window-label">{lessonWindowLabel(item.id)}</div>}
+                        <div className="lesson-label">Урок {item.id} · <span dir="rtl">{item.arabicTitle}</span></div>
+                        <h2>{item.title}</h2>
+                        <p>{item.description}{visiblePartCount(item) > 1 ? ` · в ${visiblePartCount(item)} части` : ""}</p>
+                        <div className="chips">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+                        {audioHref && !locked && !listeningLeft && (
+                          <a className="listening-link" href={audioHref}>
+                            Текст и аудио{listeningCompleted && <span aria-hidden="true"> · ✓</span>}
+                          </a>
+                        )}
+                        {listeningLeft && <p className="lesson-stage-status">Слова и задания пройдены · остались текст и аудио</p>}
+                        {hasVisibleReading(item.id, readingByLesson) && !locked && (() => {
+                          const read = savedReadings[item.id];
+                          const due = read && read.nextReview <= localDate();
+                          return (
+                            <button className={`reading-link ${due ? "is-due" : ""}`} onClick={() => startReading(item.id)}>
+                              ◫ Чтение
+                              {read ? (due ? " · сегодня повтор" : ` · следующее чтение ${read.nextReview}`) : ""}
+                            </button>
+                          );
+                        })()}
+                      </div>
+                      {locked ? (
+                        <button className="locked" disabled title={`Откроется после урока ${opensAfter?.id}`}>
+                          Закрыто <span>🔒</span>
+                        </button>
+                      ) : grammarLeft ? (
+                        <button className="repeat" onClick={() => startGrammar(item.id)}>
+                          Грамматика <span>→</span>
+                        </button>
+                      ) : listeningLeft ? (
+                        <div className="lesson-actions">
+                          <a className="primary listening-link" href={audioHref}>Текст и аудио <span aria-hidden="true">→</span></a>
+                          <button className="repeat" onClick={() => startLesson(item.id)}>
+                            Повторить слова <span>→</span>
+                          </button>
+                        </div>
+                      ) : completed ? (
+                        <div className="lesson-actions">
+                          <button className="done" disabled>Пройден <span>✓</span></button>
+                          {/* A repeat resumes silently where it stopped, so the
+                              label stays a repeat rather than turning into a
+                              "continue" the learner never asked for. */}
+                          <button className="repeat" onClick={() => startLesson(item.id)}>
+                            Повторить <span>→</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <button className="primary" onClick={() => startLesson(item.id)}>
+                          {unfinished ? "Продолжить" : "Начать урок"} <span>→</span>
+                        </button>
+                      )}
+                      {coreCompleted && (
+                        <div className="card-score">
+                          {/* A result earned before the lesson grew is shown on its
+                              own: printing it over today's larger total would read
+                              as a loss the learner never suffered. */}
+                          ✓ {saved}{savedScoreTotals[item.id] === undefined ? " верных" : `/${savedScoreTotals[item.id]}`}
+                          {GRAMMAR_ENABLED && item.grammarQuestionCount > 0 &&
+                            ` · грамматика ${savedGrammarScores[item.id]}/${item.grammarQuestionCount}`}
+                        </div>
+                      )}
+                      {grammarLeft && (
+                        <div className="card-lock">
+                          {savedGrammarScores[item.id] === undefined
+                            ? "Осталась грамматика"
+                            : `Грамматика ${savedGrammarScores[item.id]}/${item.grammarQuestionCount} · нужно ${grammarPassMark(item.grammarQuestionCount)}`}
+                        </div>
+                      )}
+                      {locked && opensAfter && <div className="card-lock">Сначала урок {opensAfter.id}</div>}
+                    </div>
+                  );
+
+                  return card;
+                })}
+                {examSummaries.map((declared) => {
+                  // While grammar is hidden the paper is shorter, and its pass mark
+                  // moves with it.
+                  const paper = visibleExamSummary(declared);
+
+                  const ready = examReadiness(paper, lessonSummaries, stored);
+                  const result = savedExams[paper.id];
+                  const passed = isExamPassed(paper, result?.best);
+                  if (!showAllLessons && (passed || !ready.open)) return null;
+                  // A paper parked before grammar was hidden no longer fits the
+                  // shorter one, so the card must not promise to continue it.
+                  const written = examSession?.examId === paper.id ? examSession : null;
+                  const parked = written && written.order.length === paper.questionCount ? written : null;
+                  return (
+                    <div
+                      className={`lesson-card exam-card ${passed ? "is-done" : ""} ${ready.open ? "" : "is-locked"}`}
+                      key={`exam-${paper.id}`}
+                    >
+                      <div className="lesson-number">✦</div>
+                      <div className="lesson-copy">
+                        <div className="lesson-label">Экзамен · после урока {paper.afterLesson}</div>
+                        <h2>{paper.title}</h2>
+                        <p>
+                          {plural(paper.questionCount, "вопрос", "вопроса", "вопросов")}
+                          {paper.grammarCount > 0 ? ` · грамматики ${paper.grammarCount}` : ""} · проходной
+                          балл {examPassMark(paper.questionCount)}
+                        </p>
+                        <div className="chips">
+                          <span>Лексика</span>
+                          {paper.grammarCount > 0 && <span>Грамматика</span>}
+                        </div>
+                      </div>
+                      {ready.open ? (
+                        <button className={passed ? "repeat" : "primary"} onClick={() => startExam(paper.id)}>
+                          {parked ? "Продолжить" : passed || result ? "Пересдать" : "Начать"} <span>→</span>
+                        </button>
+                      ) : (
+                        <button className="locked" disabled>Закрыто <span>🔒</span></button>
+                      )}
+                      {result && (
+                        <div className="card-score">
+                          {passed ? "✓" : "•"} {result.best}/{paper.questionCount}
+                        </div>
+                      )}
+                      {!ready.open && (
+                        <div className="card-lock">Пройдено {ready.done} из {ready.total} уроков</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              )}
+
               </div>
             </HomeDisclosure>
             <HomeShortcut label="Подкаст дня" detail="Один выпуск на арабском в день — своя серия и свой календарь" href="/podcasts/" />

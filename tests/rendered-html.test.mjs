@@ -35,7 +35,8 @@ test("server-renders a focused Shifahiya homepage with access to the full course
   assert.match(html, /Следующий урок/);
   assert.equal([...html.matchAll(/class="lesson-card(?:\s[^"]*)?"/g)].length, 2);
   assert.match(html, /Показать все уроки/);
-  assert(html.indexOf('class="home-extras"') > html.indexOf('id="course-lessons"'));
+  assert(html.indexOf('class="home-extras"') < html.indexOf('id="course-lessons"'));
+  assert.match(html, /id="lesson-panel"[^>]*hidden/);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 

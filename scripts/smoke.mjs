@@ -210,6 +210,7 @@ try {
       }));
     }, deckIndex);
     await page.reload({ waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Показать уроки", exact: true }).click();
     await page.locator(".lesson-card").filter({ has: page.locator(".lesson-number", { hasText: /^82$/ }) })
       .getByRole("button", { name: /Продолжить/ }).click();
     if (deckIndex === 7) {
