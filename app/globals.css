@@ -468,6 +468,9 @@ h1 em { color: var(--green); font-weight: inherit; }
 .disclosure-mark { flex: 0 0 auto; color: var(--green); font-size: 24px; line-height: 1; }
 .home-disclosure-content { padding: 16px 18px; }
 .home-disclosure-content[hidden] { display: none; }
+#lesson-panel { padding: 0 10px 12px; }
+#lesson-panel .lesson-list-toolbar { margin: 0; padding: 16px 8px; }
+#lesson-panel .lesson-copy { min-width: 0; overflow-wrap: anywhere; }
 .lesson-list-toolbar {
   display: flex;
   flex-wrap: wrap;

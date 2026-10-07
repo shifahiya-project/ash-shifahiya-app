@@ -112,6 +112,13 @@ try {
   const showAll = () => page.getByRole("button", { name: "Показать все уроки", exact: true });
   const collapseList = () => page.getByRole("button", { name: "Свернуть список", exact: true });
   const parts = page.locator("#course-parts");
+  const lessonPanel = page.locator("#lesson-panel");
+  const showLessons = () => page.getByRole("button", { name: "Показать уроки", exact: true });
+  const hideLessons = () => page.getByRole("button", { name: "Скрыть уроки", exact: true });
+  const openLessons = async () => {
+    if (await showLessons().isVisible()) await showLessons().click();
+    await lessonPanel.waitFor();
+  };
   const showParts = () => page.getByRole("button", { name: "Показать части курса", exact: true });
   const hideParts = () => page.getByRole("button", { name: "Скрыть части курса", exact: true });
   const openCourseParts = async () => {
@@ -134,6 +141,7 @@ try {
   };
   const assertWindow = async (ids) => {
     await page.waitForLoadState("networkidle");
+    await openLessons();
     await card(ids[0]).waitFor();
     assert.deepEqual(await cards.locator(".lesson-number").evaluateAll((nodes) => nodes.map((node) => Number(node.textContent.trim()))), ids, "The lesson window should contain only the previous, current and next lessons in course order");
     assert((await cards.count()) <= 3);
@@ -167,11 +175,19 @@ try {
   };
 
   // A new learner sees the first two lessons and can open the whole course.
+  assert.equal(await lessonPanel.isVisible(), false, "Lessons should be collapsed on arrival");
+  assert.equal(await showLessons().getAttribute("aria-expanded"), "false");
+  assert.equal(await showLessons().getAttribute("aria-controls"), "lesson-panel");
+  await showLessons().focus();
+  await page.keyboard.press("Enter");
   await assertWindow([1, 2]);
   assert(await showAll().isVisible());
   await showAll().click();
   assert.equal(await cards.count(), lessonSummaries.length);
-  await collapseList().click();
+  await hideLessons().click();
+  assert.equal(await lessonPanel.isVisible(), false);
+  await showLessons().click();
+  assert.equal(await cards.count(), 2, "Reopening the panel should reset the full list to the nearest lessons");
   await assertWindow([1, 2]);
   assert(await page.getByRole("button", { name: "Показать достижения", exact: true }).isVisible());
   assert.equal(await page.locator(".achievement-list").isVisible(), false);
@@ -180,9 +196,9 @@ try {
   assert.equal(await showParts().getAttribute("aria-controls"), "course-parts");
   assert.equal(await page.locator(".selected-course").count(), 1);
   assert.equal(await page.locator(".selected-course").innerText(), "Часть 1 · Шифахия");
-  assert.equal(await page.locator(".home-extras .home-disclosure").count(), 5);
-  assert.equal(await page.locator(".home-extras .home-disclosure-toggle").count(), 5);
-  assert.deepEqual(await page.locator(".home-extras .home-disclosure-toggle strong").allTextContents(), ["Личный прогресс", "Достижения", "Подкаст дня", "Темы наизусть", "Части курса"]);
+  assert.equal(await page.locator(".home-extras .home-disclosure").count(), 6);
+  assert.equal(await page.locator(".home-extras .home-disclosure-toggle").count(), 6);
+  assert.deepEqual(await page.locator(".home-extras .home-disclosure-toggle strong").allTextContents(), ["Личный прогресс", "Достижения", "Уроки", "Подкаст дня", "Темы наизусть", "Части курса"]);
   assert.equal(await page.locator("#personal-progress").isVisible(), false);
   for (const [name, href] of [[/^Подкаст дня/, "./podcasts/"], [/^Темы наизусть/, "./topics/"]]) {
     assert.equal(await page.locator(".home-extras").getByRole("link", { name }).getAttribute("href"), href);
@@ -193,14 +209,16 @@ try {
     const lessons = document.getElementById("course-lessons");
     const principle = document.querySelector(".principle");
     const extras = document.querySelector(".home-extras");
-    return Boolean(lessons.compareDocumentPosition(extras) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+    return extras.contains(lessons) &&
       Boolean(principle.compareDocumentPosition(extras) & Node.DOCUMENT_POSITION_FOLLOWING);
-  }), "All five additional blocks should follow the lesson list");
+  }), "Lessons should be inside the matching bottom panels");
+  await hideLessons().click();
+  await page.mouse.move(0, 0);
   const disclosureFormats = await page.locator(".home-disclosure-toggle").evaluateAll((nodes) => nodes.map((node) => {
     const style = getComputedStyle(node);
     return [style.backgroundColor, style.borderRadius, style.fontSize, style.padding, style.display];
   }));
-  for (const format of disclosureFormats) assert.deepEqual(format, disclosureFormats[0], "All five bottom blocks should share the same format");
+  for (const format of disclosureFormats) assert.deepEqual(format, disclosureFormats[0], "All six bottom blocks should share the same format");
   const showProgress = () => page.getByRole("button", { name: "Показать личный прогресс", exact: true });
   const hideProgress = () => page.getByRole("button", { name: "Скрыть личный прогресс", exact: true });
   await showProgress().focus();

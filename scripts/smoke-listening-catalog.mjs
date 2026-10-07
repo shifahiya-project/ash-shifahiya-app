@@ -153,6 +153,7 @@ try {
   assert.equal(await page.getByRole('link', { name: 'Текст и аудио', exact: true }).count(), 0);
   await page.evaluate(() => { localStorage.setItem('shifahiya-lesson-100', '1'); });
   await page.reload();
+  await page.getByRole('button', { name: 'Показать уроки', exact: true }).click();
   await page.getByRole('button', { name: 'Показать все уроки', exact: true }).click();
   const links = page.getByRole('link', { name: 'Текст и аудио', exact: true });
   await links.first().waitFor();
