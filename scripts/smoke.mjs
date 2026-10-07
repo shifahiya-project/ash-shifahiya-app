@@ -192,6 +192,8 @@ try {
 
   await page.goto(origin, { waitUntil: "networkidle" });
   const openCourseParts = async () => {
+    const lessonsButton = page.getByRole("button", { name: "Показать уроки", exact: true });
+    if (await lessonsButton.isVisible()) await lessonsButton.click();
     const button = page.getByRole("button", { name: "Показать части курса", exact: true });
     if (await button.isVisible()) await button.click();
     await page.locator("#course-parts").waitFor();
