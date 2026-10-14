@@ -1956,12 +1956,6 @@ export default function Home() {
     setView("practice");
   }
 
-  function resetLesson() {
-    if (!lesson) return;
-    progressStore.resetLesson(lesson.id);
-    setView("home");
-  }
-
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -1972,7 +1966,16 @@ export default function Home() {
         <button ref={mainMenuToggle} className="menu-toggle" popoverTarget="main-menu" aria-label="Меню" aria-expanded={showMainMenu} aria-controls="main-menu"><span aria-hidden="true">☰</span></button>
       </header>
 
-      <aside id="main-menu" className="main-menu" popover="auto" ref={mainMenu} aria-label="Меню" onToggle={(event) => setShowMainMenu(event.newState === "open")} onKeyDown={(event) => {
+      <aside id="main-menu" className="main-menu" popover="auto" ref={mainMenu} aria-label="Меню" onBeforeToggle={(event) => {
+        if (event.newState === "closed") {
+          setShowLessons(false);
+          setExpandedCourse(null);
+          setShowCourseParts(false);
+          setShowPersonalProgress(false);
+          setShowAchievements(false);
+          event.currentTarget.scrollTop = 0;
+        }
+      }} onToggle={(event) => setShowMainMenu(event.newState === "open")} onKeyDown={(event) => {
         if (event.key === "Escape") { event.preventDefault(); closeMainMenu(); }
       }} onClick={(event) => {
         if ((event.target as HTMLElement).closest("a[href]")) closeMainMenu();
@@ -2580,11 +2583,6 @@ export default function Home() {
               {sync.message && <small>{sync.message}</small>}
             </div>
           )}
-
-          <div className="principle">
-            <span className="quote">“</span>
-            <p>Увидели слово. Вспомнили его ещё раз. Затем использовали в предложении.</p>
-          </div>
 
         </section>
       )}
@@ -3227,7 +3225,6 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <button className="secondary" onClick={resetLesson}>Сбросить результат</button>
                   {audioHref
                     ? <a className="primary result-listening" href={audioHref}>Текст и аудио <span aria-hidden="true">→</span></a>
                     : nextLesson
@@ -3240,7 +3237,7 @@ export default function Home() {
         );
       })()}
 
-      <footer><span>Учимся осмысленно, повторяем вовремя</span><span lang="ar" dir="rtl">العِلْمُ بِالتَّعَلُّمِ</span></footer>
+      <footer className="course-footer"><span lang="ar" dir="rtl">العِلْمُ بِالتَّعَلُّمِ</span></footer>
     </main>
   );
 }
