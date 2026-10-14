@@ -301,6 +301,17 @@ h1 em { color: var(--green); font-weight: inherit; }
 .resume small { color: var(--ink-soft); margin-top: 2px; font-size: 11px; }
 .resume b { color: var(--green); }
 
+.principle {
+  display: flex;
+  gap: 16px;
+  max-width: 530px;
+  margin: 36px auto 0;
+  color: var(--ink-soft);
+  font: italic 15px/1.6 Georgia, serif;
+}
+.principle p { margin: 0; }
+.quote { font: 50px/.7 Georgia, serif; color: var(--gold); }
+
 .lesson-progress {
   width: min(760px, calc(100% - 40px));
   margin: 28px auto 0;
@@ -945,12 +956,13 @@ footer {
   border-top: 1px solid rgba(24,60,51,.10);
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   color: var(--ink-soft);
   font-size: 10px;
   letter-spacing: .06em;
 }
 footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", serif; }
+footer.course-footer { justify-content: flex-end; }
 
 @media (max-width: 720px) {
   .topbar { width: calc(100% - 28px); min-height: 70px; }
@@ -1005,7 +1017,10 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .result-grid span { font-size: 9px; }
   .result-actions { flex-direction: column-reverse; }
   footer { width: calc(100% - 28px); }
+  footer span:first-child { display: none; }
   footer { justify-content: center; }
+  footer.course-footer { justify-content: center; }
+  footer.course-footer span:first-child { display: block; }
 }
 
 @media (max-width: 420px) {
