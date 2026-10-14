@@ -63,6 +63,6 @@
 
 ## Где сохранены изменения
 
-Изменения подготовлены в ветке [`audit/shifahiya-new-edition-2026-10-13`](https://github.com/shifahiya-project/ash-shifahiya-app/tree/audit/shifahiya-new-edition-2026-10-13). В `main` они не объединены; опубликованный сайт пока не обновлён.
+Изменения подготовлены в ветке [`audit/shifahiya-new-edition-2026-10-13`](https://github.com/shifahiya-project/ash-shifahiya-app/tree/audit/shifahiya-new-edition-2026-10-13). Публикация выполняется через объединение pull request с `main` и автоматический Deploy. Актуальные изменения доступны в [основной ветке](https://github.com/shifahiya-project/ash-shifahiya-app/tree/main); ход публикации — в [GitHub Actions](https://github.com/shifahiya-project/ash-shifahiya-app/actions/workflows/deploy.yml).
 
 Полный окончательный [машинный журнал](shifahiya-2026-10-14.json) содержит все изменения «до/после», координаты карточек, добавления и привязки к источнику. Доступны также [читаемый перечень карточек и заданий](shifahiya-changes.md) и [таблица карточек CSV](shifahiya-cards.csv). Черновые предложения, впоследствии отвергнутые как ненужная замена допустимых форм, в окончательные изменения не включены.

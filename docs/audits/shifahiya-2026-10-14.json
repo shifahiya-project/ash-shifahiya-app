@@ -44757,7 +44757,7 @@
   ],
   "branch": "audit/shifahiya-new-edition-2026-10-13",
   "cardCoordinateNotation": "cardId is a prefix; persistent review keys also append -ar-ru or -ru-ar. Deck and word indices are zero based.",
-  "publication": "Prepared in an audit branch; not merged into main or published.",
+  "publication": "Audit prepared in audit/shifahiya-new-edition-2026-10-13; live publication is tracked by main and the Deploy workflow.",
   "validation": {
     "npmTest": {
       "passed": true,
