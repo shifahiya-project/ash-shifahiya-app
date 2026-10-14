@@ -3237,7 +3237,6 @@ export default function Home() {
         );
       })()}
 
-      <footer className="course-footer"><span lang="ar" dir="rtl">العِلْمُ بِالتَّعَلُّمِ</span></footer>
     </main>
   );
 }
