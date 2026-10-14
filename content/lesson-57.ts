@@ -4,7 +4,7 @@ export const lessonFiftySeven: Lesson = {
   id: 57,
   arabicTitle: "الدَّرْسُ السَّابِعُ وَالْخَمْسُونَ",
   title: "Растения, плоды и овощи.",
-  description: "72 формы · 2 круга повторения · 144 задания",
+  description: "73 формы · 2 круга повторения · 146 заданий",
   tags: ["Растения", "Фрукты", "Овощи", "Вкус и запах", "Единичное имя"],
   decks: [
     {
@@ -40,7 +40,7 @@ export const lessonFiftySeven: Lesson = {
     {
       title: "Огородные растения",
       words: [
-        { arabic: "قِثَّاءٌ", russian: "огурец" }, { arabic: "فِجْلٌ", russian: "редис" },
+        { arabic: "قِثَّاءٌ", russian: "огурец" }, { arabic: "فُجْلٌ", russian: "редис" },
         { arabic: "شَلْجَمٌ", russian: "репа" }, { arabic: "بَصَلٌ", russian: "лук" },
         { arabic: "ثُومٌ", russian: "чеснок" },
       ],
@@ -57,7 +57,7 @@ export const lessonFiftySeven: Lesson = {
     {
       title: "Единичное имя",
       words: [
-        { arabic: "نَوَاةٌ", russian: "косточка" }, { arabic: "أَنْوِي", russian: "косточки" },
+        { arabic: "نَوَاةٌ", russian: "косточка" }, { arabic: "نَوًى", russian: "косточки" },
         { arabic: "قَصَبَةٌ", russian: "одна тростинка" }, { arabic: "إِجَّاصَةٌ", russian: "одна слива" },
         { arabic: "رُمَّانَةٌ", russian: "один гранат" }, { arabic: "تُفَّاحَةٌ", russian: "одно яблоко" },
         { arabic: "تَمْرَةٌ", russian: "один финик" }, { arabic: "عِنَبَةٌ", russian: "одна виноградина" },
@@ -89,6 +89,12 @@ export const lessonFiftySeven: Lesson = {
         { arabic: "مَغْرُوسٌ", russian: "посаженный" }, { arabic: "نَابِتٌ", russian: "растущий" },
         { arabic: "غَرَّاسٌ", russian: "садовник" }, { arabic: "خُضْرٌ", russian: "зелёные" },
         { arabic: "حَرَارَةٌ", russian: "тепло" }, { arabic: "بَارِدٌ", russian: "холодный" },
+      ],
+    },
+    {
+      title: "Дополнение по новой версии книги",
+      words: [
+        { arabic: "تُمُورٌ", russian: "финики" },
       ],
     },
   ],

@@ -66,6 +66,8 @@ import {
   unlockedLessonIds,
 } from "./lesson-access";
 import { lessonParts, partIndexFor } from "../content/lesson-parts";
+import { questionsForSavedSession } from "../content/session-questions";
+import { preAuditDeckCounts, preAuditQuestionCounts } from "../content/pre-audit-question-counts";
 import {
   GRAMMAR_ENABLED,
   hasVisibleReading,
@@ -550,8 +552,11 @@ export default function Home() {
   const [cardIndex, setCardIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [questionIndex, setQuestionIndex] = useState(0);
+  const [sessionQuestionCount, setSessionQuestionCount] = useState<number | undefined>();
+  const [sessionDeckCount, setSessionDeckCount] = useState<number | undefined>();
   const [ruleIndex, setRuleIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedCorrect, setSelectedCorrect] = useState<boolean | undefined>();
   const [score, setScore] = useState(0);
   const [grammarScore, setGrammarScore] = useState(0);
   const [mistakes, setMistakes] = useState<string[]>([]);
@@ -647,7 +652,10 @@ export default function Home() {
   );
   const topicsDue = dueCardCount(topicCards.cards, localDate());
 
-  const lesson = openLessons[lessonId];
+  const loadedLesson = openLessons[lessonId];
+  const lesson = useMemo(() => loadedLesson
+    ? questionsForSavedSession(loadedLesson, sessionQuestionCount, sessionDeckCount)
+    : undefined, [loadedLesson, sessionQuestionCount, sessionDeckCount]);
   const parts = useMemo(() => (lesson ? visibleParts(lessonParts(lesson)) : []), [lesson]);
   const part = parts[partIndex] ?? parts[0];
   const deck = lesson?.decks[deckIndex];
@@ -880,7 +888,12 @@ export default function Home() {
   );
   // The course order is the manifest order, which need not be a run of 1..N.
   const nextLesson = lessonSummaries[lessonSummaries.findIndex((item) => item.id === lessonId) + 1];
-  const latestSessionLesson = latestSession ? openLessons[latestSession.lessonId] : undefined;
+  const latestSessionLoaded = latestSession ? openLessons[latestSession.lessonId] : undefined;
+  const latestSessionLesson = latestSessionLoaded && latestSession
+    ? questionsForSavedSession(latestSessionLoaded,
+        latestSession.questionCount ?? preAuditQuestionCounts[latestSession.lessonId],
+        latestSession.deckCount ?? preAuditDeckCounts[latestSession.lessonId])
+    : undefined;
   const latestSessionSummary = latestSession
     ? lessonSummaries.find((item) => item.id === latestSession.lessonId)
     : undefined;
@@ -959,14 +972,21 @@ export default function Home() {
   }
 
   async function restoreSession(session: SavedSession) {
-    const [restored] = await openLessonsById([session.lessonId]);
+    const [loaded] = await openLessonsById([session.lessonId]);
+    const savedCount = session.questionCount ?? preAuditQuestionCounts[session.lessonId];
+    const savedDeckCount = session.deckCount ?? preAuditDeckCounts[session.lessonId];
+    const restored = loaded ? questionsForSavedSession(loaded, savedCount, savedDeckCount) : undefined;
+    setSessionQuestionCount(restored?.questions.length);
+    setSessionDeckCount(restored?.decks.length);
     setLessonId(session.lessonId);
-    // The lesson may have grown since the session was parked, which splits it
-    // in two and moves the part boundaries. Resume where the position actually
-    // sits now, not where it sat then.
+    // The frozen paper and deck prefix keep the session's original boundaries.
+    // Locate its actual part from the saved position within those ranges.
     const restoredParts = restored ? lessonParts(restored) : [];
+    const parkedGrammarPart = restoredParts[session.partIndex ?? 0]?.kind === "grammar";
     const restoredPartIndex = restored
-      ? partIndexFor(restoredParts, session, session.partIndex ?? 0)
+      ? parkedGrammarPart && session.view !== "learn"
+        ? session.partIndex
+        : partIndexFor(restoredParts, session, session.partIndex ?? 0)
       : session.partIndex ?? 0;
     const restoredPart = restoredParts[restoredPartIndex];
     const emptyDeck = session.view === "learn" && restored && restoredPart &&
@@ -983,7 +1003,8 @@ export default function Home() {
     setScore(session.score);
     setGrammarScore(session.grammarScore ?? 0);
     setMistakes(session.mistakes);
-    setSelected(null);
+    setSelected(session.view === "practice" ? session.answered?.option ?? null : null);
+    setSelectedCorrect(session.view === "practice" ? session.answered?.correct : undefined);
     setRevealed(false);
     setView(emptyDeck && nextDeck === null ? "practice" : session.view);
   }
@@ -1242,6 +1263,7 @@ export default function Home() {
 
   useEffect(() => {
     if (view !== "learn" && view !== "practice" && view !== "grammar") return;
+    if (!lesson) return;
     progressStore.saveSession({
       view,
       lessonId,
@@ -1251,12 +1273,17 @@ export default function Home() {
       round,
       cardIndex,
       questionIndex,
+      questionCount: lesson.questions.length,
+      deckCount: lesson.decks.length,
+      answered: view === "practice" && selected
+        ? { option: selected, correct: selectedCorrect ?? selected === currentQuestion?.answer }
+        : undefined,
       score,
       grammarScore,
       mistakes,
       updatedAt: Date.now(),
     });
-  }, [view, lessonId, partIndex, ruleIndex, deckIndex, round, cardIndex, questionIndex, score, grammarScore, mistakes]);
+  }, [view, lessonId, partIndex, ruleIndex, deckIndex, round, cardIndex, questionIndex, score, grammarScore, mistakes, lesson, selected, selectedCorrect, currentQuestion]);
 
   useEffect(() => {
     if (!["learn", "practice", "grammar", "reading", "review", "exam", "p2-learn", "p2-practice", "p2-reading", "text-learn", "text-practice", "text-reading"].includes(view)) return;
@@ -1317,6 +1344,8 @@ export default function Home() {
       return;
     }
     await openLessonsById([id]);
+    setSessionQuestionCount(undefined);
+    setSessionDeckCount(undefined);
     setLessonId(id);
     setPartIndex(0);
     setRuleIndex(0);
@@ -1346,10 +1375,15 @@ export default function Home() {
     mergeLessons([loaded]);
     const loadedParts = lessonParts(loaded);
     const parked = savedSessions[id];
-    if (parked && loadedParts[parked.partIndex ?? 0]?.kind === "grammar") {
+    const parkedParts = parked ? lessonParts(questionsForSavedSession(loaded,
+      parked.questionCount ?? preAuditQuestionCounts[id],
+      parked.deckCount ?? preAuditDeckCounts[id])) : [];
+    if (parked && parkedParts[parked.partIndex ?? 0]?.kind === "grammar") {
       restoreSession(parked);
       return;
     }
+    setSessionQuestionCount(undefined);
+    setSessionDeckCount(undefined);
     setLessonId(id);
     setPartIndex(loadedParts.length - 1);
     setRuleIndex(0);
@@ -1825,6 +1859,7 @@ export default function Home() {
   function answer(option: string) {
     if (selected || !lesson || !currentQuestion) return;
     setSelected(option);
+    setSelectedCorrect(option === currentQuestion.answer);
     if (option === currentQuestion.answer) {
       if (grammarPart) {
         setGrammarScore((value) => value + 1);
@@ -1878,6 +1913,8 @@ export default function Home() {
         round: 1,
         cardIndex: 0,
         questionIndex: following.questionStart,
+        questionCount: lesson.questions.length,
+        deckCount: lesson.decks.length,
         score,
         grammarScore: 0,
         mistakes: following.kind === "grammar" ? [] : mistakes,
@@ -3082,7 +3119,8 @@ export default function Home() {
           </div>
           <div className="options">
             {options.map((option) => {
-              const state = selected ? option === currentQuestion.answer ? "correct" : option === selected ? "wrong" : "dimmed" : "";
+              const wasCorrect = selectedCorrect ?? selected === currentQuestion.answer;
+              const state = selected ? option === currentQuestion.answer ? "correct" : !wasCorrect && option === selected ? "wrong" : "dimmed" : "";
               return (
                 <button key={option} className={state} onClick={() => answer(option)} disabled={!!selected}>
                   {/* An option that mixes the two scripts is a Russian phrase with
@@ -3094,8 +3132,8 @@ export default function Home() {
             })}
           </div>
           {selected && (
-            <div className={`feedback ${selected === currentQuestion.answer ? "good" : "bad"}`}>
-              <div><strong>{selected === currentQuestion.answer ? "Верно!" : "Почти получилось"}</strong><p>{currentQuestion.explanation}</p></div>
+            <div className={`feedback ${(selectedCorrect ?? selected === currentQuestion.answer) ? "good" : "bad"}`}>
+              <div><strong>{(selectedCorrect ?? selected === currentQuestion.answer) ? "Верно!" : "Почти получилось"}</strong><p>{currentQuestion.explanation}</p></div>
               <button className="primary" onClick={nextQuestion}>{questionIndex === (part?.questionEnd ?? 0) - 1 ? "Результат" : "Дальше"} <span>→</span></button>
             </div>
           )}
@@ -3166,7 +3204,7 @@ export default function Home() {
               {grammarNext
                 ? "Осталась грамматика урока: правило, по которому построены эти формы, и задания к нему. Урок засчитывается вместе с ней."
                 : remaining
-                  ? "Вторая часть вводит остальные формы урока. Можно продолжить сейчас или вернуться позже — место сохранено."
+                  ? "Следующая часть вводит остальные формы урока. Можно продолжить сейчас или вернуться позже — место сохранено."
                   : audioHref
                     ? "Остались текст и аудио этого урока. Прочитайте текст, прослушайте запись и отметьте этот этап как пройденный в плеере."
                   : strong

@@ -4,7 +4,7 @@ export const lessonFortyNine: Lesson = {
   id: 49,
   arabicTitle: "الدَّرْسُ التَّاسِعُ وَالْأَرْبَعُونَ",
   title: "Нравственные качества и полезные наставления.",
-  description: "80 форм · 2 круга повторения · 160 заданий",
+  description: "81 форма · 2 круга повторения · 162 задания",
   tags: ["Частицы", "نِعْمَ и بِئْسَ", "Качества", "Верность", "Глаголы"],
   decks: [
     {
@@ -31,7 +31,7 @@ export const lessonFortyNine: Lesson = {
     {
       title: "Друг и собеседник",
       words: [
-        { arabic: "جَلِيسٌ", russian: "сосед за столом" }, { arabic: "جُلَسَاءُ", russian: "соседи за столом" },
+        { arabic: "جَلِيسٌ", russian: "собеседник / товарищ, с которым сидят" }, { arabic: "جُلَسَاءُ", russian: "собеседники / товарищи, с которыми сидят" },
         { arabic: "قَرِينٌ", russian: "друг / товарищ" }, { arabic: "قُرَنَاءُ", russian: "друзья / товарищи" },
         { arabic: "حَرِيصٌ", russian: "жаждущий" }, { arabic: "حُرَصَاءُ", russian: "жаждущие" },
         { arabic: "حَبِيبٌ", russian: "любимый" }, { arabic: "أَحِبَّاءُ", russian: "любимые" },
@@ -92,8 +92,14 @@ export const lessonFortyNine: Lesson = {
         { arabic: "الصَّمْتُ", russian: "безмолвие", note: "масдар" },
         { arabic: "كَسَبَ", russian: "он добыл" }, { arabic: "يَكْسِبُ", russian: "он добывает" },
         { arabic: "الْكَسْبُ", russian: "заработок", note: "масдар" },
-        { arabic: "بَغَضَ", russian: "он возненавидел" }, { arabic: "يُبْغِضُ", russian: "он ненавидит" },
+        { arabic: "بَغَضَ", russian: "он возненавидел" }, { arabic: "يَبْغَضُ", russian: "он ненавидит" },
         { arabic: "الْبُغْضُ", russian: "ненависть", note: "масдар" },
+      ],
+    },
+    {
+      title: "Дополнение по новой версии книги",
+      words: [
+        { arabic: "أَلْفٌ", russian: "привыкание / близость" },
       ],
     },
   ],

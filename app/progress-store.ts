@@ -26,6 +26,12 @@ export type SavedSession = {
   round: number;
   cardIndex: number;
   questionIndex: number;
+  /** Freeze an unfinished paper's size when vocabulary is added to a lesson. */
+  questionCount?: number;
+  /** Appended decks must not move the halves of an unfinished lesson. */
+  deckCount?: number;
+  /** The displayed answer has already contributed to the saved score. */
+  answered?: { option: string; correct: boolean };
   score: number;
   /** Counted apart from the lesson score, like the stored result. */
   grammarScore?: number;
@@ -343,10 +349,14 @@ function readProgress(): Progress {
     if (session && session.lessonId === summary.id) part11Sessions[summary.id] = session;
   }
 
-  // A session interrupted mid-lesson is stored twice; the active copy wins.
+  // An interrupted lesson is stored twice. A copy restored from sync or a
+  // backup can be newer than the active copy left on this device.
   const active = read<SavedSession | null>(ACTIVE_SESSION_KEY, null);
   if (active && lessonSummaries.some((summary) => summary.id === active.lessonId)) {
-    sessions[active.lessonId] = active;
+    const parked = sessions[active.lessonId];
+    if (!parked || (active.updatedAt ?? 0) >= (parked.updatedAt ?? 0)) {
+      sessions[active.lessonId] = active;
+    }
   }
 
   // A learner who stopped inside a grammar block finished the lesson's own
@@ -668,6 +678,10 @@ export const progressStore = {
     }
     for (const [id, session] of Object.entries(progress.sessions)) {
       window.localStorage.setItem(lessonSessionKey(id), JSON.stringify(session));
+    }
+    const active = read<SavedSession | null>(ACTIVE_SESSION_KEY, null);
+    if (active && progress.sessions[active.lessonId]) {
+      window.localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(progress.sessions[active.lessonId]));
     }
     window.localStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(progress.cards));
     window.localStorage.setItem(READING_PROGRESS_KEY, JSON.stringify(progress.readings ?? {}));

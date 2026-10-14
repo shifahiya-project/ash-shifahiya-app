@@ -2,7 +2,7 @@ import type { Lesson } from "./types";
 
 /**
  * Above this many questions a lesson is no longer one sitting, so it is taught
- * in two halves with a stop between them.
+ * in separate parts with a stop between them.
  */
 export const PART_THRESHOLD = 150;
 
@@ -49,10 +49,10 @@ function grammarPart(lesson: Lesson, index: number): LessonPart[] {
 }
 
 /**
- * Splits a long lesson in two. The cards are cut at a deck boundary — a deck is
- * one topic and should not straddle the break — choosing the boundary that
- * leaves the halves closest to equal. The questions are cut at the midpoint, so
- * the closing "find the mistake" question stays in the second half.
+ * Splits a long lesson into enough parts to keep each paper under the limit.
+ * Cards are cut only at deck boundaries, choosing the nearest balance for the
+ * remaining parts. The original two-part split is unchanged; very large new
+ * runs can have more parts. The closing correction stays in the last part.
  */
 export function lessonParts(lesson: Lesson, threshold = PART_THRESHOLD): LessonPart[] {
   if (lesson.questions.length <= threshold || lesson.decks.length < 2) {
@@ -62,31 +62,35 @@ export function lessonParts(lesson: Lesson, threshold = PART_THRESHOLD): LessonP
   const cardsPerDeck = lesson.decks.map((deck) => deck.words.length * 2);
   const totalCards = cardsPerDeck.reduce((sum, count) => sum + count, 0);
 
-  let boundary = 1;
-  let smallestGap = Infinity;
-  let running = 0;
-  for (let index = 0; index < cardsPerDeck.length - 1; index += 1) {
-    running += cardsPerDeck[index];
-    const gap = Math.abs(running - totalCards / 2);
-    if (gap < smallestGap) {
-      smallestGap = gap;
-      boundary = index + 1;
+  const count = Math.min(Math.ceil(lesson.questions.length / threshold), lesson.decks.length);
+  const parts: LessonPart[] = [];
+  let deckStart = 0;
+  let remainingCards = totalCards;
+  for (let index = 0; index < count; index += 1) {
+    const remainingParts = count - index;
+    let deckEnd = lesson.decks.length;
+    if (remainingParts > 1) {
+      let smallestGap = Infinity;
+      let running = 0;
+      // Leave at least one deck for each of the parts that follows.
+      for (let deckIndex = deckStart; deckIndex < lesson.decks.length - remainingParts + 1; deckIndex += 1) {
+        running += cardsPerDeck[deckIndex];
+        const gap = Math.abs(running - remainingCards / remainingParts);
+        if (gap < smallestGap) {
+          smallestGap = gap;
+          deckEnd = deckIndex + 1;
+        }
+      }
     }
+    parts.push({
+      index, kind: "cards", deckStart, deckEnd,
+      questionStart: Math.round(lesson.questions.length * index / count),
+      questionEnd: Math.round(lesson.questions.length * (index + 1) / count),
+    });
+    remainingCards -= cardsPerDeck.slice(deckStart, deckEnd).reduce((sum, cards) => sum + cards, 0);
+    deckStart = deckEnd;
   }
-
-  const questionCut = Math.round(lesson.questions.length / 2);
-  return [
-    { index: 0, kind: "cards", deckStart: 0, deckEnd: boundary, questionStart: 0, questionEnd: questionCut },
-    {
-      index: 1,
-      kind: "cards",
-      deckStart: boundary,
-      deckEnd: lesson.decks.length,
-      questionStart: questionCut,
-      questionEnd: lesson.questions.length,
-    },
-    ...grammarPart(lesson, 2),
-  ];
+  return [...parts, ...grammarPart(lesson, count)];
 }
 
 export function partCount(lesson: Lesson, threshold = PART_THRESHOLD) {
@@ -96,7 +100,7 @@ export function partCount(lesson: Lesson, threshold = PART_THRESHOLD) {
 /**
  * Which part a saved position belongs to now.
  *
- * A lesson that grows past the threshold splits in two, and a session parked
+ * A lesson that grows past the threshold gains parts, and a session parked
  * in what used to be the whole lesson would resume in a part that no longer
  * reaches its question. The stored index is a hint, not the answer: the part
  * that actually contains the position wins.
