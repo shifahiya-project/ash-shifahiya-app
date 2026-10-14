@@ -18,18 +18,18 @@
   "totals": {
     "lessons": 100,
     "oldWords": 6739,
-    "newWords": 7321,
-    "addedWords": 582,
-    "changedWords": 253,
+    "newWords": 7329,
+    "addedWords": 590,
+    "changedWords": 254,
     "authoredQuestions": 1075,
     "changedQuestions": 125,
     "changedGrammarQuestions": 52,
     "normalizationOnlyWords": 521,
     "oldDecks": 811,
-    "newDecks": 884,
+    "newDecks": 886,
     "grammarQuestions": 248,
     "oldGeneratedQuestionCount": 13478,
-    "newGeneratedQuestionCount": 14642
+    "newGeneratedQuestionCount": 14658
   },
   "lessons": [
     {
@@ -8077,7 +8077,7 @@
                 63
               ]
             },
-            "issue": "Требует независимого первичного подтверждения грамматический разбор именно сложного имени مُحَرَّمُ الْحَرَامِ. Новая фотография урока27 ясно подтверждает касру в конце الْحَرَامِ; вопрос чтения закрыт. Идафа رَبِيعُ الْأَوَّلِ / رَبِيعُ الْآخِرِ отдельно подтверждена «Мисбах аль-мунир».",
+            "issue": "Требует независимого первичного подтверждения грамматический разбор именно сложного имени مُحَرَّمُ الْحَرَامِ. Новая фотография урока 27 ясно подтверждает касру в конце الْحَرَامِ; вопрос чтения закрыт. Идафа رَبِيعُ الْأَوَّلِ / رَبِيعُ الْآخِرِ отдельно подтверждена «Мисбах аль-мунир».",
             "status": "unresolved_editorial",
             "evidence": [
               "coverage-21-30.json, lesson27.unresolved: прежний общий флаг сужен дополнительной проверкой.",
@@ -19380,25 +19380,7 @@
           "originalQuestionsPreserved": true,
           "intentionalLastErrorPromptPreserved": true
         },
-        "remainingIssues": [
-          {
-            "lesson": 39,
-            "source": {
-              "jpg": [
-                100
-              ],
-              "printedPage": [
-                101
-              ]
-            },
-            "issue": "Первая огласовка غناء в JPG плохо различима; значение «богатство/достаток» ясно.",
-            "status": "unresolved_scan",
-            "evidence": [
-              "coverage-31-40.json, lesson39.unresolved",
-              "Текущая новая карточка غَنَاءٌ «достаток / обеспеченность» использует нормативную форму; это не заявление о прочитанном первом знаке скана."
-            ]
-          }
-        ]
+        "remainingIssues": []
       }
     },
     {
@@ -20193,7 +20175,7 @@
       "id": 46,
       "title": "Аллах, ангелы, пророки, этот мир и вечность.",
       "oldWords": 77,
-      "newWords": 80,
+      "newWords": 81,
       "wordChanges": [],
       "addedWords": [
         {
@@ -20221,6 +20203,16 @@
           "word": {
             "arabic": "نَفْعَلُ مَا نُؤْمَرُ بِهِ",
             "russian": "мы делаем то, что нам приказано"
+          }
+        },
+        {
+          "deckIndex": 10,
+          "wordIndex": 0,
+          "cardId": "lesson-46-deck-10-word-0",
+          "word": {
+            "arabic": "مُنِحَ مَا طُلِبَ وَأُخِذَ مَا مُنِحَ",
+            "russian": "Было дано то, что было запрошено, и взято то, что было дано",
+            "note": "Все четыре глагола стоят в страдательном залоге прошедшего времени."
           }
         }
       ],
@@ -20305,13 +20297,17 @@
       "metadataChanges": {
         "description": {
           "before": "77 форм · 2 круга повторения · 154 задания",
-          "after": "80 форм · 2 круга повторения · 160 заданий"
+          "after": "81 форма · 2 круга повторения · 162 задания"
         }
       },
       "addedDecks": [
         {
           "deckIndex": 9,
           "title": "Дополнение по новой версии книги"
+        },
+        {
+          "deckIndex": 10,
+          "title": "Дать и взять запрошенное"
         }
       ],
       "sourceCoverage": {
@@ -20332,25 +20328,7 @@
           }
         ],
         "courseReview": "entire_file_including_questions_options_explanations_and_existing_grammar",
-        "remainingIssues": [
-          {
-            "lesson": 46,
-            "source": {
-              "jpg": [
-                120
-              ],
-              "printedPage": [
-                121
-              ]
-            },
-            "issue": "В словарном примере مَا طَلَبَ وَأَخَذَ مَا ... не читается надёжно залог последнего глагола.",
-            "status": "unresolved_scan",
-            "evidence": [
-              "coverage-41-60.json, lesson46.unresolved",
-              "Неясный полный пример не добавлен по догадке; существующие карточки сохранены."
-            ]
-          }
-        ]
+        "remainingIssues": []
       }
     },
     {
@@ -21386,11 +21364,12 @@
                 165
               ]
             },
-            "issue": "Точное окончание заимствованного множественного طَوَاطِي «попугаи» не подтверждено.",
+            "issue": "Нормативное окончание редкого заимствованного множественного طَوَاطِي требует первичного словарного подтверждения. Новая фотография раздела 56 ясно показывает именно طَوَاطِي без напечатанной шадды или падежного знака в конце; сомнение в чтении снято.",
             "status": "unresolved_lexicography",
             "evidence": [
               "coverage-41-60.json, lesson56.unresolved",
-              "В текущем lesson-56.ts прежняя طَوَاطِي сохранена. Другое слово той же страницы كَرَاكِيُّ уже независимо подтверждено и исправлено; оно не остаётся открытым вопросом."
+              "В текущем lesson-56.ts прежняя طَوَاطِي сохранена. Другое слово той же страницы كَرَاكِيُّ уже независимо подтверждено и исправлено; оно не остаётся открытым вопросом.",
+              "Вторая фотография во втором дополнительном наборе пользователя: طُوطِيٌّ / طَوَاطِي; разрешение достаточно для чтения печати."
             ]
           }
         ]
@@ -40922,7 +40901,7 @@
       "id": 82,
       "title": "Глаголы с первой слабой буквой: полное спряжение.",
       "oldWords": 76,
-      "newWords": 89,
+      "newWords": 96,
       "wordChanges": [
         {
           "deckIndex": 0,
@@ -40935,6 +40914,20 @@
           "after": {
             "arabic": "هَبُوا / هَبَا / هَبِي",
             "russian": "подарите (мн.) / подарите вдвоём / подари (ж.р.)"
+          }
+        },
+        {
+          "deckIndex": 1,
+          "wordIndex": 11,
+          "cardId": "lesson-82-deck-1-word-11",
+          "before": {
+            "arabic": "مُوسِعٌ",
+            "russian": "расширяющий"
+          },
+          "after": {
+            "arabic": "مُوسِعٌ",
+            "russian": "расширяющий",
+            "note": "Действительное причастие IV породы от أَوْسَعَ. Страдательное причастие I породы от وَسِعَ — مَوْسُوعٌ."
           }
         },
         {
@@ -41068,6 +41061,76 @@
             "arabic": "وَجَدْتُ الرِّجَالَ عُلَمَاءَ",
             "russian": "я нашёл, что мужчины — учёные"
           }
+        },
+        {
+          "deckIndex": 10,
+          "wordIndex": 0,
+          "cardId": "lesson-82-deck-10-word-0",
+          "word": {
+            "arabic": "ثِبَةٌ",
+            "russian": "прыжок / прыганье",
+            "note": "Масдар от وَثَبَ; в книге с артиклем: الثِّبَةُ."
+          }
+        },
+        {
+          "deckIndex": 10,
+          "wordIndex": 1,
+          "cardId": "lesson-82-deck-10-word-1",
+          "word": {
+            "arabic": "يُوسَعُ",
+            "russian": "вмещается",
+            "note": "Страдательная форма I породы от переходного وَسِعَ — «вместить»."
+          }
+        },
+        {
+          "deckIndex": 10,
+          "wordIndex": 2,
+          "cardId": "lesson-82-deck-10-word-2",
+          "word": {
+            "arabic": "وَسَّاعٌ",
+            "russian": "очень вместительный / много вмещающий",
+            "note": "Усиленная форма от وَسِعَ."
+          }
+        },
+        {
+          "deckIndex": 10,
+          "wordIndex": 3,
+          "cardId": "lesson-82-deck-10-word-3",
+          "word": {
+            "arabic": "لَا يَهَبْ",
+            "russian": "пусть он не дарит",
+            "note": "Запрет в третьем лице; после запрещающего لَا глагол стоит в джазме."
+          }
+        },
+        {
+          "deckIndex": 10,
+          "wordIndex": 4,
+          "cardId": "lesson-82-deck-10-word-4",
+          "word": {
+            "arabic": "وَجَدْتُ الرِّجَالَ عَالِمِينَ",
+            "russian": "я нашёл, что мужчины — учёные",
+            "note": "Книжный вариант с правильным множественным числом; عُلَمَاءَ — вариант с ломаным множественным."
+          }
+        },
+        {
+          "deckIndex": 10,
+          "wordIndex": 5,
+          "cardId": "lesson-82-deck-10-word-5",
+          "word": {
+            "arabic": "وَطْءٌ",
+            "russian": "топтание / половое сношение / низкое место",
+            "note": "Масдар и книжные значения существительного; низкое место — понижение земной поверхности."
+          }
+        },
+        {
+          "deckIndex": 10,
+          "wordIndex": 6,
+          "cardId": "lesson-82-deck-10-word-6",
+          "word": {
+            "arabic": "يُوثَبُ",
+            "russian": "совершается прыжок (страдательная форма)",
+            "note": "В предложении употребляется с предлогом, обстоятельством или масдаром: например, يُوثَبُ عَلَيْهِ — «на него прыгают». Активная форма «он прыгает» — يَثِبُ."
+          }
         }
       ],
       "questionChanges": [],
@@ -41075,13 +41138,17 @@
       "metadataChanges": {
         "description": {
           "before": "76 форм · 2 круга повторения · 152 задания",
-          "after": "89 форм · 2 круга повторения · 178 заданий"
+          "after": "96 форм · 2 круга повторения · 192 задания"
         }
       },
       "addedDecks": [
         {
           "deckIndex": 9,
           "title": "Дополнение по новой версии книги"
+        },
+        {
+          "deckIndex": 10,
+          "title": "Прыжок, вместительность и зависимые формы"
         }
       ],
       "sourceCoverage": {
@@ -41120,46 +41187,7 @@
         ],
         "courseContentAudit": "Complete file including decks, questions, answers/options, explanations and grammar reviewed.",
         "sourceTextInspection": "Contact sheets used for navigation; individually inspected vocabulary pages. Narrative-only pages are not claimed as a full line-by-line source transcription.",
-        "remainingIssues": [
-          {
-            "lesson": 82,
-            "source": {
-              "jpg": [
-                261,
-                262
-              ],
-              "printedPage": [
-                265,
-                266
-              ]
-            },
-            "issue": "Огласовка редкого масдара الثبة на маленьком скане неразборчива.",
-            "status": "unresolved_scan",
-            "evidence": [
-              "coverage-81-100.json, lesson82.unresolved",
-              "Неясная новая карточка не добавлена без подтверждения; существующие формы وَثَبَ сохранены."
-            ]
-          },
-          {
-            "lesson": 82,
-            "source": {
-              "jpg": [
-                261,
-                262
-              ],
-              "printedPage": [
-                265,
-                266
-              ]
-            },
-            "issue": "Книжные формы موسع / يوسع при وَسِعَ требуют большего скана для различения огласовок и разбора.",
-            "status": "unresolved_scan",
-            "evidence": [
-              "coverage-81-100.json, lesson82.unresolved",
-              "Неясные новые формы не достроены по догадке; старые карточки остались на прежних местах."
-            ]
-          }
-        ]
+        "remainingIssues": []
       }
     },
     {
@@ -44736,7 +44764,8 @@
       "command": "npm test",
       "testCount": 351,
       "failed": 0,
-      "skipped": 0
+      "skipped": 0,
+      "finalSupplementaryPhotosRecheck": true
     },
     "lint": {
       "passed": true,
@@ -44749,18 +44778,20 @@
     "staticBuild": {
       "passed": true,
       "command": "npm run build:static",
-      "pages": 3
+      "pages": 3,
+      "finalSupplementaryPhotosRecheck": true
     },
     "smoke": {
       "passed": true,
       "command": "SMOKE_CHROMIUM=/usr/bin/chromium npm run smoke",
       "browser": "Chromium",
-      "scope": "Shared course flows, eighth and eleventh parts, topics, backup and review"
+      "scope": "Shared course flows, eighth and eleventh parts, topics, backup and review",
+      "finalSupplementaryPhotosRecheck": true
     },
     "firstPartProgressBrowser": {
       "passed": true,
       "command": "check-progress-browser.mjs against final static site from a subdirectory",
-      "scope": "Legacy 28/28 paper, frozen old decks, preserved result, full fresh retake, restored correct/wrong answers without double scoring, original second half of lesson21"
+      "scope": "Legacy 28/28 paper, frozen old decks, preserved result, full fresh retake, restored correct/wrong answers without double scoring, original second half of lesson21; legacy lesson82 retains9decks/152questions and starts second-half question76; fresh lesson82 retains11decks/192questions and visits the final photo supplement."
     },
     "diffCheck": {
       "passed": true,
@@ -44777,13 +44808,31 @@
   },
   "sourceScopeSupplement": {
     "date": "2026-10-14",
-    "source": "Seven higher-resolution photographs attached by the user after the initial audit report.",
+    "source": "Two batches of higher-resolution user photographs after the initial audit: seven photos, then ten photos.",
     "resolved": [
       {
         "lesson": 22,
         "reading": "مِرَارًا",
         "evidence": "Photo1: kasra below initial mim, matching the existing card and authored answer.",
         "result": "Scan reading closed; no course edit needed."
+      },
+      {
+        "lesson": 39,
+        "reading": "غَنَاءٌ",
+        "evidence": "Second batch photo1, printed102: clear fatha on ghayn.",
+        "result": "Existing added card correct; no course edit."
+      },
+      {
+        "lesson": 46,
+        "reading": "مُنِحَ مَا طُلِبَ وَأُخِذَ مَا مُنِحَ",
+        "evidence": "Second batch photo7, printed122; four passive past verbs; initial standalone مَا is a separate vocabulary entry.",
+        "result": "Added one full sentence in a new final deck."
+      },
+      {
+        "lesson": 82,
+        "reading": "الثِّبَةُ; يُوسَعُ; مَوْسُوعٌ",
+        "evidence": "Second batch photos3–4, printed265–266.",
+        "result": "Added missing lexical and grammatical entries in a new final deck; preserved existing old cards."
       }
     ],
     "partiallyResolved": [
@@ -44792,12 +44841,208 @@
         "reading": "مُحَرَّمُ الْحَرَامِ; رَبِيعُ الْأَوَّلِ; رَبِيعُ الْآخِرِ",
         "evidence": "Photo2 confirms the genitive vowel in the second components.",
         "result": "Reading confirmed; independent editorial question for Muharram remains. Existing forms retained."
+      },
+      {
+        "lesson": 56,
+        "reading": "طَوَاطِي",
+        "evidence": "Second batch photo2: no printed final shadda or case vowel.",
+        "result": "Source reading clear; exact normative ending remains a lexicographic question, old slot retained."
       }
     ],
     "paginationNote": "Photo pages101,121,163,262 and263 show practice paragraphs rather than the vocabulary rows referenced in the uploaded scan. Locate remaining evidence by lesson heading and Arabic word, not by matching printed page numbers between layouts.",
-    "remainingQuestions": 6,
-    "courseChanged": false,
-    "progressChanged": false
+    "remainingQuestions": 2,
+    "courseChanged": true,
+    "progressChanged": false,
+    "newCardsByLesson": {
+      "46": 1,
+      "82": 7
+    },
+    "existingCardClarification": {
+      "lesson": 82,
+      "deckIndex": 1,
+      "wordIndex": 11,
+      "result": "Existing مُوسِعٌ retained as valid IV participle; note distinguishes it from I مَوْسُوعٌ."
+    },
+    "primaryEvidence82": {
+      "date": "2026-10-14",
+      "scope": "Independent read-only review of user photographs printed pp.265–268, §82; comparison with first-part lessons1–100, especially80/82.",
+      "resolvedReadings": [
+        {
+          "printedPage": 265,
+          "arabic": "الثِّبَةُ",
+          "meaning": "прыжок",
+          "status": "Kasra independently read by reviewer and root; now explicitly confirmed as the pattern of عِدَةٌ by Taj al-Arus4p328."
+        },
+        {
+          "printedPage": 265,
+          "arabic": "يُوسَعُ",
+          "meaning": "вмещается (страдательное настоящее I породы)",
+          "status": "read confidently; book Russian gloss «становится широким» must not be mechanically transferred to passive"
+        },
+        {
+          "printedPage": 266,
+          "arabic": "مَوْسُوعٌ",
+          "meaning": "вмещённый",
+          "status": "read confidently; already present at82deck7word3 and80deck1word11"
+        }
+      ],
+      "additionsRecommended": [
+        {
+          "arabic": "ثِبَةٌ",
+          "russian": "прыжок",
+          "note": "Редкий масдар глагола وَثَبَ — يَثِبُ, напечатанный в словаре §82.",
+          "printedPage": 265
+        },
+        {
+          "arabic": "يُوسَعُ",
+          "russian": "он вмещается",
+          "note": "Страдательное настоящее I породы от переходного وَسِعَ «вместить». Начальная و сохраняется. Это не действительное «становится широким».",
+          "printedPage": 265
+        },
+        {
+          "arabic": "وَسَّاعٌ",
+          "russian": "много вмещающий; очень вместительный",
+          "note": "Усилительная форма от وَسِعَ.",
+          "printedPage": 266
+        },
+        {
+          "arabic": "لَا يَهَبْ",
+          "russian": "пусть он не дарит",
+          "printedPage": 266
+        },
+        {
+          "arabic": "وَجَدْتُ الرِّجَالَ عَالِمِينَ",
+          "russian": "я нашёл, что мужчины — учёные",
+          "printedPage": 268,
+          "note": "В книге дано как допустимая альтернатива عُلَمَاءَ; генератор не должен предлагать оба как взаимоисключающие ответы."
+        },
+        {
+          "arabic": "وَطْءٌ",
+          "russian": "топтание; половое сношение; низкое место",
+          "printedPage": 268,
+          "note": "Самостоятельная карточка масдара/существительного со значениями, которые отсутствуют в прежнем глагольном сочетании82deck7word5."
+        }
+      ],
+      "optionalPrintedPassive": {
+        "arabic": "يُوثَبُ",
+        "russian": "совершается прыжок (страдательная форма)",
+        "note": "От непереходного «прыгать» употребляется в конструкции с предлогом, обстоятельством или масдаром; например يُوثَبُ عَلَيْهِ — на него прыгают. Не равно действительному يَثِبُ.",
+        "printedPage": 265,
+        "rationale": "Keeps the literal printed bare morphological row, while teaching that the intransitive passive requires a syntactic complement. Do not invent a lexical direct-object meaning «его перепрыгивают»."
+      },
+      "existingCoordinateRecommendations": [
+        {
+          "lesson": 82,
+          "deckIndex": 1,
+          "wordIndex": 11,
+          "arabic": "مُوسِعٌ",
+          "action": "keep existing form and Russian gloss; add note naming formIV أَوْسَعَ, because photo gives Ipassive مَوْسُوعٌ elsewhere and these should not be conflated"
+        },
+        {
+          "lesson": 80,
+          "deckIndex": 1,
+          "wordIndex": 5,
+          "arabic": "مَوْثُوبٌ",
+          "action": "preserve slot; if clarification authorized, note normal prepositional construction مَوْثُوبٌ عَلَيْهِ; do not imply a proven direct-object usage"
+        },
+        {
+          "lesson": 82,
+          "deckIndex": 1,
+          "wordIndex": 5,
+          "arabic": "مَوْثُوبٌ",
+          "action": "preserve slot; note normal prepositional construction مَوْثُوبٌ عَلَيْهِ if clarifying; existing Russian «тот, через кого перепрыгнули» does not provide the missing Arabic preposition"
+        }
+      ],
+      "earlierCoverageSearch": {
+        "method": "All first-part lesson1–100 source files searched after NFC and Arabic-mark/space removal.",
+        "missingAcrossAllFirstPart": [
+          "ثبة",
+          "وساع",
+          "لايهب",
+          "وجدتالرجالعالمين",
+          "يوثب"
+        ],
+        "specificNotes": [
+          "يوسع occurs only as the differently-vowelled/shaddaed formII يُوَسِّعُ in lesson83; Ipassive is absent.",
+          "وطء occurs only as a verbal tuple in82, translated «топтать, ступать»."
+        ]
+      },
+      "primaryEvidence": [
+        {
+          "title": "Ибн Манзур, Лисан аль-араб, статьяوسع, т.8 с.391–392",
+          "url": "https://raw.githubusercontent.com/OpenITI/0725AH/master/data/0711IbnManzurIfriqi/0711IbnManzurIfriqi.LisanCarab/0711IbnManzurIfriqi.LisanCarab.Shamela0001687-ara1.mARkdown",
+          "quotes": [
+            "وقد وسعه يسعه ويسعه سعة",
+            "هذا الكيل يسع ثلاثة أمناء، وهذا الوعاء يسع عشرين كيلا"
+          ],
+          "conclusion": "Transitive Imeaning «вмещать» directly documented, so Ipassive يُوسَعُ/مَوْسُوعٌ can carry the accommodation meaning."
+        },
+        {
+          "title": "Фирузабади, Камус аль-мухит, с.54–55",
+          "url": "https://raw.githubusercontent.com/OpenITI/0825AH/master/data/0817MajdDinFiruzabadi/0817MajdDinFiruzabadi.QamusMuhit/0817MajdDinFiruzabadi.QamusMuhit.Shamela0007283-ara1",
+          "quotes": [
+            "وطئه، بالكسر، يطؤه: داسه ... والمرأة: جامعها",
+            "والوطء والوطاء والميطأ: ما انخفض من الأرض بين النشاز والإشراف"
+          ],
+          "conclusion": "The three printed noun meanings of وطء are supported; low-place gloss is not an unsupported extrapolation."
+        },
+        {
+          "title": "Муртада аз-Забиди, Тадж аль-арус, статьяوثب, т.4с.328",
+          "url": "https://raw.githubusercontent.com/OpenITI/1225AH/master/data/1205MurtadaZabidi/1205MurtadaZabidi.TajCarus/1205MurtadaZabidi.TajCarus.Shamela0007030-ara1",
+          "quote": "قال شيخنا: ومما بقي على المصنف من مصادر هاذا الباب: ثبة، كعدة، وهي مقيسة، ذكرها أرباب الأفعال، ونبه عليها الشيخ ابن مالك وغيره.",
+          "conclusion": "ثِبَةٌ is explicitly documented as a masdar of وَثَبَ matching عِدَةٌ. Earlier absence in Lisan/Qamus was just an incomplete enumeration, not evidence of invalidity."
+        }
+      ],
+      "coveredPrintedMaterial": "All وَهَبَ paradigm rows, commands, passive present dual/plural, moods, derivatives; وَثَبَ main derivatives; وَسِعَ main forms; analogous roots وَضَعَ/وَقَعَ/وَعَدَ/وَجَدَ/وَرَدَ/وَقَفَ/وَصَلَ/وَعَظَ/وَجَبَ/وَصَفَ/وَثِقَ, and six displayed عَلِمْتُ/وَجَدْتُ sentences are already represented, except the additions above. Printed table uses infinitive Russian headings even though Arabic basic verbs are past forms; course tense-aware glosses remain appropriate.",
+      "source83BelowScope": "Page268 additionally begins §83; visible إِيجَادٌ/إِيقَادٌ/تَوَسُّعٌ/تَوَكُّلٌ/مُوَافَقَةٌ/تَوَاضُعٌ tuples match lesson83 vocabulary; no newly identified omission in that fragment.",
+      "courseFilesEdited": false,
+      "postEditReadOnlyReview": {
+        "filesInspected": [
+          "content/lesson-82.ts gitdiff"
+        ],
+        "newCards": 7,
+        "result": "All seven appended cards and the existing formIV note are linguistically acceptable. Existing positions remain intact; no mutations performed by reviewer."
+      }
+    },
+    "remainingEditorialResearch": {
+      "scope": "Bounded independent primary verification; no content changes",
+      "date": "2026-10-14",
+      "questions": [
+        {
+          "lesson": 56,
+          "term": "طَوَاطِي",
+          "status": "unresolved_normative_ending",
+          "bookPhoto": "Clearly prints طَوَاطِي without visible final shadda or case mark; source reading is resolved by user photo, normative ending is separate.",
+          "checkedPrimarySources": [
+            {
+              "title": "لسان العرب",
+              "url": "https://raw.githubusercontent.com/OpenITI/0725AH/master/data/0711IbnManzurIfriqi/0711IbnManzurIfriqi.LisanCarab/0711IbnManzurIfriqi.LisanCarab.Shamela0001687-ara1.mARkdown",
+              "result": "No exact foreign-loan طوطي → طواطي pair found."
+            },
+            {
+              "title": "تاج العروس، electronic Shamela text",
+              "url": "https://raw.githubusercontent.com/OpenITI/1225AH/master/data/1205MurtadaZabidi/1205MurtadaZabidi.TajCarus/1205MurtadaZabidi.TajCarus.Shamela0007030-ara1",
+              "result": "Full 40 MB text searched after stripping harakat. No exact foreign-loan طوطي → طواطي pair found."
+            }
+          ],
+          "limitation": "Absence from these dictionaries does not prove the form invalid; do not supply shadda/case from كراكي by analogy."
+        },
+        {
+          "lesson": 27,
+          "term": "مُحَرَّمُ الْحَرَامِ",
+          "status": "unresolved_grammatical_analysis",
+          "bookPhoto": "The spelling and kasra of الْحَرَامِ are resolved by user photo.",
+          "attestations": [
+            {
+              "title": "بداية العابد، ابن عبد الله البعلي الحنبلي (d1192 AH), quoted author colophon",
+              "url": "https://github.com/OpenITI/1200AH/blob/87a474ec27f0104af9bb0582f9c5561009c20e31/data/1192IbnCabdAllahBacliHanbali/1192IbnCabdAllahBacliHanbali.BidayatCabid/1192IbnCabdAllahBacliHanbali.BidayatCabid.Sham19Y0147661-ara1",
+              "quote": "وفرغت من تسويده نهار الثلاثاء، عشر من شهر الله المحرم الحرام، افتتاح شهور سنة إحدى وسبعين ومائة وألف (1171 ه)"
+            }
+          ],
+          "limitation": "Traditional unvowelled محرم الحرام is widely attested, but this does not establish the target nominative مُحَرَّمُ + genitive الْحَرَامِ. Most examples place both words under a governing genitive. The case/definiteness analysis cannot be resolved from them. Preserve existing card pending stronger primary grammatical evidence."
+        }
+      ]
+    }
   },
   "sourceScope": {
     "uploadedImages": 328,
@@ -44819,46 +45064,12 @@
             63
           ]
         },
-        "issue": "Требует независимого первичного подтверждения грамматический разбор именно сложного имени مُحَرَّمُ الْحَرَامِ. Новая фотография урока27 ясно подтверждает касру в конце الْحَرَامِ; вопрос чтения закрыт. Идафа رَبِيعُ الْأَوَّلِ / رَبِيعُ الْآخِرِ отдельно подтверждена «Мисбах аль-мунир».",
+        "issue": "Требует независимого первичного подтверждения грамматический разбор именно сложного имени مُحَرَّمُ الْحَرَامِ. Новая фотография урока 27 ясно подтверждает касру в конце الْحَرَامِ; вопрос чтения закрыт. Идафа رَبِيعُ الْأَوَّلِ / رَبِيعُ الْآخِرِ отдельно подтверждена «Мисбах аль-мунир».",
         "status": "unresolved_editorial",
         "evidence": [
           "coverage-21-30.json, lesson27.unresolved: прежний общий флаг сужен дополнительной проверкой.",
           "final-open-word-research.json: Фиюми прямо разрешает идафу для названий месяцев раби. Для مُحَرَّمُ الْحَرَامِ целевой поиск прямого первичного разбора пока не дал.",
           "Фотография пользователя, второе изображение в сообщении после первого итогового отчёта: ясно مُحَرَّمُ الْحَرَامِ."
-        ]
-      },
-      {
-        "lesson": 39,
-        "source": {
-          "jpg": [
-            100
-          ],
-          "printedPage": [
-            101
-          ]
-        },
-        "issue": "Первая огласовка غناء в JPG плохо различима; значение «богатство/достаток» ясно.",
-        "status": "unresolved_scan",
-        "evidence": [
-          "coverage-31-40.json, lesson39.unresolved",
-          "Текущая новая карточка غَنَاءٌ «достаток / обеспеченность» использует нормативную форму; это не заявление о прочитанном первом знаке скана."
-        ]
-      },
-      {
-        "lesson": 46,
-        "source": {
-          "jpg": [
-            120
-          ],
-          "printedPage": [
-            121
-          ]
-        },
-        "issue": "В словарном примере مَا طَلَبَ وَأَخَذَ مَا ... не читается надёжно залог последнего глагола.",
-        "status": "unresolved_scan",
-        "evidence": [
-          "coverage-41-60.json, lesson46.unresolved",
-          "Неясный полный пример не добавлен по догадке; существующие карточки сохранены."
         ]
       },
       {
@@ -44871,49 +45082,12 @@
             165
           ]
         },
-        "issue": "Точное окончание заимствованного множественного طَوَاطِي «попугаи» не подтверждено.",
+        "issue": "Нормативное окончание редкого заимствованного множественного طَوَاطِي требует первичного словарного подтверждения. Новая фотография раздела 56 ясно показывает именно طَوَاطِي без напечатанной шадды или падежного знака в конце; сомнение в чтении снято.",
         "status": "unresolved_lexicography",
         "evidence": [
           "coverage-41-60.json, lesson56.unresolved",
-          "В текущем lesson-56.ts прежняя طَوَاطِي сохранена. Другое слово той же страницы كَرَاكِيُّ уже независимо подтверждено и исправлено; оно не остаётся открытым вопросом."
-        ]
-      },
-      {
-        "lesson": 82,
-        "source": {
-          "jpg": [
-            261,
-            262
-          ],
-          "printedPage": [
-            265,
-            266
-          ]
-        },
-        "issue": "Огласовка редкого масдара الثبة на маленьком скане неразборчива.",
-        "status": "unresolved_scan",
-        "evidence": [
-          "coverage-81-100.json, lesson82.unresolved",
-          "Неясная новая карточка не добавлена без подтверждения; существующие формы وَثَبَ сохранены."
-        ]
-      },
-      {
-        "lesson": 82,
-        "source": {
-          "jpg": [
-            261,
-            262
-          ],
-          "printedPage": [
-            265,
-            266
-          ]
-        },
-        "issue": "Книжные формы موسع / يوسع при وَسِعَ требуют большего скана для различения огласовок и разбора.",
-        "status": "unresolved_scan",
-        "evidence": [
-          "coverage-81-100.json, lesson82.unresolved",
-          "Неясные новые формы не достроены по догадке; старые карточки остались на прежних местах."
+          "В текущем lesson-56.ts прежняя طَوَاطِي сохранена. Другое слово той же страницы كَرَاكِيُّ уже независимо подтверждено и исправлено; оно не остаётся открытым вопросом.",
+          "Вторая фотография во втором дополнительном наборе пользователя: طُوطِيٌّ / طَوَاطِي; разрешение достаточно для чтения печати."
         ]
       }
     ],

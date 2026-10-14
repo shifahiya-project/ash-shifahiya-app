@@ -31,7 +31,20 @@ test("a fresh lesson 82 run visits its added deck before starting the expanded p
   assert.ok(part.deckStart <= addedDeck && addedDeck < part.deckEnd);
   assert.equal(nextPopulatedDeck(lesson, addedDeck - 1, part.deckEnd), addedDeck,
     "fresh navigation crosses the empty old deck to the vocabulary supplement");
-  assert.equal(nextPopulatedDeck(lesson, addedDeck + 1, part.deckEnd), null);
+  const expectedAddedDecks = lesson.decks
+    .map((deck, index) => ({ deck, index }))
+    .filter(({ deck, index }) => index >= addedDeck && index < part.deckEnd && deck.words.length > 0)
+    .map(({ index }) => index);
+  const visitedAddedDecks = [];
+  let following = nextPopulatedDeck(lesson, addedDeck, part.deckEnd);
+  while (following !== null) {
+    visitedAddedDecks.push(following);
+    assert.ok(visitedAddedDecks.length <= expectedAddedDecks.length,
+      "navigation must advance rather than repeat a supplement");
+    following = nextPopulatedDeck(lesson, following + 1, part.deckEnd);
+  }
+  assert.deepEqual(visitedAddedDecks, expectedAddedDecks,
+    "all appended vocabulary decks are visited before the expanded paper");
   assert.equal(part.questionEnd, lesson.questions.length);
   assert.ok(lesson.questions[part.questionStart]);
   assert.equal(lesson.questions[part.questionEnd - 1].prompt, lessonEightyTwo.questions.at(-1).prompt);
