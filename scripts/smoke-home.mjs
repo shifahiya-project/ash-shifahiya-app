@@ -105,6 +105,9 @@ try {
     if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
   });
   await page.goto(origin, { waitUntil: "networkidle" });
+  assert.doesNotMatch(await page.locator("main").innerText(), /Увидели слово|Учимся осмысленно, повторяем вовремя/);
+  assert.equal(await page.locator(".principle, .quote").count(), 0);
+  assert(await page.locator("footer span[lang=ar]").isVisible(), "The Arabic footer should remain visible on mobile");
 
   const menu = page.locator("#main-menu");
   const menuToggle = page.getByRole("button", { name: "Меню", exact: true });
@@ -337,6 +340,29 @@ try {
   assert.equal(await earlierAudio.getAttribute("href"), "./text-and-audio.html?lesson=87");
   await collapseList().click();
   await assertWindow([90, 91, 92]);
+  // Every native popover dismissal resets disclosure state and scroll position.
+  for (const dismiss of ["close", "escape", "outside", "toggle"]) {
+    await showAll().click();
+    await openCourseParts();
+    await showProgress().click();
+    await page.getByRole("button", { name: "Показать достижения", exact: true }).click();
+    await menu.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+    if (dismiss === "close") await closeMainMenu();
+    else if (dismiss === "escape") await page.keyboard.press("Escape");
+    else if (dismiss === "outside") await page.mouse.click(2, 2);
+    else await menuToggle.click();
+    await menu.waitFor({ state: "hidden" });
+    await openMainMenu();
+    assert.equal(await menu.evaluate((element) => element.scrollTop), 0, "The menu should reopen at the top");
+    assert.equal(await lessonPanel.isVisible(), false, "Lessons should collapse after every menu dismissal");
+    assert.equal(await page.locator("#personal-progress").isVisible(), false);
+    assert.equal(await page.locator(".achievement-list").isVisible(), false);
+    assert.equal(await parts.isVisible(), false);
+    assert.deepEqual(await menu.locator(".home-disclosure-toggle[aria-expanded]").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-expanded"))), ["false", "false", "false"]);
+    await assertWindow([90, 91, 92]);
+    assert.equal(await showParts().getAttribute("aria-expanded"), "false");
+    assert(await showAll().isVisible());
+  }
   const unchangedEntries = await page.evaluate((keys) => keys.map((key) => [key, localStorage.getItem(key)]), lateEntries.map(([key]) => key));
   assert.deepEqual(unchangedEntries, progressBeforeToggling, "Hiding and revealing lessons must preserve progress");
   const progressBeforeParts = await page.evaluate(() => Object.entries(localStorage).sort(([a], [b]) => a.localeCompare(b)));
@@ -400,6 +426,7 @@ try {
   await page.locator(".practice-view .options").getByRole("button", { name: closing87.answer, exact: true }).click();
   await page.getByRole("button", { name: /^Результат/ }).click();
   await page.locator(".result-view").waitFor();
+  assert.equal(await page.getByRole("button", { name: "Сбросить результат", exact: true }).count(), 0);
   assert.match(await page.locator(".result-view .eyebrow").innerText(), /Урок 87 · слова и задания пройдены/i);
   assert.equal(await page.locator(".result-view a.primary").getAttribute("href"), "./text-and-audio.html?lesson=87");
   assert.equal(await page.getByRole("button", { name: /^Перейти к уроку 88/ }).count(), 0);
