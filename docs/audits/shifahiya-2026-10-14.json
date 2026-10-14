@@ -6011,25 +6011,7 @@
             ]
           }
         ],
-        "remainingIssues": [
-          {
-            "lesson": 22,
-            "source": {
-              "jpg": [
-                45
-              ],
-              "printedPage": [
-                46
-              ]
-            },
-            "issue": "На скане неразличим первый огласовочный знак مِرَارًا.",
-            "status": "unresolved_scan",
-            "evidence": [
-              "coverage-21-30.json, lesson22.unresolved",
-              "В текущем lesson-22.ts есть нормативное مِرَارًا «несколько раз / многократно»; неясный знак не использован для замены."
-            ]
-          }
-        ]
+        "remainingIssues": []
       }
     },
     {
@@ -8095,11 +8077,12 @@
                 63
               ]
             },
-            "issue": "Требует независимого первичного подтверждения разбор именно сложного имени مُحَرَّمُ الْحَرَامِ; конечный знак на JPG62 мелкий. Принятая идафа رَبِيعُ الْأَوَّلِ / رَبِيعُ الْآخِرِ отдельно подтверждена «Мисбах аль-мунир» и из сомнения исключена.",
+            "issue": "Требует независимого первичного подтверждения грамматический разбор именно сложного имени مُحَرَّمُ الْحَرَامِ. Новая фотография урока27 ясно подтверждает касру в конце الْحَرَامِ; вопрос чтения закрыт. Идафа رَبِيعُ الْأَوَّلِ / رَبِيعُ الْآخِرِ отдельно подтверждена «Мисбах аль-мунир».",
             "status": "unresolved_editorial",
             "evidence": [
               "coverage-21-30.json, lesson27.unresolved: прежний общий флаг сужен дополнительной проверкой.",
-              "final-open-word-research.json: Фиюми прямо разрешает идафу для названий месяцев раби. Для مُحَرَّمُ الْحَرَامِ целевой поиск прямого первичного разбора пока не дал."
+              "final-open-word-research.json: Фиюми прямо разрешает идафу для названий месяцев раби. Для مُحَرَّمُ الْحَرَامِ целевой поиск прямого первичного разбора пока не дал.",
+              "Фотография пользователя, второе изображение в сообщении после первого итогового отчёта: ясно مُحَرَّمُ الْحَرَامِ."
             ]
           }
         ]
@@ -44792,6 +44775,30 @@
       "scope": "All100 pre-audit paper sizes and deck/part boundaries checked against commit6768367"
     }
   },
+  "sourceScopeSupplement": {
+    "date": "2026-10-14",
+    "source": "Seven higher-resolution photographs attached by the user after the initial audit report.",
+    "resolved": [
+      {
+        "lesson": 22,
+        "reading": "مِرَارًا",
+        "evidence": "Photo1: kasra below initial mim, matching the existing card and authored answer.",
+        "result": "Scan reading closed; no course edit needed."
+      }
+    ],
+    "partiallyResolved": [
+      {
+        "lesson": 27,
+        "reading": "مُحَرَّمُ الْحَرَامِ; رَبِيعُ الْأَوَّلِ; رَبِيعُ الْآخِرِ",
+        "evidence": "Photo2 confirms the genitive vowel in the second components.",
+        "result": "Reading confirmed; independent editorial question for Muharram remains. Existing forms retained."
+      }
+    ],
+    "paginationNote": "Photo pages101,121,163,262 and263 show practice paragraphs rather than the vocabulary rows referenced in the uploaded scan. Locate remaining evidence by lesson heading and Arabic word, not by matching printed page numbers between layouts.",
+    "remainingQuestions": 6,
+    "courseChanged": false,
+    "progressChanged": false
+  },
   "sourceScope": {
     "uploadedImages": 328,
     "reviewedLessons": 100,
@@ -44803,23 +44810,6 @@
     },
     "scanAndLexicographyLimits": [
       {
-        "lesson": 22,
-        "source": {
-          "jpg": [
-            45
-          ],
-          "printedPage": [
-            46
-          ]
-        },
-        "issue": "На скане неразличим первый огласовочный знак مِرَارًا.",
-        "status": "unresolved_scan",
-        "evidence": [
-          "coverage-21-30.json, lesson22.unresolved",
-          "В текущем lesson-22.ts есть нормативное مِرَارًا «несколько раз / многократно»; неясный знак не использован для замены."
-        ]
-      },
-      {
         "lesson": 27,
         "source": {
           "jpg": [
@@ -44829,11 +44819,12 @@
             63
           ]
         },
-        "issue": "Требует независимого первичного подтверждения разбор именно сложного имени مُحَرَّمُ الْحَرَامِ; конечный знак на JPG62 мелкий. Принятая идафа رَبِيعُ الْأَوَّلِ / رَبِيعُ الْآخِرِ отдельно подтверждена «Мисбах аль-мунир» и из сомнения исключена.",
+        "issue": "Требует независимого первичного подтверждения грамматический разбор именно сложного имени مُحَرَّمُ الْحَرَامِ. Новая фотография урока27 ясно подтверждает касру в конце الْحَرَامِ; вопрос чтения закрыт. Идафа رَبِيعُ الْأَوَّلِ / رَبِيعُ الْآخِرِ отдельно подтверждена «Мисбах аль-мунир».",
         "status": "unresolved_editorial",
         "evidence": [
           "coverage-21-30.json, lesson27.unresolved: прежний общий флаг сужен дополнительной проверкой.",
-          "final-open-word-research.json: Фиюми прямо разрешает идафу для названий месяцев раби. Для مُحَرَّمُ الْحَرَامِ целевой поиск прямого первичного разбора пока не дал."
+          "final-open-word-research.json: Фиюми прямо разрешает идафу для названий месяцев раби. Для مُحَرَّمُ الْحَرَامِ целевой поиск прямого первичного разбора пока не дал.",
+          "Фотография пользователя, второе изображение в сообщении после первого итогового отчёта: ясно مُحَرَّمُ الْحَرَامِ."
         ]
       },
       {
