@@ -146,23 +146,62 @@ test("no single option dominates a lesson's generated questions", () => {
   }
 });
 
-// A repeated Arabic form is the same card twice; a repeated gloss makes the
-// ru→ar question have two right answers.
-test("no two words in a lesson share a form or a gloss", () => {
+// Correcting old vowel errors made six pairs of existing cards identical.
+// Keep their coordinates for saved review progress; do not permit new duplicates.
+test("only the preserved old cards repeat an Arabic form, with the same meaning", () => {
+  const preservedPairs = new Set([
+    "34:3:5:8:2", "34:4:5:7:2", "72:2:0:9:6",
+    "94:2:11:5:0", "94:2:13:5:2", "94:2:14:5:3",
+  ]);
+  const foundPairs = new Set();
   for (const lesson of rawLessons) {
-    const words = wordsOf(lesson);
-    const arabic = words.map((word) => word.arabic);
-    const russian = words.map((word) => word.russian);
-    assert.equal(
-      new Set(arabic).size,
-      arabic.length,
-      `lesson ${lesson.id}: repeated Arabic form ${arabic.find((v, i) => arabic.indexOf(v) !== i)}`,
-    );
-    assert.equal(
-      new Set(russian).size,
-      russian.length,
-      `lesson ${lesson.id}: repeated gloss "${russian.find((v, i) => russian.indexOf(v) !== i)}"`,
-    );
+    const seen = new Map();
+    lesson.decks.forEach((deck, deckIndex) => deck.words.forEach((word, wordIndex) => {
+      const previous = seen.get(word.arabic);
+      if (previous) {
+        const key = `${lesson.id}:${previous.deckIndex}:${previous.wordIndex}:${deckIndex}:${wordIndex}`;
+        assert.ok(preservedPairs.has(key), `unexpected repeated card ${key}: ${word.arabic}`);
+        assert.equal(word.russian, previous.word.russian, `ambiguous repeated card ${key}`);
+        foundPairs.add(key);
+      } else {
+        seen.set(word.arabic, { word, deckIndex, wordIndex });
+      }
+    }));
+  }
+  assert.deepEqual(foundPairs, preservedPairs);
+});
+
+test("Arabic synonyms cannot become wrong answers for their shared Russian meaning", () => {
+  const lesson = expandLessonQuestions({
+    id: 0, title: "", arabicTitle: "", description: "", tags: [], questions: [],
+    decks: [{ title: "", words: [
+      { arabic: "ذَلِكَ", russian: "тот" },
+      { arabic: "ذَاكَ", russian: "тот" },
+      { arabic: "هَذَا", russian: "этот" },
+      { arabic: "تِلْكَ", russian: "та" },
+    ] }],
+  });
+  for (const question of lesson.questions.filter((q) => q.promptLang === "ru" && q.prompt === "тот")) {
+    assert.equal(question.options.length, 3);
+    for (const alternative of ["ذَلِكَ", "ذَاكَ"]) {
+      if (alternative !== question.answer) assert.ok(!question.options.includes(alternative));
+    }
+  }
+});
+
+test("no generated Russian prompt offers an Arabic synonym as a wrong answer", () => {
+  const glosses = (value) => value.split(/[/,;]/).map((s) => s.toLowerCase().replace(/\s+/g, " ").trim());
+  for (const [index, lesson] of expanded.entries()) {
+    const words = wordsOf(rawLessons[index]);
+    for (const q of generatedQuestions(lesson, rawLessons[index]).filter((q) => q.promptLang === "ru")) {
+      const wanted = glosses(q.prompt);
+      for (const option of q.options.filter((value) => value !== q.answer)) {
+        for (const word of words.filter((word) => word.arabic === option)) {
+          assert.ok(!glosses(word.russian).some((meaning) => wanted.includes(meaning)),
+            `lesson ${lesson.id}: ${option} also translates ${q.prompt}`);
+        }
+      }
+    }
   }
 });
 

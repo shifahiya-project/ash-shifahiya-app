@@ -54,6 +54,19 @@ test("a longer lesson is cut in two", () => {
   assert.equal(parts.length, 2);
 });
 
+test("a very large vocabulary addition gains parts without overlong papers", () => {
+  const lesson = lessonOf([35, 35, 35, 35, 35, 35], PART_THRESHOLD * 3 + 1);
+  const parts = lessonParts(lesson);
+  assert.equal(parts.length, 4);
+  assert.equal(parts[0].questionStart, 0);
+  assert.equal(parts.at(-1).questionEnd, lesson.questions.length);
+  assert.equal(parts.at(-1).deckEnd, lesson.decks.length);
+  for (const part of parts) {
+    assert.ok(part.questionEnd - part.questionStart <= PART_THRESHOLD);
+    assert.ok(part.deckEnd > part.deckStart);
+  }
+});
+
 test("the cut falls on the deck boundary nearest the middle", () => {
   // 3 + 4 + 5 words → 6 + 8 + 10 cards. Half of 24 is 12: cutting after the
   // first deck leaves 6, after the second leaves 14, so the second wins.
@@ -103,7 +116,7 @@ test("the closing correction question stays in the last part", () => {
 
 test("every lesson over the threshold is split, and no other is", () => {
   for (const lesson of lessons) {
-    const expected = lesson.questions.length > PART_THRESHOLD && lesson.decks.length >= 2 ? 2 : 1;
+    const expected = Math.min(Math.ceil(lesson.questions.length / PART_THRESHOLD), lesson.decks.length);
     assert.equal(cardsParts(lesson).length, expected, `lesson ${lesson.id}`);
   }
 });

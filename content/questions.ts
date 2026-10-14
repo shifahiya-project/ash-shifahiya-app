@@ -15,7 +15,7 @@ const ALEF_VARIANTS = /[آأإٱ]/g;
 /** Russian glosses list alternatives as "высокий / длинный" or "он, оно". */
 const GLOSS_SEPARATORS = /[/,;]/;
 
-type Candidate = { value: string; deckIndex: number };
+type Candidate = { value: string; deckIndex: number; meaning?: string };
 
 function normalize(value: string) {
   return value
@@ -107,10 +107,14 @@ export function seededShuffle<T>(items: T[], seed: number) {
  * similar in shape, and varied from question to question so the option list
  * itself stops being a hint.
  */
-export function buildOptions(answer: string, candidates: Candidate[], deckIndex: number) {
+export function buildOptions(answer: string, candidates: Candidate[], deckIndex: number, meaning?: string) {
   const seen = new Set([normalize(answer)]);
   const usable: Candidate[] = [];
   for (const candidate of candidates) {
+    // Different Arabic forms may be synonyms (e.g. ذَلِكَ and ذَاكَ). Neither
+    // can be a wrong answer when the prompt asks for their shared meaning.
+    if (meaning !== undefined && candidate.meaning !== undefined &&
+        overlapsInMeaning(meaning, candidate.meaning)) continue;
     const key = normalize(candidate.value);
     if (seen.has(key)) continue;
     if (overlapsInMeaning(answer, candidate.value)) continue;
@@ -179,6 +183,7 @@ export function expandLessonQuestions(lesson: Lesson): Lesson {
   const arabicCandidates: Candidate[] = entries.map(({ word, deckIndex }) => ({
     value: word.arabic,
     deckIndex,
+    meaning: word.russian,
   }));
   const russianCandidates: Candidate[] = entries.map(({ word, deckIndex }) => ({
     value: word.russian,
@@ -197,7 +202,7 @@ export function expandLessonQuestions(lesson: Lesson): Lesson {
       prompt: word.russian,
       promptLang: "ru",
       answer: word.arabic,
-      options: buildOptions(word.arabic, arabicCandidates, deckIndex),
+      options: buildOptions(word.arabic, arabicCandidates, deckIndex, word.russian),
       explanation: `${word.arabic} — правильная арабская форма для «${word.russian}».`,
     },
   ]);
