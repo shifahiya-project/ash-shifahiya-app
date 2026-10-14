@@ -962,7 +962,6 @@ footer {
   letter-spacing: .06em;
 }
 footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", serif; }
-footer.course-footer { justify-content: flex-end; }
 
 @media (max-width: 720px) {
   .topbar { width: calc(100% - 28px); min-height: 70px; }
@@ -1019,8 +1018,6 @@ footer.course-footer { justify-content: flex-end; }
   footer { width: calc(100% - 28px); }
   footer span:first-child { display: none; }
   footer { justify-content: center; }
-  footer.course-footer { justify-content: center; }
-  footer.course-footer span:first-child { display: block; }
 }
 
 @media (max-width: 420px) {

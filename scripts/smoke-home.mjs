@@ -107,7 +107,7 @@ try {
   await page.goto(origin, { waitUntil: "networkidle" });
   assert.doesNotMatch(await page.locator("main").innerText(), /Увидели слово|Учимся осмысленно, повторяем вовремя/);
   assert.equal(await page.locator(".principle, .quote").count(), 0);
-  assert(await page.locator("footer span[lang=ar]").isVisible(), "The Arabic footer should remain visible on mobile");
+  assert.equal(await page.locator("footer").count(), 0, "The course page should have no footer");
 
   const menu = page.locator("#main-menu");
   const menuToggle = page.getByRole("button", { name: "Меню", exact: true });
