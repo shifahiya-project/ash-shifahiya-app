@@ -68,5 +68,85 @@
     "duration": 303.408,
     "audioSrc": "./audio/shifahiya-1/lesson-100.mp3",
     "textSrc": "./text/shifahiya-1/lesson-100.json"
+  },
+  {
+    "lessonId": 1,
+    "courseTitle": "Чтение",
+    "duration": 303.768,
+    "audioSrc": "./audio/reading-2/lesson-1.mp3",
+    "textSrc": "./text/reading-2/lesson-1.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 2,
+    "courseTitle": "Чтение",
+    "duration": 230.088,
+    "audioSrc": "./audio/reading-2/lesson-2.mp3",
+    "textSrc": "./text/reading-2/lesson-2.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 3,
+    "courseTitle": "Чтение",
+    "duration": 228.768,
+    "audioSrc": "./audio/reading-2/lesson-3.mp3",
+    "textSrc": "./text/reading-2/lesson-3.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 4,
+    "courseTitle": "Чтение",
+    "duration": 315.408,
+    "audioSrc": "./audio/reading-2/lesson-4.mp3",
+    "textSrc": "./text/reading-2/lesson-4.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 5,
+    "courseTitle": "Чтение",
+    "duration": 222.288,
+    "audioSrc": "./audio/reading-2/lesson-5.mp3",
+    "textSrc": "./text/reading-2/lesson-5.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 6,
+    "courseTitle": "Чтение",
+    "duration": 286.248,
+    "audioSrc": "./audio/reading-2/lesson-6.mp3",
+    "textSrc": "./text/reading-2/lesson-6.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 7,
+    "courseTitle": "Чтение",
+    "duration": 299.304,
+    "audioSrc": "./audio/reading-2/lesson-7.mp3",
+    "textSrc": "./text/reading-2/lesson-7.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 8,
+    "courseTitle": "Чтение",
+    "duration": 229.848,
+    "audioSrc": "./audio/reading-2/lesson-8.mp3",
+    "textSrc": "./text/reading-2/lesson-8.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 9,
+    "courseTitle": "Чтение",
+    "duration": 405.768,
+    "audioSrc": "./audio/reading-2/lesson-9.mp3",
+    "textSrc": "./text/reading-2/lesson-9.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 10,
+    "courseTitle": "Чтение",
+    "duration": 451.344,
+    "audioSrc": "./audio/reading-2/lesson-10.mp3",
+    "textSrc": "./text/reading-2/lesson-10.json",
+    "courseId": 2
   }
 ]

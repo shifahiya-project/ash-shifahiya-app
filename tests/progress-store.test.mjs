@@ -38,7 +38,7 @@ globalThis.window = {
   removeEventListener: events.removeEventListener.bind(events),
 };
 
-const { progressStore, EXAM_SESSION_KEY, EXAM_RESULTS_KEY, CARD_PROGRESS_KEY, LISTENING_PROGRESS_KEY } = await import(
+const { progressStore, EXAM_SESSION_KEY, EXAM_RESULTS_KEY, CARD_PROGRESS_KEY, LISTENING_PROGRESS_KEY, PART2_LISTENING_PROGRESS_KEY } = await import(
   "../app/progress-store.ts"
 );
 const { normalizeProgress } = await import("../app/merge-progress.ts");
@@ -117,6 +117,29 @@ test("a legacy payload does not infer listening completion from word scores", ()
   assert.deepEqual(progressStore.getSnapshot().listening, {});
   assert.deepEqual(JSON.parse(window.localStorage.getItem(LISTENING_PROGRESS_KEY)), {});
   assert.equal(progressStore.getSnapshot().scores[87], 20);
+});
+
+test("reading recordings survive a backup round trip and an update from another tab", () => {
+  freshStorage();
+  const original = normalizeProgress({
+    listening: { 1: { completed: true, updatedAt: 100 } },
+    part2Listening: { 1: { completed: false, updatedAt: 200 } },
+    part2Scores: { 1: 39 },
+  });
+  progressStore.replaceAll(original);
+  const backup = JSON.parse(JSON.stringify(progressStore.getSnapshot()));
+  freshStorage();
+  progressStore.replaceAll(normalizeProgress(backup));
+  assert.deepEqual(JSON.parse(window.localStorage.getItem(PART2_LISTENING_PROGRESS_KEY)), original.part2Listening);
+  const unsubscribe = progressStore.subscribe(() => {});
+  window.localStorage.setItem(PART2_LISTENING_PROGRESS_KEY, JSON.stringify({ 1: { completed: true, updatedAt: 300 } }));
+  const event = new Event("storage");
+  Object.defineProperty(event, "key", { value: PART2_LISTENING_PROGRESS_KEY });
+  events.dispatchEvent(event);
+  assert.deepEqual(progressStore.getSnapshot().part2Listening, { 1: { completed: true, updatedAt: 300 } });
+  assert.deepEqual(progressStore.getSnapshot().listening, original.listening);
+  assert.equal(progressStore.getSnapshot().part2Scores[1], 39);
+  unsubscribe();
 });
 
 test("malformed listening data in storage cannot complete a lesson", () => {
