@@ -135,6 +135,19 @@ test("a later listening reset beats an older completion on either device", () =>
   assert.deepEqual(mergeProgress(reset, completed).listening, reset.listening);
 });
 
+test("recordings with the same lesson number in different courses merge independently", () => {
+  const phone = progress({
+    listening: { 1: { completed: true, updatedAt: 300 } },
+    part2Listening: { 1: { completed: true, updatedAt: 100 } },
+  });
+  const laptop = progress({ part2Listening: { 1: { completed: false, updatedAt: 200 } } });
+  const merged = mergeProgress(phone, laptop);
+  assert.deepEqual(merged.listening, phone.listening);
+  assert.deepEqual(merged.part2Listening, laptop.part2Listening);
+  assert.deepEqual(merged, mergeProgress(laptop, phone));
+  assert.deepEqual(normalizeProgress({}).part2Listening, {});
+});
+
 test("simultaneous conflicting listening marks merge deterministically", () => {
   const completed = progress({ listening: { 87: { completed: true, updatedAt: 100 } } });
   const reset = progress({ listening: { 87: { completed: false, updatedAt: 100 } } });

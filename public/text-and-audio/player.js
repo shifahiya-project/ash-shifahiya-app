@@ -7,11 +7,12 @@
   let lesson;
   let state;
   let lastSave = 0;
-  const key = () => `shifahiya-listening-${lesson.lessonId}-v1`;
+  const courseId = () => lesson.courseId ?? 1;
+  const key = () => `shifahiya-${courseId() === 2 ? 'p2-' : ''}listening-${lesson.lessonId}-v1`;
   const status = get('status');
   const embedded = window.LISTENING_LESSON;
   const rates = [0.5, 0.75, 0.9, 1, 1.25, 1.5, 2];
-  const progressKey = 'shifahiya-listening-progress-v1';
+  const progressKey = () => `shifahiya-${courseId() === 2 ? 'p2-' : ''}listening-progress-v1`;
   async function fetchText(url) {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -36,8 +37,9 @@
     };
   }
   function readProgress() {
+    if (!lesson) return {};
     try {
-      const saved = JSON.parse(localStorage.getItem(progressKey));
+      const saved = JSON.parse(localStorage.getItem(progressKey()));
       if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
       // Match app/listening-progress.ts, including records for future lessons.
       const normalized = {};
@@ -132,14 +134,14 @@
       updatedAt: Math.max(Date.now(), (previous?.updatedAt || 0) + 1),
     };
     try {
-      localStorage.setItem(progressKey, JSON.stringify(progress));
+      localStorage.setItem(progressKey(), JSON.stringify(progress));
       renderCompletion();
     } catch {
       get('completion-status').textContent = 'Не удалось сохранить отметку. Проверьте, разрешено ли браузеру сохранять данные.';
     }
   };
   window.addEventListener('storage', (event) => {
-    if (event.key === progressKey || event.key === null) renderCompletion();
+    if (lesson && (event.key === progressKey() || event.key === null)) renderCompletion();
   });
   window.addEventListener('pageshow', renderCompletion);
   get('lesson').onchange = (event) => {
@@ -163,7 +165,7 @@
         reader.readAsDataURL(blob);
       });
       const [html, css, script] = await Promise.all([
-        fetchText('./text-and-audio.html?v=4'), fetchText('./text-and-audio/player.css?v=4'), fetchText('./text-and-audio/player.js?v=4'),
+        fetchText('./text-and-audio.html?v=5'), fetchText('./text-and-audio/player.css?v=5'), fetchText('./text-and-audio/player.js?v=5'),
       ]);
       const doc = new DOMParser().parseFromString(html, 'text/html');
       doc.querySelector('link[rel="stylesheet"]').remove();
@@ -179,7 +181,7 @@
       const href = URL.createObjectURL(new Blob(['<!doctype html>\n' + doc.documentElement.outerHTML], { type: 'text/html;charset=utf-8' }));
       const link = document.createElement('a');
       link.href = href;
-      link.download = `shifahiya-lesson-${lesson.lessonId}.html`;
+      link.download = `${courseId() === 2 ? 'reading' : 'shifahiya'}-lesson-${lesson.lessonId}.html`;
       link.click();
       setTimeout(() => URL.revokeObjectURL(href), 60000);
       get('download-status').textContent = 'Файл готов. Откройте скачанный HTML для занятий без интернета.';
@@ -197,11 +199,19 @@
       const courseLink = document.querySelector('nav a');
       courseLink.href = 'https://shifahiya-project.github.io/ash-shifahiya-app/';
     } else {
-      catalog = JSON.parse(await fetchText('./text-and-audio/catalog.json'));
+      const params = new URLSearchParams(location.search);
+      const requestedCourse = params.get('course') ?? '1';
+      if (!['1', '2'].includes(requestedCourse)) throw new Error('Course unavailable');
+      catalog = JSON.parse(await fetchText('./text-and-audio/catalog.json'))
+        .filter(entry => String(entry.courseId ?? 1) === requestedCourse);
       const requested = new URLSearchParams(location.search).get('lesson');
       const entry = requested === null ? catalog[0] : catalog.find(item => String(item.lessonId) === requested);
       if (!entry) throw new Error('Lesson unavailable');
       lesson = { ...entry, ...JSON.parse(await fetchText(entry.textSrc)) };
+    }
+    if (courseId() === 2) {
+      document.querySelector('nav a').href = embedded
+        ? 'https://shifahiya-project.github.io/ash-shifahiya-app/?course=2' : './?course=2';
     }
     for (const entry of catalog) {
       const option = document.createElement('option');
@@ -220,7 +230,7 @@
     renderCompletion();
     audio.src = lesson.audioSrc;
     get('audio-download').href = lesson.audioSrc;
-    get('audio-download').setAttribute('download', `lesson-${lesson.lessonId}.mp3`);
+    get('audio-download').setAttribute('download', `${courseId() === 2 ? 'reading-' : ''}lesson-${lesson.lessonId}.mp3`);
     document.querySelector('.listening-player').hidden = false;
     document.querySelector('.listening-completion').hidden = false;
     document.querySelector('footer').hidden = false;

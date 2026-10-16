@@ -16,7 +16,8 @@ const root = resolve(".static-site");
 const base = "/ash-shifahiya-app/";
 const exists = (path) => access(path).then(() => true, () => false);
 assert(await exists(resolve(root, "index.html")), "Run npm run build:static first");
-const listeningCatalog = JSON.parse(await readFile(resolve(root, "text-and-audio/catalog.json"), "utf8"));
+const listeningCatalog = JSON.parse(await readFile(resolve(root, "text-and-audio/catalog.json"), "utf8"))
+  .filter((entry) => (entry.courseId ?? 1) === 1);
 assert.deepEqual(listeningCatalog.map(({ lessonId }) => lessonId), [87, 88, 91, 92, 95, 96, 97, 98, 99, 100]);
 
 const specifiedBrowser = process.env.SMOKE_CHROMIUM ?? process.env.CHROME_PATH;
@@ -96,7 +97,8 @@ let browser;
 const errors = [];
 try {
   browser = await chromium.launch({ executablePath });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
@@ -483,7 +485,7 @@ try {
   const download = await downloading;
   const backup = JSON.parse(await readFile(await download.path(), "utf8"));
   assert.equal(backup.format, "shifahiya-progress");
-  assert.equal(backup.version, 2);
+  assert.equal(backup.version, 3);
   assert.equal(backup.listening[87].completed, true);
   await seed([]);
   await openMainMenu();
@@ -559,11 +561,101 @@ try {
   // Reading-course cards share the compact behavior, and retain their book
   // and section headings when the first visible lesson falls inside a book.
   const finalPassed = ["shifahiya-exams-v1", JSON.stringify({ final: { best: 150, attempts: 1 } })];
+  const readingListeningKey = "shifahiya-p2-listening-progress-v1";
+  const readingListeningEntry = [readingListeningKey, JSON.stringify(Object.fromEntries(
+    Array.from({ length: 10 }, (_, index) => [index + 1, { completed: true, updatedAt: 1000 }])))];
+
+  // The same number in two courses must keep distinct playback and completion.
+  const originalListening = { 1: { completed: false, updatedAt: 1000 } };
+  const originalPosition = JSON.stringify({ position: 99, rate: 2 });
+  await seed([
+    finalPassed,
+    ...scoreEntries(lessonSummaries, "shifahiya-lesson-", 1),
+    ...scoreEntries(part2Summaries, "shifahiya-p2-lesson-", 5),
+    ["shifahiya-p2-session-6", readingSession(6, 2000)],
+    [listeningKey, JSON.stringify(originalListening)],
+    ["shifahiya-listening-1-v1", originalPosition],
+  ]);
+  await choosePart(/^2 · Чтение/);
+  await assertWindow([1, 2]);
+  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=1&course=2");
+  assert.match(await card(1).innerText(), /Чтение пройдено · остались текст и аудио/);
+  await assertMobileActions(1, "reading-pending-audio-1");
+  await closeMainMenu();
+  await hero.click();
+  await page.getByRole("heading", { name: "Чтение · Урок 1", exact: true }).waitFor();
+  await page.waitForFunction(() => document.querySelector("audio")?.readyState > 0);
+  assert.equal(await page.locator("audio").evaluate(a => a.currentTime), 0);
+  assert.equal(await page.locator("audio").evaluate(a => a.playbackRate), 1);
+  await page.locator("audio").evaluate(a => { a.currentTime = 22; });
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem("shifahiya-p2-listening-1-v1") ?? "{}").position === 22);
+  await page.getByRole("button", { name: "Текст и аудио пройдены", exact: true }).click();
+  assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(key)), listeningKey), originalListening);
+  assert.equal(await page.evaluate(() => localStorage.getItem("shifahiya-listening-1-v1")), originalPosition);
+  assert.equal(await page.getByRole("link", { name: "← К курсу", exact: true }).getAttribute("href"), "./?course=2");
+  await page.getByRole("link", { name: "← К курсу", exact: true }).click();
+  await assertWindow([1, 2, 3]);
+  assert.equal(await page.locator(".selected-course").innerText(), "Часть 2 · Чтение");
+  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=2&course=2");
+  const otherTab = await page.context().newPage();
+  await otherTab.goto(`${origin}text-and-audio.html?lesson=2&course=2`);
+  await otherTab.getByRole("button", { name: "Текст и аудио пройдены", exact: true }).click();
+  await page.waitForFunction(() => document.querySelector(".continue-learning")?.getAttribute("href")?.includes("lesson=3&course=2"));
+  await assertWindow([2, 3, 4]);
+  await otherTab.locator('#complete[aria-pressed="true"]').click();
+  await page.waitForFunction(() => document.querySelector(".continue-learning")?.getAttribute("href")?.includes("lesson=2&course=2"));
+  await otherTab.close();
+  await assertWindow([1, 2, 3]);
+  await openMainMenu();
+  await showProgress().click();
+  const readingDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Сохранить копию", exact: true }).click();
+  const readingBackup = JSON.parse(await readFile(await (await readingDownload).path(), "utf8"));
+  assert.equal(readingBackup.version, 3);
+  assert.equal(readingBackup.part2Listening[1].completed, true);
+  assert.equal(readingBackup.part2Listening[2].completed, false);
+  await seed([]);
+  await openMainMenu();
+  await showProgress().click();
+  await page.locator('input[type="file"]').setInputFiles({ name: "progress-v3.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(readingBackup)) });
+  await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
+  await assertWindow([1, 2, 3]);
+  const oldReadingBackup = { ...readingBackup, version: 2 };
+  delete oldReadingBackup.part2Listening;
+  await page.reload({ waitUntil: "networkidle" });
+  await openMainMenu();
+  await showProgress().click();
+  await page.locator('input[type="file"]').setInputFiles({ name: "progress-v2.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(oldReadingBackup)) });
+  await page.getByText("Прогресс восстановлен.", { exact: true }).waitFor();
+  assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(key)), readingListeningKey), readingBackup.part2Listening);
+  await page.goto(origin, { waitUntil: "networkidle" });
+
+  // Finishing the core reading lesson offers its recording before the next one.
+  await seed([
+    finalPassed,
+    ["shifahiya-p2-session-1", JSON.stringify({ lessonId: 1, view: "reading", index: 0, score: 39, mistakes: [], updatedAt: 2000 })],
+  ]);
+  await choosePart(/^2 · Чтение/);
+  await closeMainMenu();
+  await hero.click();
+  await page.locator(".reading-view").waitFor();
+  await page.getByRole("button", { name: /^Урок пройден/ }).click();
+  await page.locator(".result-view").waitFor();
+  assert.equal(await page.locator(".result-view .result-listening").getAttribute("href"), "./text-and-audio.html?lesson=1&course=2");
+  await page.locator(".result-listening").click();
+  await page.getByRole("heading", { name: "Чтение · Урок 1", exact: true }).waitFor();
+  await page.goto(origin, { waitUntil: "networkidle" });
+
+  await seed([]);
+  await choosePart(/^2 · Чтение/);
+  assert.equal(await page.locator(".lesson-list .listening-link").count(), 0, "Locked reading lessons must expose no audio links");
+
   await seed([
     ...scoreEntries(lessonSummaries, "shifahiya-lesson-"),
     listeningEntry(),
     finalPassed,
     ...scoreEntries(part2Summaries, "shifahiya-p2-lesson-", 20),
+    readingListeningEntry,
     ["shifahiya-p2-session-21", readingSession(21, 1000)],
   ]);
   await openCourseParts();

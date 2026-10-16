@@ -6,6 +6,7 @@ export type ListeningProgress = {
 
 /** Shared with the standalone player; existing lesson scores keep their keys. */
 export const LISTENING_PROGRESS_KEY = "shifahiya-listening-progress-v1";
+export const PART2_LISTENING_PROGRESS_KEY = "shifahiya-p2-listening-progress-v1";
 
 /** Ignore malformed records from storage, backups or another device. */
 export function normalizeListeningProgress(value: unknown): Record<number, ListeningProgress> {
