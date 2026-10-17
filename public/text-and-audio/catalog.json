@@ -292,5 +292,13 @@
     "audioSrc": "./audio/reading-2/lesson-29.mp3",
     "textSrc": "./text/reading-2/lesson-29.json",
     "courseId": 2
+  },
+  {
+    "lessonId": 30,
+    "courseTitle": "Чтение",
+    "duration": 859.224,
+    "audioSrc": "./audio/reading-2/lesson-30.mp3",
+    "textSrc": "./text/reading-2/lesson-30.json",
+    "courseId": 2
   }
 ]
