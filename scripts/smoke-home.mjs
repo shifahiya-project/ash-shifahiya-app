@@ -16,8 +16,9 @@ const root = resolve(".static-site");
 const base = "/ash-shifahiya-app/";
 const exists = (path) => access(path).then(() => true, () => false);
 assert(await exists(resolve(root, "index.html")), "Run npm run build:static first");
-const listeningCatalog = JSON.parse(await readFile(resolve(root, "text-and-audio/catalog.json"), "utf8"))
-  .filter((entry) => (entry.courseId ?? 1) === 1);
+const fullListeningCatalog = JSON.parse(await readFile(resolve(root, "text-and-audio/catalog.json"), "utf8"));
+const listeningCatalog = fullListeningCatalog.filter((entry) => (entry.courseId ?? 1) === 1);
+const readingListeningCatalog = fullListeningCatalog.filter((entry) => entry.courseId === 2);
 assert.deepEqual(listeningCatalog.map(({ lessonId }) => lessonId), [87, 88, 91, 92, 95, 96, 97, 98, 99, 100]);
 
 const specifiedBrowser = process.env.SMOKE_CHROMIUM ?? process.env.CHROME_PATH;
@@ -563,7 +564,7 @@ try {
   const finalPassed = ["shifahiya-exams-v1", JSON.stringify({ final: { best: 150, attempts: 1 } })];
   const readingListeningKey = "shifahiya-p2-listening-progress-v1";
   const readingListeningEntry = [readingListeningKey, JSON.stringify(Object.fromEntries(
-    Array.from({ length: 10 }, (_, index) => [index + 1, { completed: true, updatedAt: 1000 }])))];
+    readingListeningCatalog.map(({ lessonId }) => [lessonId, { completed: true, updatedAt: 1000 }])))];
 
   // The same number in two courses must keep distinct playback and completion.
   const originalListening = { 1: { completed: false, updatedAt: 1000 } };
@@ -679,7 +680,7 @@ try {
   assert((await page.locator(".lesson-list .book-divider").allTextContents()).some((text) => text.includes(part2Summaries[20].book)));
   assert.match(await card(21).innerText(), /Продолжить/);
   assert.match(await hero.innerText(), /[Уу]рок 21\./);
-  assert.equal(await page.locator(".continue-learning-group").getByRole("link", { name: "Текст и аудио", exact: true }).count(), 0);
+  assert.equal(await page.locator(".continue-learning-group").getByRole("link", { name: "Текст и аудио", exact: true }).getAttribute("href"), "./text-and-audio.html?lesson=21&course=2");
   await showAll().click();
   await card(1).waitFor();
   assert.equal(await cards.count(), part2Summaries.length);
