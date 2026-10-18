@@ -38,10 +38,37 @@ globalThis.window = {
   removeEventListener: events.removeEventListener.bind(events),
 };
 
-const { progressStore, EXAM_SESSION_KEY, EXAM_RESULTS_KEY, CARD_PROGRESS_KEY, LISTENING_PROGRESS_KEY, PART2_LISTENING_PROGRESS_KEY } = await import(
+const { progressStore, EXAM_SESSION_KEY, EXAM_RESULTS_KEY, CARD_PROGRESS_KEY, LISTENING_PROGRESS_KEY, PART2_LISTENING_PROGRESS_KEY, LISTENING_REVIEW_PROGRESS_KEY } = await import(
   "../app/progress-store.ts"
 );
 const { normalizeProgress } = await import("../app/merge-progress.ts");
+const { createListeningReview } = await import("../public/text-and-audio/review.js");
+
+test("audio review histories survive the sync and backup storage boundary", () => {
+  const review = createListeningReview();
+  const state = review.complete(review.setStudied(undefined, true, "2026-10-18", 100), "2026-10-19", 200);
+  const original = normalizeProgress({ listeningReviews: { "2:1": state, "3:1": state } });
+  progressStore.replaceAll(original);
+  const backup = JSON.parse(JSON.stringify(progressStore.getSnapshot()));
+  progressStore.replaceAll(normalizeProgress({}));
+  progressStore.replaceAll(normalizeProgress(backup));
+  assert.deepEqual(progressStore.getSnapshot().listeningReviews, original.listeningReviews);
+  assert.deepEqual(JSON.parse(window.localStorage.getItem(LISTENING_REVIEW_PROGRESS_KEY)), original.listeningReviews);
+});
+
+test("a review saved by the standalone player refreshes the course snapshot", () => {
+  progressStore.replaceAll(normalizeProgress({}));
+  let notified = 0;
+  const unsubscribe = progressStore.subscribe(() => notified++);
+  const state = createListeningReview().setStudied(undefined, true, "2026-10-18", 100);
+  window.localStorage.setItem(LISTENING_REVIEW_PROGRESS_KEY, JSON.stringify({ "2:1": state }));
+  const event = new Event("storage");
+  Object.defineProperty(event, "key", { value: LISTENING_REVIEW_PROGRESS_KEY });
+  events.dispatchEvent(event);
+  assert.equal(notified, 1);
+  assert.deepEqual(progressStore.getSnapshot().listeningReviews, { "2:1": state });
+  unsubscribe();
+});
 
 const PAPER = {
   examId: "final",

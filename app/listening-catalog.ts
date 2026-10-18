@@ -1,5 +1,7 @@
 import catalog from "../public/text-and-audio/catalog.json";
 
+export const listeningCatalog = catalog;
+
 const recordings = new Set(catalog.map((entry: { courseId?: number; lessonId: number }) =>
   `${entry.courseId ?? 1}:${entry.lessonId}`));
 
