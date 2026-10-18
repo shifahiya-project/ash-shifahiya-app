@@ -14,7 +14,7 @@ assert.deepEqual(catalog, [...catalog].sort((a, b) => (a.courseId ?? 1) - (b.cou
 const firstCourseCatalog = catalog.filter(entry => (entry.courseId ?? 1) === 1);
 const readingCatalog = catalog.filter(entry => entry.courseId === 2);
 assert.deepEqual(readingCatalog.map(entry => entry.lessonId),
-  Array.from({ length: 30 }, (_, index) => index + 1).filter(id => id !== 15));
+  Array.from({ length: 42 }, (_, index) => index + 1).filter(id => id !== 15 && id !== 41));
 assert(catalog.some(entry => entry.lessonId === 87) && catalog.some(entry => entry.lessonId === 88), 'The original pilot lessons must join the shared catalog');
 const listeningKey = 'shifahiya-listening-progress-v1';
 const readingListeningKey = 'shifahiya-p2-listening-progress-v1';
@@ -241,6 +241,11 @@ try {
   await page.goto(`${origin}${base}text-and-audio.html?lesson=${missing ?? 101}`);
   await page.getByRole('status').filter({ hasText: 'Не удалось открыть урок' }).waitFor();
   assert.equal(await page.locator('audio').getAttribute('src'), null);
+  for (const lesson of [15, 41]) {
+    await page.goto(`${origin}${base}text-and-audio.html?lesson=${lesson}&course=2`);
+    await page.getByRole('status').filter({ hasText: 'Не удалось открыть урок' }).waitFor();
+    assert.equal(await page.locator('audio').getAttribute('src'), null, 'A skipped reading lesson must not load another recording');
+  }
   assert.deepEqual(errors, []);
   console.log('Lesson gates, catalog selection, subdirectory links and missing lesson handled correctly');
 } finally {
