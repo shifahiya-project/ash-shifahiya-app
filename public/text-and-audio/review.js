@@ -52,14 +52,21 @@ export function createListeningReview() {
     const result = normalize(mine);
     for (const [key, record] of Object.entries(normalize(theirs))) {
       const previous = result[key];
-      const rank = item => [item.updatedAt, Number(item.active), item.repeatedOn.length, item.repeatedOn.join(','), item.studiedOn];
       if (!previous) { result[key] = record; continue; }
-      const ours = rank(previous), incoming = rank(record);
-      for (let index = 0; index < ours.length; index++) {
-        if (ours[index] === incoming[index]) continue;
-        if (incoming[index] > ours[index]) result[key] = record;
-        break;
-      }
+      // A fresh cancellation changes activity, but cannot erase earned stages.
+      const active = record.updatedAt === previous.updatedAt ? record.active || previous.active
+        : record.updatedAt > previous.updatedAt ? record.active : previous.active;
+      // Keep a complete valid timeline; concurrent attempts count as one stage.
+      // With equal counts, compare actual dates from the latest stage backwards.
+      const history = record.repeatedOn.length > previous.repeatedOn.length
+        || (record.repeatedOn.length === previous.repeatedOn.length
+          && [...record.repeatedOn].reverse().join(',') > [...previous.repeatedOn].reverse().join(',')) ? record : previous;
+      result[key] = {
+        active,
+        studiedOn: record.studiedOn < previous.studiedOn ? record.studiedOn : previous.studiedOn,
+        repeatedOn: [...history.repeatedOn],
+        updatedAt: Math.max(record.updatedAt, previous.updatedAt),
+      };
     }
     return result;
   }

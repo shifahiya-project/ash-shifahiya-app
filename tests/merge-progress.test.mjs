@@ -23,9 +23,10 @@ function progress(overrides = {}) {
 test("audio review histories and cancellations travel independently of lesson scores", () => {
   const history = { active: true, studiedOn: "2026-10-18", repeatedOn: ["2026-10-19"], updatedAt: 200 };
   const laptop = progress({ listeningReviews: { "2:1": history } });
-  const phone = progress({ listeningReviews: { "2:1": { ...history, active: false, updatedAt: 300 }, "3:1": history } });
+  const phone = progress({ listeningReviews: { "2:1": { ...history, active: false, repeatedOn: [], updatedAt: 300 }, "3:1": history } });
   const merged = mergeProgress(laptop, phone);
   assert.equal(merged.listeningReviews["2:1"].active, false);
+  assert.deepEqual(merged.listeningReviews["2:1"].repeatedOn, history.repeatedOn);
   assert.deepEqual(merged.listeningReviews["3:1"], history);
   assert.deepEqual(merged, mergeProgress(phone, laptop));
   assert.deepEqual(mergeProgress(laptop, progress()).listeningReviews, laptop.listeningReviews);

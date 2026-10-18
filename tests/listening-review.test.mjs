@@ -86,6 +86,57 @@ test("review sync is commutative and a later cancellation survives an older devi
   assert.deepEqual(review.merge(simultaneous, recent), review.merge(recent, simultaneous));
 });
 
+test("a stale-device cancellation preserves reviews earned after the shared history", () => {
+  const shared = review.complete(study(), "2026-10-19", 200);
+  const laptop = review.complete(shared, "2026-10-21", 300);
+  const phone = review.setStudied(shared, false, "2026-10-22", 400);
+  const merged = review.merge({ "2:1": laptop }, { "2:1": phone })["2:1"];
+  assert.equal(merged.active, false);
+  assert.equal(merged.updatedAt, 400);
+  assert.deepEqual(merged.repeatedOn, ["2026-10-19", "2026-10-21"]);
+  assert.equal(review.nextDate(merged), null);
+  const restored = review.setStudied(merged, true, "2026-10-22", 500);
+  assert.equal(review.nextDate(restored), "2026-10-25");
+});
+
+test("a newer shorter history cannot erase earned stages or change their study day", () => {
+  let advanced = study();
+  for (const [index, day] of ["2026-10-19", "2026-10-21", "2026-10-25"].entries()) {
+    advanced = review.complete(advanced, day, 200 + index);
+  }
+  const laterStudy = review.setStudied(undefined, true, "2026-10-20", 300);
+  const shorter = review.complete(laterStudy, "2026-10-26", 400);
+  const merged = review.merge({ "2:1": advanced }, { "2:1": shorter });
+  assert.equal(merged["2:1"].studiedOn, "2026-10-18");
+  assert.deepEqual(merged["2:1"].repeatedOn, ["2026-10-19", "2026-10-21", "2026-10-25"]);
+  assert.deepEqual(review.normalize(merged), merged);
+  assert.equal(review.nextDate(merged["2:1"]), "2026-11-08");
+});
+
+test("concurrent reviews converge across repeated sync orders without inventing stages", () => {
+  const early = review.complete(study(), "2026-10-19", 200);
+  const late = review.complete(study(), "2026-10-20", 200);
+  const concurrent = review.merge({ "2:1": early }, { "2:1": late })["2:1"];
+  assert.deepEqual(concurrent.repeatedOn, ["2026-10-20"]);
+  assert.equal(review.nextDate(concurrent), "2026-10-22");
+  const laterSecond = review.complete(early, "2026-10-24", 250);
+  const earlierSecond = review.complete(late, "2026-10-22", 300);
+  const second = review.merge({ "2:1": laterSecond }, { "2:1": earlierSecond })["2:1"];
+  assert.deepEqual(second.repeatedOn, ["2026-10-19", "2026-10-24"]);
+  assert.equal(review.nextDate(second), "2026-10-28");
+  const maps = [study(), early, late, review.complete(early, "2026-10-21", 250),
+    laterSecond, earlierSecond, review.setStudied(study(), false, "2026-10-22", 300)].map(item => ({ "2:1": item }));
+  for (const a of maps) {
+    assert.deepEqual(review.merge(a, a), a);
+    for (const b of maps) {
+      assert.deepEqual(review.merge(a, b), review.merge(b, a));
+      for (const c of maps) {
+        assert.deepEqual(review.merge(review.merge(a, b), c), review.merge(a, review.merge(b, c)));
+      }
+    }
+  }
+});
+
 test("audio dates survive leap days, DST, and both ends of the local calendar", () => {
   assert.equal(review.addDays("2028-02-28", 1), "2028-02-29");
   assert.equal(review.addDays("2026-03-28", 1), "2026-03-29");
