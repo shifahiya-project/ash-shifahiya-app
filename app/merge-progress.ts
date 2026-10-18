@@ -12,6 +12,7 @@ import type {
   SavedSession,
 } from "./progress-store";
 import { normalizeListeningProgress } from "./listening-progress.ts";
+import { mergeListeningReviews, normalizeListeningReviews } from "./listening-review.ts";
 import type { PodcastWatch } from "./podcast-catalog";
 import type { DayPlan } from "./podcast-day";
 import type { TopicCard, TopicExamResult } from "./topic-schedule";
@@ -244,6 +245,7 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
     readings: mergeReadings(mine.readings ?? {}, theirs.readings ?? {}),
     listening: mergeListening(mine.listening ?? {}, theirs.listening ?? {}),
     part2Listening: mergeListening(mine.part2Listening ?? {}, theirs.part2Listening ?? {}),
+    listeningReviews: mergeListeningReviews(mine.listeningReviews, theirs.listeningReviews),
     exams: mergeExams(mine.exams ?? {}, theirs.exams ?? {}),
     examSession: laterExamSession(mine.examSession ?? null, theirs.examSession ?? null),
     part2Scores: mergeScores(mine.part2Scores ?? {}, theirs.part2Scores ?? {}),
@@ -281,6 +283,7 @@ export function normalizeProgress(value: Partial<Progress> | null | undefined): 
     readings: value?.readings ?? {},
     listening: normalizeListeningProgress(value?.listening),
     part2Listening: normalizeListeningProgress(value?.part2Listening),
+    listeningReviews: normalizeListeningReviews(value?.listeningReviews),
     exams: value?.exams ?? {},
     examSession: value?.examSession ?? null,
     part2Scores: value?.part2Scores ?? {},

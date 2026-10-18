@@ -373,6 +373,9 @@ h1 em { color: var(--green); font-weight: inherit; }
 .daily-review small { margin-top: 4px; color: var(--ink-soft); }
 .daily-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: var(--green); color: white; font-size: 22px; }
 .daily-review button:disabled { opacity: .55; cursor: default; }
+.listening-review-action { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; flex-shrink: 0; }
+.listening-due > div > div { min-width: 0; }
+.listening-due small { line-height: 1.5; }
 .continue-learning {
   width: 100%;
   margin: 0 0 18px;

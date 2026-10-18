@@ -2,7 +2,9 @@
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { lessonSummaries } from "../content/manifest";
-import { hasListening, listeningHref } from "./listening-catalog";
+import { hasListening, listeningHref, listeningCatalog } from "./listening-catalog";
+import { dueListeningReviews, listeningReviewKey, resolveListeningReview, nextListeningReviewDate,
+  normalizeListeningReviews, subscribeListeningDay, listeningDaySnapshot, listeningDayServerSnapshot } from "./listening-review";
 import { READING_SOURCE, readingByLesson } from "../content/reading-manifest";
 import { loadLessons } from "../content/lessons";
 import { loadReading } from "../content/reading";
@@ -532,11 +534,19 @@ function isCourseLessonComplete(item: (typeof lessonSummaries)[number], progress
 
 function isPart2CourseLessonComplete(item: (typeof part2Summaries)[number], progress: Progress) {
   return progress.part2Scores[item.id] !== undefined &&
-    (!hasListening(item.id, 2) || progress.part2Listening[item.id]?.completed === true);
+    (!hasListening(item.id, 2) || isLaterListeningComplete(item.id, 2, progress));
+}
+
+function isLaterListeningComplete(id: number, course: number, progress: Progress) {
+  return resolveListeningReview(progress.listeningReviews[listeningReviewKey(course, id)],
+    course === 2 ? progress.part2Listening[id] : undefined)?.active === true;
 }
 
 const subscribeInitialCourse = () => () => {};
-const initialCourse = (): 1 | 2 => new URLSearchParams(window.location.search).get("course") === "2" ? 2 : 1;
+const initialCourse = (): 1 | 2 | TextCourseId => {
+  const id = Number(new URLSearchParams(window.location.search).get("course"));
+  return Number.isInteger(id) && id >= 2 && id <= 11 ? id as 2 | TextCourseId : 1;
+};
 const initialServerCourse = () => 1 as const;
 
 export default function Home() {
@@ -645,6 +655,20 @@ export default function Home() {
   const savedSessions = stored.sessions;
   const cardProgress = stored.cards;
   const learningStats = stored.stats;
+  const listeningToday = useSyncExternalStore(subscribeListeningDay, listeningDaySnapshot, listeningDayServerSnapshot);
+  const audioReviewQueue = dueListeningReviews(listeningCatalog, stored.listeningReviews, stored.part2Listening, listeningToday || localDate());
+  const studiedAudio = listeningCatalog.filter((entry) => (entry.courseId ?? 1) >= 2).flatMap((entry) => {
+    const record = resolveListeningReview(stored.listeningReviews[listeningReviewKey(entry.courseId ?? 1, entry.lessonId)],
+      entry.courseId === 2 ? stored.part2Listening[entry.lessonId] : undefined);
+    return record?.active ? [record] : [];
+  });
+  const audioReviewDates = studiedAudio.flatMap((record) => {
+    const date = nextListeningReviewDate(record);
+    return date ? [date] : [];
+  }).sort();
+  const nextAudioReview = audioReviewDates[0];
+  const audioReviewHref = audioReviewQueue[0]
+    ? `${listeningHref(audioReviewQueue[0].lessonId, audioReviewQueue[0].courseId)}&review=1` : undefined;
 
   const sync = useSyncExternalStore(syncStore.subscribe, syncStore.getSnapshot, syncStore.getServerSnapshot);
 
@@ -942,31 +966,33 @@ export default function Home() {
     ? selectedSummaries.find((item) => item.id === latestReadingSession?.lessonId) ??
       selectedSummaries.find((item) => readingScores[item.id] === undefined && readingUnlocked.has(item.id))
     : undefined;
-  const pendingPart2ListeningLesson = course === 2 ? part2Summaries.find((item) =>
-    part2Scores[item.id] !== undefined && hasListening(item.id, 2) &&
-    stored.part2Listening[item.id]?.completed !== true && unlockedPart2.has(item.id)) : undefined;
-  const recommendedReadingListeningLesson = pendingPart2ListeningLesson && (!recommendedReadingCoreLesson ||
-    selectedSummaries.findIndex((item) => item.id === pendingPart2ListeningLesson.id) <
+  const pendingReadingListeningLesson = course !== 1 ? selectedSummaries.find((item) =>
+    readingScores[item.id] !== undefined && hasListening(item.id, course) &&
+    !isLaterListeningComplete(item.id, course, stored) && readingUnlocked.has(item.id)) : undefined;
+  const recommendedReadingListeningLesson = pendingReadingListeningLesson && (!recommendedReadingCoreLesson ||
+    selectedSummaries.findIndex((item) => item.id === pendingReadingListeningLesson.id) <
       selectedSummaries.findIndex((item) => item.id === recommendedReadingCoreLesson.id))
-    ? pendingPart2ListeningLesson : undefined;
+    ? pendingReadingListeningLesson : undefined;
   const recommendedReadingLesson = recommendedReadingListeningLesson ?? recommendedReadingCoreLesson;
   const homeLesson = course === 1 ? recommendedLesson : recommendedReadingLesson;
   const homeIsListening = course === 1 ? recommendedListeningLesson !== undefined
-    : course === 2 && recommendedReadingListeningLesson !== undefined;
+    : recommendedReadingListeningLesson !== undefined;
   const homeSession = homeIsListening ? undefined : course === 1 ? latestSession : latestReadingSession;
   const homeListeningHref = homeLesson ? listeningHref(homeLesson.id, course) : undefined;
   const firstCourseCompletedCount = lessonSummaries.filter((item) => isCourseLessonComplete(item, stored)).length;
   const completedLessonCount = course === 1
     ? firstCourseCompletedCount
     : course === 2 ? part2Summaries.filter((item) => isPart2CourseLessonComplete(item, stored)).length
-      : selectedSummaries.filter((item) => readingScores[item.id] !== undefined).length;
+      : selectedSummaries.filter((item) => readingScores[item.id] !== undefined &&
+        (!hasListening(item.id, course) || isLaterListeningComplete(item.id, course, stored))).length;
   const firstCourseSummaries = showAllLessons ? lessonSummaries
     : homeLessonWindow(lessonSummaries, (item) => isCourseLessonComplete(item, stored), recommendedLesson?.id);
   const visiblePart2Summaries = showAllLessons ? part2Summaries
     : homeLessonWindow(part2Summaries, (item) => isPart2CourseLessonComplete(item, stored), homeLesson?.id);
   const visibleTextSummaries = isTextCourse(course)
     ? showAllLessons ? TEXT_COURSES[course].summaries
-      : homeLessonWindow(TEXT_COURSES[course].summaries, (item) => textCourseProgress[course].scores[item.id] !== undefined, homeLesson?.id)
+      : homeLessonWindow(TEXT_COURSES[course].summaries, (item) => textCourseProgress[course].scores[item.id] !== undefined &&
+        (!hasListening(item.id, course) || isLaterListeningComplete(item.id, course, stored)), homeLesson?.id)
     : [];
   const focusedCurrentId = homeLesson?.id ?? (course === 1
     ? lessonSummaries.find((item) => !isCourseLessonComplete(item, stored))
@@ -1746,7 +1772,7 @@ export default function Home() {
   function exportProgress() {
     const payload = {
       format: "shifahiya-progress",
-      version: 3,
+      version: 4,
       exportedAt: new Date().toISOString(),
       scores: savedScores,
       scoreTotals: savedScoreTotals,
@@ -1756,6 +1782,7 @@ export default function Home() {
       readings: savedReadings,
       listening: stored.listening,
       part2Listening: stored.part2Listening,
+      listeningReviews: stored.listeningReviews,
       exams: savedExams,
       // The paper in progress belongs in the copy as well: restoring a backup
       // onto a fresh device would otherwise drop it, and the restore writes
@@ -1798,7 +1825,7 @@ export default function Home() {
     if (!file) return;
     try {
       const payload = JSON.parse(await file.text());
-      if (payload.format !== "shifahiya-progress" || ![1, 2, 3].includes(payload.version)) throw new Error("Invalid backup");
+      if (payload.format !== "shifahiya-progress" || ![1, 2, 3, 4].includes(payload.version)) throw new Error("Invalid backup");
       const scores = payload.scores ?? {};
       // Backups written before the totals were kept simply have none of them,
       // and the card then shows the result without a denominator.
@@ -1822,6 +1849,8 @@ export default function Home() {
           ? stored.listening : normalizeListeningProgress(payload.listening),
         part2Listening: payload.version < 3 && payload.part2Listening === undefined
           ? stored.part2Listening : normalizeListeningProgress(payload.part2Listening),
+        listeningReviews: payload.version < 4 && payload.listeningReviews === undefined
+          ? progressStore.getSnapshot().listeningReviews : normalizeListeningReviews(payload.listeningReviews),
         exams: payload.exams ?? {},
         examSession: payload.examSession ?? null,
         part2Scores: payload.part2Scores ?? {},
@@ -2166,7 +2195,7 @@ export default function Home() {
                   const coreCompleted = score !== undefined;
                   const done = isPart2CourseLessonComplete(item, stored);
                   const audioHref = listeningHref(item.id, 2);
-                  const listeningCompleted = stored.part2Listening[item.id]?.completed === true;
+                  const listeningCompleted = isLaterListeningComplete(item.id, 2, stored);
                   const listeningLeft = coreCompleted && audioHref && !listeningCompleted;
                   const parked = part2Sessions[item.id];
                   const locked = !unlockedPart2.has(item.id);
@@ -2244,7 +2273,11 @@ export default function Home() {
                 {visibleTextSummaries.flatMap((item, index, all) => {
                   const { scores, sessions, unlocked } = textCourseProgress[course];
                   const score = scores[item.id];
-                  const done = score !== undefined;
+                  const coreCompleted = score !== undefined;
+                  const audioHref = listeningHref(item.id, course);
+                  const listeningCompleted = isLaterListeningComplete(item.id, course, stored);
+                  const listeningLeft = coreCompleted && !!audioHref && !listeningCompleted;
+                  const done = coreCompleted && !listeningLeft;
                   const parked = sessions[item.id];
                   const locked = !unlocked.has(item.id);
                   // The course runs through one book after another, so the list
@@ -2287,9 +2320,20 @@ export default function Home() {
                             : "только чтение · "}
                           {plural(item.fragmentCount, "фрагмент", "фрагмента", "фрагментов")} текста
                         </p>
+                        {audioHref && !locked && !listeningLeft && (
+                          <a className="listening-link" href={audioHref}>Текст и аудио{listeningCompleted && <span aria-hidden="true"> · ✓</span>}</a>
+                        )}
+                        {listeningLeft && <p className="lesson-stage-status">Чтение пройдено · остались текст и аудио</p>}
                       </div>
                       {locked ? (
                         <button className="locked" disabled>Закрыто <span>🔒</span></button>
+                      ) : listeningLeft ? (
+                        <div className="lesson-actions">
+                          <a className="primary listening-link" href={audioHref}>Текст и аудио <span aria-hidden="true">→</span></a>
+                          <button className="repeat" popoverTarget="main-menu" popoverTargetAction="hide" onClick={() => startTextCourse(course, item.id, "start")}>
+                            Повторить <span>→</span>
+                          </button>
+                        </div>
                       ) : done ? (
                         <div className="lesson-actions">
                           <button className="done" disabled>Пройден <span>✓</span></button>
@@ -2302,7 +2346,7 @@ export default function Home() {
                           {parked ? "Продолжить" : "Начать урок"} <span>→</span>
                         </button>
                       )}
-                      {done && (
+                      {coreCompleted && (
                         <div className="card-score">
                           {item.wordCount ? `✓ ${score}/${item.wordCount}` : "✓ прочитан"}
                         </div>
@@ -2557,6 +2601,28 @@ export default function Home() {
             </button>
           </div>
 
+          {listeningCatalog.some((entry) => (entry.courseId ?? 1) >= 2) && (
+            <div className="daily-review listening-due" aria-label="Повторение аудио">
+              <div>
+                <span className="daily-icon" aria-hidden="true">▶</span>
+                <div>
+                  <strong>{audioReviewQueue.length
+                    ? `${plural(audioReviewQueue.length, "аудиоурок", "аудиоурока", "аудиоуроков")} на повторение`
+                    : "Повторение аудио"}</strong>
+                  <small>{audioReviewQueue.length
+                    ? `Около ${Math.max(1, Math.ceil(audioReviewQueue.reduce((total, entry) => total + (entry.duration ?? 0), 0) / 60))} мин · слушайте и повторяйте вслух`
+                    : nextAudioReview
+                      ? `Следующее повторение ${new Date(`${nextAudioReview}T12:00:00`).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}`
+                      : studiedAudio.length ? "Все семь повторений завершены"
+                        : "После изучения аудиоурока здесь появятся повторения"}</small>
+                </div>
+              </div>
+              {audioReviewHref
+                ? <a className="primary listening-review-action" href={audioReviewHref}>Повторить аудио <span>→</span></a>
+                : <button className="primary" disabled>Повторить аудио</button>}
+            </div>
+          )}
+
           {dueReadings.length > 0 && (
             <div className="daily-review reading-due">
               <div>
@@ -2579,8 +2645,8 @@ export default function Home() {
                   <span className="continue-mark">▶</span>
                   <span className="continue-copy">
                     <small>Продолжить обучение</small>
-                    <strong>{course === 2 ? "Часть 2 · " : ""}Урок {homeLesson.id}. {homeLesson.title}</strong>
-                    <em>{course === 2 ? "Чтение пройдено" : "Слова и задания пройдены"} · остались текст и аудио</em>
+                    <strong>{course !== 1 ? `Часть ${course} · ` : ""}Урок {homeLesson.id}. {homeLesson.title}</strong>
+                    <em>{course !== 1 ? "Чтение пройдено" : "Слова и задания пройдены"} · остались текст и аудио</em>
                   </span>
                   <span className="continue-action">Текст и аудио <b>→</b></span>
                 </a>
@@ -2868,7 +2934,7 @@ export default function Home() {
           </p>
           <div className="study-actions">
             <button className="secondary" onClick={() => setView("home")}>Вернуться к курсу</button>
-            {listeningHref(part2.id, 2) && stored.part2Listening[part2.id]?.completed !== true ? (
+            {listeningHref(part2.id, 2) && !isLaterListeningComplete(part2.id, 2, stored) ? (
               <a className="primary result-listening" href={listeningHref(part2.id, 2)}>Текст и аудио <span>→</span></a>
             ) : part2Summaries.some((item) => item.id === part2.id + 1) && (
               <button className="primary" onClick={() => startPart2(part2.id + 1, "start")}>
@@ -3013,7 +3079,9 @@ export default function Home() {
           </p>
           <div className="study-actions">
             <button className="secondary" onClick={() => setView("home")}>Вернуться к курсу</button>
-            {textCourse.summaries.some((item) => item.id === textLesson.id + 1) && (
+            {listeningHref(textLesson.id, textCourse.id) && !isLaterListeningComplete(textLesson.id, textCourse.id, stored) ? (
+              <a className="primary result-listening" href={listeningHref(textLesson.id, textCourse.id)}>Текст и аудио <span>→</span></a>
+            ) : textCourse.summaries.some((item) => item.id === textLesson.id + 1) && (
               <button className="primary" onClick={() => startTextCourse(textCourse.id, textLesson.id + 1, "start")}>
                 Следующий урок <span>→</span>
               </button>
