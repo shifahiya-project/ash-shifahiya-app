@@ -1,4 +1,5 @@
 import { createListeningReview } from './review.js?v=1';
+import { createListeningTime } from './time.js?v=1';
 /* A standalone player: fetch only the selected recording and transcript. */
 (async function () {
   'use strict';
@@ -12,7 +13,9 @@ import { createListeningReview } from './review.js?v=1';
   let reviewMode = false;
   let playbackKey;
   let reviewTimer;
+  let listeningClock;
   const reviews = createListeningReview();
+  const listeningTime = createListeningTime();
   const courseId = () => lesson.courseId ?? 1;
   const prefix = (id = courseId()) => id === 1 ? '' : `p${id}-`;
   const studyKey = () => `shifahiya-${prefix()}listening-${lesson.lessonId}-v1`;
@@ -28,6 +31,7 @@ import { createListeningReview } from './review.js?v=1';
   }
   function save() {
     if (!lesson || !state) return;
+    listeningClock?.flush();
     if (audio.readyState > 0) state.position = audio.ended ? 0 : audio.currentTime;
     try {
       localStorage.setItem(key(), JSON.stringify(state));
@@ -228,9 +232,13 @@ import { createListeningReview } from './review.js?v=1';
     get('audio-error').hidden = true;
   });
   audio.addEventListener('error', () => { get('audio-error').hidden = false; });
+  audio.addEventListener('playing', () => listeningClock?.start());
+  for (const event of ['pause', 'waiting', 'seeking', 'ended', 'error', 'emptied']) {
+    audio.addEventListener(event, () => listeningClock?.stop());
+  }
   for (const event of ['pause', 'seeked', 'ended']) audio.addEventListener(event, save);
   audio.addEventListener('timeupdate', () => { if (Date.now() - lastSave > 5000) save(); });
-  window.addEventListener('pagehide', () => { save(); clearTimeout(reviewTimer); });
+  window.addEventListener('pagehide', () => { listeningClock?.stop(); save(); clearTimeout(reviewTimer); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); else refreshReviews(); });
   get('settings-toggle').onclick = () => {
     const settings = get('player-settings');
@@ -280,6 +288,9 @@ import { createListeningReview } from './review.js?v=1';
     if (lesson && (event.key === progressKey() || event.key === progressKey(2) || event.key === reviews.KEY || event.key === null)) renderCompletion();
   });
   window.addEventListener('pageshow', refreshReviews);
+  window.addEventListener('pageshow', () => {
+    if (!audio.paused && !audio.seeking && audio.readyState >= 3) listeningClock?.start();
+  });
   window.addEventListener('focus', refreshReviews);
   get('lesson').onchange = (event) => {
     save();
@@ -302,7 +313,7 @@ import { createListeningReview } from './review.js?v=1';
         reader.readAsDataURL(blob);
       });
       const [html, css, script] = await Promise.all([
-        fetchText('./text-and-audio.html?v=6'), fetchText('./text-and-audio/player.css?v=6'), fetchText('./text-and-audio/player.js?v=6'),
+        fetchText('./text-and-audio.html?v=7'), fetchText('./text-and-audio/player.css?v=7'), fetchText('./text-and-audio/player.js?v=7'),
       ]);
       const doc = new DOMParser().parseFromString(html, 'text/html');
       doc.querySelector('link[rel="stylesheet"]').remove();
@@ -316,7 +327,8 @@ import { createListeningReview } from './review.js?v=1';
       player.type = 'module';
       // The factory is self-contained, so the saved lesson needs no module fetch.
       player.textContent = `const createListeningReview = ${createListeningReview.toString()};\n`
-        + script.replace(/^import \{ createListeningReview \} from ['"].+['"];\s*/, '');
+        + `const createListeningTime = ${createListeningTime.toString()};\n`
+        + script.replace(/^import \{ createListening(?:Review|Time) \} from ['"].+['"];\s*/gm, '');
       doc.body.append(data, player);
       const href = URL.createObjectURL(new Blob(['<!doctype html>\n' + doc.documentElement.outerHTML], { type: 'text/html;charset=utf-8' }));
       const link = document.createElement('a');
@@ -369,6 +381,16 @@ import { createListeningReview } from './review.js?v=1';
     audio.setAttribute('aria-label', `Аудио урока ${lesson.lessonId}`);
     playbackKey = reviewPlaybackKey();
     state = readState();
+    listeningClock = listeningTime.tracker({
+      course: courseId(),
+      read: () => {
+        try { return JSON.parse(localStorage.getItem(listeningTime.KEY) || '{}'); }
+        catch { return {}; }
+      },
+      write: value => localStorage.setItem(listeningTime.KEY, JSON.stringify(value)),
+      now: () => performance.now(),
+      makeId: () => crypto.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+    });
     render();
     refreshReviews();
     audio.src = lesson.audioSrc;

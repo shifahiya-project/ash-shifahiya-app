@@ -43,6 +43,26 @@ const { progressStore, EXAM_SESSION_KEY, EXAM_RESULTS_KEY, CARD_PROGRESS_KEY, LI
 );
 const { normalizeProgress } = await import("../app/merge-progress.ts");
 const { createListeningReview } = await import("../public/text-and-audio/review.js");
+const { LISTENING_TIME_KEY } = await import("../app/listening-time.ts");
+
+test("listening time survives backups, older payloads and updates from the player", () => {
+  progressStore.replaceAll(normalizeProgress({ listeningTime: { "2:laptop": 2000 } }));
+  const backup = JSON.parse(JSON.stringify(progressStore.getSnapshot()));
+  progressStore.replaceAll(normalizeProgress({ listeningTime: { "3:phone": 3000 } }));
+  progressStore.replaceAll(normalizeProgress(backup));
+  progressStore.replaceAll(normalizeProgress({}));
+  assert.deepEqual(progressStore.getSnapshot().listeningTime, { "2:laptop": 2000, "3:phone": 3000 });
+  let notified = 0;
+  const unsubscribe = progressStore.subscribe(() => notified++);
+  const saved = { "2:laptop": 4000, "3:phone": 3000 };
+  window.localStorage.setItem(LISTENING_TIME_KEY, JSON.stringify(saved));
+  const event = new Event("storage");
+  Object.defineProperty(event, "key", { value: LISTENING_TIME_KEY });
+  events.dispatchEvent(event);
+  assert.equal(notified, 1);
+  assert.deepEqual(progressStore.getSnapshot().listeningTime, saved);
+  unsubscribe();
+});
 
 test("audio review histories survive the sync and backup storage boundary", () => {
   const review = createListeningReview();

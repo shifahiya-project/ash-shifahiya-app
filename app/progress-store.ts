@@ -12,9 +12,11 @@ import { part11Summaries } from "../content/part11/manifest.ts";
 import { GRAMMAR_ENABLED } from "./features.ts";
 import { LISTENING_PROGRESS_KEY, PART2_LISTENING_PROGRESS_KEY, normalizeListeningProgress, type ListeningProgress } from "./listening-progress.ts";
 import { LISTENING_REVIEW_PROGRESS_KEY, normalizeListeningReviews, type ListeningReviewMap } from "./listening-review.ts";
+import { LISTENING_TIME_KEY, normalizeListeningTime, mergeListeningTime, type ListeningTime } from "./listening-time.ts";
 
 export { LISTENING_PROGRESS_KEY, PART2_LISTENING_PROGRESS_KEY } from "./listening-progress.ts";
 export { LISTENING_REVIEW_PROGRESS_KEY } from "./listening-review.ts";
+export { LISTENING_TIME_KEY } from "./listening-time.ts";
 export type { ListeningProgress } from "./listening-progress.ts";
 
 export type SavedSession = {
@@ -133,6 +135,8 @@ export type Progress = {
   part2Listening: Record<number, ListeningProgress>;
   /** Independent audio review histories, keyed by course and lesson. */
   listeningReviews: ListeningReviewMap;
+  /** Actual playback time from the second course onward, including repeats. */
+  listeningTime: ListeningTime;
   exams: Record<string, ExamResult>;
   examSession: ExamSession | null;
   /** The second course keeps its own results; the review cards are shared. */
@@ -206,6 +210,7 @@ const EMPTY: Progress = {
   listening: {},
   part2Listening: {},
   listeningReviews: {},
+  listeningTime: {},
   exams: {},
   examSession: null,
   part2Scores: {},
@@ -388,6 +393,7 @@ function readProgress(): Progress {
     listening: normalizeListeningProgress(read<unknown>(LISTENING_PROGRESS_KEY, {})),
     part2Listening: normalizeListeningProgress(read<unknown>(PART2_LISTENING_PROGRESS_KEY, {})),
     listeningReviews: normalizeListeningReviews(read<unknown>(LISTENING_REVIEW_PROGRESS_KEY, {})),
+    listeningTime: normalizeListeningTime(read<unknown>(LISTENING_TIME_KEY, {})),
     exams: read<Record<string, ExamResult>>(EXAM_RESULTS_KEY, {}),
     part2Scores,
     part2Sessions,
@@ -421,7 +427,7 @@ function publish() {
 
 function refreshExternalListening(event: StorageEvent) {
   if (event.key === null || event.key === LISTENING_PROGRESS_KEY || event.key === PART2_LISTENING_PROGRESS_KEY
-    || event.key === LISTENING_REVIEW_PROGRESS_KEY) publish();
+    || event.key === LISTENING_REVIEW_PROGRESS_KEY || event.key === LISTENING_TIME_KEY) publish();
 }
 
 function refreshRestoredPage(event: PageTransitionEvent) {
@@ -698,6 +704,8 @@ export const progressStore = {
     window.localStorage.setItem(LISTENING_PROGRESS_KEY, JSON.stringify(normalizeListeningProgress(progress.listening)));
     window.localStorage.setItem(PART2_LISTENING_PROGRESS_KEY, JSON.stringify(normalizeListeningProgress(progress.part2Listening)));
     window.localStorage.setItem(LISTENING_REVIEW_PROGRESS_KEY, JSON.stringify(normalizeListeningReviews(progress.listeningReviews)));
+    // Restoring an older backup must not erase listening already recorded here.
+    window.localStorage.setItem(LISTENING_TIME_KEY, JSON.stringify(mergeListeningTime(read<unknown>(LISTENING_TIME_KEY, {}), progress.listeningTime)));
     window.localStorage.setItem(EXAM_RESULTS_KEY, JSON.stringify(progress.exams ?? {}));
     // The unfinished paper travels with the rest. A hundred and fifty answers
     // are exactly what the key exists to save, and leaving it out meant the

@@ -10,6 +10,7 @@ const base = '/ash-shifahiya-app/';
 const catalog = JSON.parse(await readFile(resolve(root, 'text-and-audio/catalog.json'), 'utf8'));
 const key = 'shifahiya-listening-reviews-v1';
 const legacyKey = 'shifahiya-p2-listening-progress-v1';
+const timeKey = 'shifahiya-listening-time-v1';
 const at = day => new Date(`${day}T07:00:00Z`);
 const artifacts = process.env.SMOKE_ARTIFACTS;
 async function screenshot(locator, name) {
@@ -51,6 +52,14 @@ try {
     await page.evaluate(() => dispatchEvent(new Event('focus')));
   };
   const records = () => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), key);
+  const times = () => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), timeKey);
+  const playBriefly = async target => {
+    const before = await target.locator('audio').evaluate(audio => audio.currentTime);
+    await target.locator('audio').evaluate(audio => audio.play());
+    await target.waitForFunction(before => document.querySelector('audio').currentTime > before + 1.2, before);
+    await target.locator('audio').evaluate(audio => audio.pause());
+    await target.waitForFunction(() => document.querySelector('audio').paused);
+  };
   const record = async () => (await records())['2:11'];
   const openPlayer = async (course = 2, lesson = 11, review = true) => {
     await page.goto(`${site}text-and-audio.html?course=${course}&lesson=${lesson}${review ? '&review=1' : ''}`);
@@ -71,6 +80,13 @@ try {
     for (let lesson = 1; lesson <= 11; lesson++) localStorage.setItem(`shifahiya-p2-lesson-${lesson}`, '1');
   });
   await openPlayer(2, 11, false);
+  await playBriefly(page);
+  await page.waitForFunction(key => Object.values(JSON.parse(localStorage.getItem(key) || '{}')).some(ms => ms > 0), timeKey);
+  const firstTime = await times();
+  assert(Object.keys(firstTime).every(id => id.startsWith('2:')));
+  await page.locator('audio').evaluate(audio => { audio.currentTime += 30; });
+  await page.clock.runFor(120000);
+  assert.deepEqual(await times(), firstTime, 'Seeking and time spent paused must not count as listening');
   assert(await repeat.isHidden());
   await page.getByRole('button', { name: 'Текст и аудио пройдены', exact: true }).click();
   assert.equal((await record()).studiedOn, '2026-10-18');
@@ -78,6 +94,11 @@ try {
   assert(await repeat.isDisabled());
   await page.locator('audio').evaluate(audio => { audio.currentTime = 42; audio.dispatchEvent(new Event('seeked')); });
   await home();
+  await openBackup();
+  const listeningStat = page.locator('.stats-grid > div').filter({ hasText: 'прослушано аудио' });
+  assert.match(await listeningStat.innerText(), /< 1 мин.*прослушано аудио · со 2-й части/s);
+  assert.equal(await page.locator('.stats-grid > div').count(), 8);
+  await page.getByRole('button', { name: 'Закрыть меню', exact: true }).click();
   assert(await audioCard.getByRole('button', { name: 'Повторить аудио', exact: true }).isDisabled());
 
   await setDay('2026-10-19');
@@ -139,6 +160,8 @@ try {
   await saved.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
   await saved.locator('audio').evaluate(audio => audio.play());
   await saved.waitForFunction(() => document.querySelector('audio').currentTime > 0.1);
+  await saved.locator('audio').evaluate(audio => audio.pause());
+  await saved.waitForFunction(key => Object.values(JSON.parse(localStorage.getItem(key) || '{}')).some(ms => ms > 0), timeKey);
   await saved.locator('#complete').click();
   await saved.clock.setFixedTime(at('2026-10-26'));
   await saved.evaluate(() => dispatchEvent(new Event('focus')));
@@ -153,7 +176,8 @@ try {
   const backupDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Сохранить копию', exact: true }).click();
   const backup = JSON.parse(await readFile(await (await backupDownload).path(), 'utf8'));
-  assert.equal(backup.version, 4);
+  assert.equal(backup.version, 5);
+  assert.deepEqual(backup.listeningTime, await times());
   assert.equal(backup.listeningReviews['2:11'].repeatedOn.length, 2);
   await page.evaluate(() => localStorage.clear());
   await home();
@@ -163,14 +187,21 @@ try {
     await page.getByText('Прогресс восстановлен.', { exact: true }).waitFor();
   };
   await restore(backup);
+  assert.deepEqual(await times(), backup.listeningTime);
   assert.deepEqual(await records(), backup.listeningReviews);
   for (const version of [1, 2, 3]) {
     const old = { ...backup, version };
     delete old.listeningReviews;
+    delete old.listeningTime;
     await restore(old);
     assert.deepEqual(await records(), backup.listeningReviews, `Version ${version} must preserve newer review history`);
+    assert.deepEqual(await times(), backup.listeningTime, `Version ${version} must preserve listening time`);
   }
-  console.log('Version 4 round trip and legacy versions 1–3 preserve the review history');
+  const version4 = { ...backup, version: 4 };
+  delete version4.listeningTime;
+  await restore(version4);
+  assert.deepEqual(await times(), backup.listeningTime);
+  console.log('Version 5 round trip and legacy versions 1–3 preserve the review history');
 
   await setDay('2026-10-29');
   await openPlayer();
@@ -193,6 +224,14 @@ try {
   await other.goto(`${site}text-and-audio.html?course=2&lesson=11&review=1`);
   await other.locator('#review-complete:not([disabled])').waitFor();
   await other.locator('#review-complete').click();
+  await playBriefly(other);
+  await page.waitForFunction(key => Object.keys(JSON.parse(localStorage.getItem(key) || '{}')).length >= 2, timeKey);
+  await openBackup();
+  const crossTabBackupDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Сохранить копию', exact: true }).click();
+  const crossTabBackup = JSON.parse(await readFile(await (await crossTabBackupDownload).path(), 'utf8'));
+  assert.deepEqual(crossTabBackup.listeningTime, await times(), 'The homepage snapshot must include playback from another tab');
+  await page.getByRole('button', { name: 'Закрыть меню', exact: true }).click();
   await page.waitForFunction(() => !document.querySelector('.listening-review-action'));
   assert.equal((await record()).repeatedOn.length, 3);
   assert(await audioCard.getByRole('button', { name: 'Повторить аудио', exact: true }).isDisabled());
@@ -212,7 +251,10 @@ try {
   console.log('Storage errors do not advance progress; cross-tab updates and the seven-review limit passed');
 
   const completed = await records();
+  const beforeFirstCourse = await times();
   await openPlayer(1, 87, false);
+  await playBriefly(page);
+  assert.deepEqual(await times(), beforeFirstCourse, 'The first course must not enter listening time');
   assert(await page.locator('#audio-review').isHidden());
   await page.locator('#complete').click();
   assert.deepEqual(await records(), completed, 'The first course must not enter the audio schedule');

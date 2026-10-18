@@ -486,7 +486,7 @@ try {
   const download = await downloading;
   const backup = JSON.parse(await readFile(await download.path(), "utf8"));
   assert.equal(backup.format, "shifahiya-progress");
-  assert.equal(backup.version, 4);
+  assert.equal(backup.version, 5);
   assert.equal(backup.listening[87].completed, true);
   await seed([]);
   await openMainMenu();
@@ -613,7 +613,7 @@ try {
   const readingDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Сохранить копию", exact: true }).click();
   const readingBackup = JSON.parse(await readFile(await (await readingDownload).path(), "utf8"));
-  assert.equal(readingBackup.version, 4);
+  assert.equal(readingBackup.version, 5);
   assert.equal(readingBackup.part2Listening[1].completed, true);
   assert.equal(readingBackup.part2Listening[2].completed, false);
   await seed([]);
