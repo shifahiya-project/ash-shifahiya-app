@@ -6,7 +6,7 @@ export function createListeningTime() {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return result;
     for (const [id, milliseconds] of Object.entries(value)) {
       const course = Number(id.split(':')[0]);
-      if (!/^[1-9]\d*:[\w-]+$/.test(id) || !Number.isSafeInteger(course) || course < 2) continue;
+      if (!/^[1-9]\d*:[\w-]+$/.test(id) || !Number.isSafeInteger(course) || course < 1) continue;
       if (typeof milliseconds !== 'number' || !Number.isSafeInteger(milliseconds) || milliseconds <= 0) continue;
       result[id] = milliseconds;
     }
@@ -27,7 +27,7 @@ export function createListeningTime() {
     let since;
     let elapsed = 0;
     let known = {};
-    const enabled = Number.isSafeInteger(course) && course >= 2;
+    const enabled = Number.isSafeInteger(course) && course >= 1;
     function flush() {
       if (!enabled || !id) return;
       if (since !== undefined) {

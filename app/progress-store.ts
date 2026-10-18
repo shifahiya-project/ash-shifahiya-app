@@ -135,7 +135,7 @@ export type Progress = {
   part2Listening: Record<number, ListeningProgress>;
   /** Independent audio review histories, keyed by course and lesson. */
   listeningReviews: ListeningReviewMap;
-  /** Actual playback time from the second course onward, including repeats. */
+  /** Actual playback time across all courses, including every repeat. */
   listeningTime: ListeningTime;
   exams: Record<string, ExamResult>;
   examSession: ExamSession | null;

@@ -15,10 +15,10 @@ function session(course = 2, id = 'one') {
     fail: value => { failing = value; }, restore: value => { saved = value; } };
 }
 
-test('only valid counters from the second course onward enter the total', () => {
+test('valid counters from every course enter the total', () => {
   assert.deepEqual(time.normalize({ '1:old': 5000, '2:one': 1500, '11:two': 2500,
     '0:zero': 50, '2:negative': -1, '2:fraction': 1.5, '2:string': '100',
-    '2:infinite': Infinity, '2:empty': 0, 'bad': 3000 }), { '2:one': 1500, '11:two': 2500 });
+    '2:infinite': Infinity, '2:empty': 0, 'bad': 3000 }), { '1:old': 5000, '2:one': 1500, '11:two': 2500 });
   assert.equal(time.seconds({ '2:one': 1500, '11:two': 2500 }), 4);
   for (const value of [undefined, null, [], 4]) assert.deepEqual(time.normalize(value), {});
 });
@@ -44,10 +44,12 @@ test('playback counts wall time, excluding pauses, waiting and seeking gaps', ()
   assert.equal(s.saved()['2:one'], 5500);
 });
 
-test('first-course audio never writes a counter', () => {
+test('first-course audio and its repeats accumulate in the same counter', () => {
   const s = session(1);
   s.tracker.start(); s.advance(90000); s.tracker.stop();
-  assert.deepEqual(s.saved(), {});
+  s.advance(10000);
+  s.tracker.start(); s.advance(90000); s.tracker.stop();
+  assert.deepEqual(s.saved(), { '1:one': 180000 });
 });
 
 test('a storage failure keeps the unsaved playback for the next checkpoint', () => {

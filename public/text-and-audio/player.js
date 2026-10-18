@@ -233,9 +233,13 @@ import { createListeningTime } from './time.js?v=1';
   });
   audio.addEventListener('error', () => { get('audio-error').hidden = false; });
   audio.addEventListener('playing', () => listeningClock?.start());
+  function resumeListeningClock() {
+    if (!audio.paused && !audio.seeking && !audio.ended && audio.readyState >= 3) listeningClock?.start();
+  }
   for (const event of ['pause', 'waiting', 'seeking', 'ended', 'error', 'emptied']) {
     audio.addEventListener(event, () => listeningClock?.stop());
   }
+  audio.addEventListener('seeked', resumeListeningClock);
   for (const event of ['pause', 'seeked', 'ended']) audio.addEventListener(event, save);
   audio.addEventListener('timeupdate', () => { if (Date.now() - lastSave > 5000) save(); });
   window.addEventListener('pagehide', () => { listeningClock?.stop(); save(); clearTimeout(reviewTimer); });
@@ -288,9 +292,7 @@ import { createListeningTime } from './time.js?v=1';
     if (lesson && (event.key === progressKey() || event.key === progressKey(2) || event.key === reviews.KEY || event.key === null)) renderCompletion();
   });
   window.addEventListener('pageshow', refreshReviews);
-  window.addEventListener('pageshow', () => {
-    if (!audio.paused && !audio.seeking && audio.readyState >= 3) listeningClock?.start();
-  });
+  window.addEventListener('pageshow', resumeListeningClock);
   window.addEventListener('focus', refreshReviews);
   get('lesson').onchange = (event) => {
     save();

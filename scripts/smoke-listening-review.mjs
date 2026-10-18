@@ -87,6 +87,23 @@ try {
   await page.locator('audio').evaluate(audio => { audio.currentTime += 30; });
   await page.clock.runFor(120000);
   assert.deepEqual(await times(), firstTime, 'Seeking and time spent paused must not count as listening');
+  // Some browsers resume a buffered seek without sending another playing event.
+  await page.locator('audio').evaluate(audio => audio.play());
+  const sought = await page.locator('audio').evaluate(audio => {
+    window.suppressPlaying = event => event.stopImmediatePropagation();
+    audio.addEventListener('playing', window.suppressPlaying, true);
+    audio.currentTime += 10;
+    return audio.currentTime;
+  });
+  await page.waitForFunction(() => !document.querySelector('audio').seeking);
+  const seekCheckpoint = Object.values(await times()).reduce((sum, ms) => sum + ms, 0);
+  await page.waitForFunction(sought => document.querySelector('audio').currentTime > sought + 1.2, sought);
+  await page.locator('audio').evaluate(audio => {
+    audio.pause();
+    audio.removeEventListener('playing', window.suppressPlaying, true);
+  });
+  await page.waitForFunction(({ key, before }) => Object.values(JSON.parse(localStorage.getItem(key) || '{}')).reduce((sum, ms) => sum + ms, 0) > before + 1000,
+    { key: timeKey, before: seekCheckpoint });
   assert(await repeat.isHidden());
   await page.getByRole('button', { name: 'Текст и аудио пройдены', exact: true }).click();
   assert.equal((await record()).studiedOn, '2026-10-18');
@@ -96,7 +113,7 @@ try {
   await home();
   await openBackup();
   const listeningStat = page.locator('.stats-grid > div').filter({ hasText: 'прослушано аудио' });
-  assert.match(await listeningStat.innerText(), /< 1 мин.*прослушано аудио · со 2-й части/s);
+  assert.match(await listeningStat.innerText(), /< 1 мин.*прослушано аудио/s);
   assert.equal(await page.locator('.stats-grid > div').count(), 8);
   await page.getByRole('button', { name: 'Закрыть меню', exact: true }).click();
   assert(await audioCard.getByRole('button', { name: 'Повторить аудио', exact: true }).isDisabled());
@@ -254,7 +271,11 @@ try {
   const beforeFirstCourse = await times();
   await openPlayer(1, 87, false);
   await playBriefly(page);
-  assert.deepEqual(await times(), beforeFirstCourse, 'The first course must not enter listening time');
+  const afterFirstCourse = await times();
+  assert(Object.keys(afterFirstCourse).some(id => id.startsWith('1:')), 'The first course must enter listening time');
+  for (const [id, ms] of Object.entries(beforeFirstCourse)) assert.equal(afterFirstCourse[id], ms, 'Earlier listening must be preserved');
+  await playBriefly(page);
+  assert(Object.entries(await times()).some(([id, ms]) => id.startsWith('1:') && ms > afterFirstCourse[id]), 'Every first-course replay must add listening time');
   assert(await page.locator('#audio-review').isHidden());
   await page.locator('#complete').click();
   assert.deepEqual(await records(), completed, 'The first course must not enter the audio schedule');
@@ -281,7 +302,7 @@ try {
   assert.equal((await records())['2:12'].studiedOn, '2028-01-01');
   assert.deepEqual((await records())['2:12'].repeatedOn, ['2028-01-03']);
   assert.deepEqual(errors, []);
-  console.log('First-course exclusion, future-course isolation and legacy completion migration passed');
+  console.log('First-course listening and repeats, separate review schedule, future courses and legacy completion migration passed');
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));

@@ -2049,7 +2049,7 @@ export default function Home() {
               <div><strong>{wordProgress.mastered}</strong><span>слов выучено</span></div>
               <div><strong>{learningStats.masteredPhrases.length}</strong><span>фраз освоено</span></div>
               <div><strong>{studyStreaks.longest}</strong><span>рекорд без перерыва</span></div>
-              <div><strong>{listeningSeconds ? formatStudyTime(listeningSeconds) : "0 мин"}</strong><span>прослушано аудио · со 2-й части</span></div>
+              <div><strong>{listeningSeconds ? formatStudyTime(listeningSeconds) : "0 мин"}</strong><span>прослушано аудио</span></div>
             </div>
             <div className="backup-tools">
               <span>{sync.email ? `Прогресс синхронизируется · ${sync.email}` : "Прогресс хранится на этом устройстве"}</span>
