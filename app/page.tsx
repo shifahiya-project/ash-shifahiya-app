@@ -58,6 +58,7 @@ import type {
 import { cardPhaseProgress } from "./lesson-progress";
 import { homeLessonWindow } from "./home-lesson-window";
 import { normalizeListeningProgress } from "./listening-progress";
+import { listeningTimeSeconds, normalizeListeningTime } from "./listening-time";
 import { nextPopulatedDeck } from "./lesson-navigation";
 import {
   examPassMark,
@@ -655,6 +656,7 @@ export default function Home() {
   const savedSessions = stored.sessions;
   const cardProgress = stored.cards;
   const learningStats = stored.stats;
+  const listeningSeconds = listeningTimeSeconds(stored.listeningTime);
   const listeningToday = useSyncExternalStore(subscribeListeningDay, listeningDaySnapshot, listeningDayServerSnapshot);
   const audioReviewQueue = dueListeningReviews(listeningCatalog, stored.listeningReviews, stored.part2Listening, listeningToday || localDate());
   const studiedAudio = listeningCatalog.filter((entry) => (entry.courseId ?? 1) >= 2).flatMap((entry) => {
@@ -1772,7 +1774,7 @@ export default function Home() {
   function exportProgress() {
     const payload = {
       format: "shifahiya-progress",
-      version: 4,
+      version: 5,
       exportedAt: new Date().toISOString(),
       scores: savedScores,
       scoreTotals: savedScoreTotals,
@@ -1783,6 +1785,7 @@ export default function Home() {
       listening: stored.listening,
       part2Listening: stored.part2Listening,
       listeningReviews: stored.listeningReviews,
+      listeningTime: stored.listeningTime,
       exams: savedExams,
       // The paper in progress belongs in the copy as well: restoring a backup
       // onto a fresh device would otherwise drop it, and the restore writes
@@ -1825,7 +1828,7 @@ export default function Home() {
     if (!file) return;
     try {
       const payload = JSON.parse(await file.text());
-      if (payload.format !== "shifahiya-progress" || ![1, 2, 3, 4].includes(payload.version)) throw new Error("Invalid backup");
+      if (payload.format !== "shifahiya-progress" || ![1, 2, 3, 4, 5].includes(payload.version)) throw new Error("Invalid backup");
       const scores = payload.scores ?? {};
       // Backups written before the totals were kept simply have none of them,
       // and the card then shows the result without a denominator.
@@ -1851,6 +1854,7 @@ export default function Home() {
           ? stored.part2Listening : normalizeListeningProgress(payload.part2Listening),
         listeningReviews: payload.version < 4 && payload.listeningReviews === undefined
           ? progressStore.getSnapshot().listeningReviews : normalizeListeningReviews(payload.listeningReviews),
+        listeningTime: normalizeListeningTime(payload.listeningTime),
         exams: payload.exams ?? {},
         examSession: payload.examSession ?? null,
         part2Scores: payload.part2Scores ?? {},
@@ -2045,6 +2049,7 @@ export default function Home() {
               <div><strong>{wordProgress.mastered}</strong><span>слов выучено</span></div>
               <div><strong>{learningStats.masteredPhrases.length}</strong><span>фраз освоено</span></div>
               <div><strong>{studyStreaks.longest}</strong><span>рекорд без перерыва</span></div>
+              <div><strong>{listeningSeconds ? formatStudyTime(listeningSeconds) : "0 мин"}</strong><span>прослушано аудио</span></div>
             </div>
             <div className="backup-tools">
               <span>{sync.email ? `Прогресс синхронизируется · ${sync.email}` : "Прогресс хранится на этом устройстве"}</span>
