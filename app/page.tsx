@@ -3,6 +3,7 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { lessonSummaries } from "../content/manifest";
 import { hasListening, listeningHref, listeningCatalog } from "./listening-catalog";
+import { ResumeAudio } from "./resume-audio";
 import { dueListeningReviews, listeningReviewKey, resolveListeningReview, nextListeningReviewDate,
   normalizeListeningReviews, subscribeListeningDay, listeningDaySnapshot, listeningDayServerSnapshot } from "./listening-review";
 import { READING_SOURCE, readingByLesson } from "../content/reading-manifest";
@@ -2592,6 +2593,8 @@ export default function Home() {
       {view === "home" && (
         <section className="home-view">
           <h1>Учимся через<br /><em>повторение и практику</em></h1>
+
+          <ResumeAudio />
 
           <div className="daily-review">
             <div>

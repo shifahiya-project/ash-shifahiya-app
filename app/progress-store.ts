@@ -682,6 +682,11 @@ export const progressStore = {
     publish();
   },
 
+  saveListeningTime(value: ListeningTime) {
+    window.localStorage.setItem(LISTENING_TIME_KEY, JSON.stringify(mergeListeningTime(read<unknown>(LISTENING_TIME_KEY, {}), value)));
+    publish();
+  },
+
   replaceAll(progress: Progress) {
     for (const [id, score] of Object.entries(progress.scores)) {
       window.localStorage.setItem(lessonScoreKey(id), String(score));

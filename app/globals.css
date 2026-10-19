@@ -301,6 +301,17 @@ h1 em { color: var(--green); font-weight: inherit; }
 .resume small { color: var(--ink-soft); margin-top: 2px; font-size: 11px; }
 .resume b { color: var(--green); }
 
+.resume-audio { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 14px; margin: 0 0 24px; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--mint); text-align: left; }
+.resume-audio-copy { min-width: 0; }
+.resume-audio-copy small, .resume-audio-copy strong { display: block; }
+.resume-audio-copy small { color: var(--ink-soft); font-size: 12px; }
+.resume-audio-copy strong { margin: 5px 0 8px; font-size: 18px; }
+.resume-audio-copy a, .resume-audio-error a { color: var(--green); font-size: 13px; }
+.resume-audio-close { display: grid; place-items: center; align-self: start; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--green); font-size: 26px; cursor: pointer; }
+.resume-audio-close:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.resume-audio audio { grid-column: 1 / -1; width: 100%; min-width: 0; }
+.resume-audio-error { grid-column: 1 / -1; color: var(--ink-soft); }
+
 .principle {
   display: flex;
   gap: 16px;
