@@ -95,7 +95,39 @@ export const baynaYadaykVolumeThreePartOne = {
   ],
 } as const satisfies BaynaYadaykSection;
 
+export const baynaYadaykVolumeThreePartTwo = {
+  title: "Том 3 · Часть 2",
+  totalLessons: 23,
+  playlistId: "PLu3huSKRjCrBkgv1uhYBastQf26rZyrUM",
+  lessons: [
+    { number: 1, videoId: "MU86sM_E870" },
+    { number: 2, videoId: "2VVphkuAy1c" },
+    { number: 3, videoId: "M7m7SGSzYTI" },
+    { number: 4, videoId: "Sv6tc5YnbUI" },
+    { number: 5, videoId: "AqqKkiGnp3s" },
+    { number: 6, videoId: "gdGO0bnnD_E" },
+    { number: 7, videoId: "BpeMM_IkR-M" },
+    { number: 8, videoId: "oi2C3eNh08k" },
+    { number: 9, videoId: "zIkXa9iUntU" },
+    { number: 10, videoId: "BNwT_hpbyw4" },
+    { number: 11, videoId: "55Onq8HU_Vs" },
+    { number: 12, videoId: "UUAYo-mBzQs" },
+    { number: 13, videoId: "OzRMdd_8auQ" },
+    { number: 14, videoId: "CEOc5H_JLro" },
+    { number: 15, videoId: "KKq3mGak6p8" },
+    { number: 16, videoId: "bT3Y7_sE2hc" },
+    { number: 17, videoId: "3L3n3oOT59c" },
+    { number: 18, videoId: "gHOY9bcJIcw" },
+    { number: 19, videoId: null },
+    { number: 20, videoId: null },
+    { number: 21, videoId: "H_ScrwfJ4Ek" },
+    { number: 22, videoId: "biojU8nHHzg" },
+    { number: 23, videoId: "nBB8p8qrNyk" },
+  ],
+} as const satisfies BaynaYadaykSection;
+
 export const baynaYadaykSections: readonly BaynaYadaykSection[] = [
   baynaYadaykVolumeTwo,
   baynaYadaykVolumeThreePartOne,
+  baynaYadaykVolumeThreePartTwo,
 ];

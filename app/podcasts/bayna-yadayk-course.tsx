@@ -49,7 +49,7 @@ export default function BaynaYadaykCourse() {
       >
         <span>
           <strong>Аудиокурс «Байна ядайк»</strong>
-          <small>Том 2 · Том 3, часть 1</small>
+          <small>Том 2 · Том 3, части 1 и 2</small>
         </span>
         <span className="disclosure-mark" aria-hidden="true">{open ? "−" : "+"}</span>
       </button>
