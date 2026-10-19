@@ -524,5 +524,37 @@
     "audioSrc": "./audio/reading-2/lesson-60.mp3",
     "textSrc": "./text/reading-2/lesson-60.json",
     "courseId": 2
+  },
+  {
+    "lessonId": 62,
+    "courseTitle": "Чтение",
+    "duration": 1165.944,
+    "audioSrc": "./audio/reading-2/lesson-62.mp3",
+    "textSrc": "./text/reading-2/lesson-62.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 64,
+    "courseTitle": "Чтение",
+    "duration": 1417.008,
+    "audioSrc": "./audio/reading-2/lesson-64.mp3",
+    "textSrc": "./text/reading-2/lesson-64.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 66,
+    "courseTitle": "Чтение",
+    "duration": 1919.112,
+    "audioSrc": "./audio/reading-2/lesson-66.mp3",
+    "textSrc": "./text/reading-2/lesson-66.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 67,
+    "courseTitle": "Чтение",
+    "duration": 445.608,
+    "audioSrc": "./audio/reading-2/lesson-67.mp3",
+    "textSrc": "./text/reading-2/lesson-67.json",
+    "courseId": 2
   }
 ]
