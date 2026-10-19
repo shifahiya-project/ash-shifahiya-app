@@ -14,7 +14,7 @@ assert.deepEqual(catalog, [...catalog].sort((a, b) => (a.courseId ?? 1) - (b.cou
 const firstCourseCatalog = catalog.filter(entry => (entry.courseId ?? 1) === 1);
 const readingCatalog = catalog.filter(entry => entry.courseId === 2);
 assert.deepEqual(readingCatalog.map(entry => entry.lessonId),
-  Array.from({ length: 42 }, (_, index) => index + 1).filter(id => id !== 15 && id !== 41));
+  Array.from({ length: 60 }, (_, index) => index + 1).filter(id => ![15, 41, 48].includes(id)));
 assert(catalog.some(entry => entry.lessonId === 87) && catalog.some(entry => entry.lessonId === 88), 'The original pilot lessons must join the shared catalog');
 const listeningKey = 'shifahiya-listening-progress-v1';
 const readingListeningKey = 'shifahiya-p2-listening-progress-v1';
@@ -237,11 +237,24 @@ try {
   await page.getByLabel('Выбрать урок').selectOption('100');
   await page.getByText('Шифахия · Урок 100', { exact: true }).waitFor();
   await page.screenshot({ path: '/tmp/more-audio-mobile.png' });
+  await page.evaluate(last => {
+    localStorage.setItem('shifahiya-exams-v1', JSON.stringify({ final: { best: 150, attempts: 1 } }));
+    for (let lesson = 1; lesson <= last; lesson++) localStorage.setItem(`shifahiya-p2-lesson-${lesson}`, '1');
+  }, Math.max(...readingCatalog.map(entry => entry.lessonId)));
+  await page.goto(`${origin}${base}?course=2`, { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Меню', exact: true }).click();
+  await page.getByRole('button', { name: 'Показать уроки', exact: true }).click();
+  await page.getByRole('button', { name: 'Показать все уроки', exact: true }).click();
+  const readingLinks = page.getByRole('link', { name: 'Текст и аудио', exact: true });
+  assert.equal(await readingLinks.count(), readingCatalog.length);
+  const readingHrefs = await readingLinks.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
+  for (const entry of readingCatalog) assert(readingHrefs.includes(`./text-and-audio.html?lesson=${entry.lessonId}&course=2`));
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Reading menu overflows on mobile');
   const missing = Array.from({ length: 100 }, (_, index) => index + 1).find(id => !firstCourseCatalog.some(entry => entry.lessonId === id));
   await page.goto(`${origin}${base}text-and-audio.html?lesson=${missing ?? 101}`);
   await page.getByRole('status').filter({ hasText: 'Не удалось открыть урок' }).waitFor();
   assert.equal(await page.locator('audio').getAttribute('src'), null);
-  for (const lesson of [15, 41]) {
+  for (const lesson of [15, 41, 48]) {
     await page.goto(`${origin}${base}text-and-audio.html?lesson=${lesson}&course=2`);
     await page.getByRole('status').filter({ hasText: 'Не удалось открыть урок' }).waitFor();
     assert.equal(await page.locator('audio').getAttribute('src'), null, 'A skipped reading lesson must not load another recording');

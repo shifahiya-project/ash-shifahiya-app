@@ -388,5 +388,141 @@
     "audioSrc": "./audio/reading-2/lesson-42.mp3",
     "textSrc": "./text/reading-2/lesson-42.json",
     "courseId": 2
+  },
+  {
+    "lessonId": 43,
+    "courseTitle": "Чтение",
+    "duration": 202.848,
+    "audioSrc": "./audio/reading-2/lesson-43.mp3",
+    "textSrc": "./text/reading-2/lesson-43.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 44,
+    "courseTitle": "Чтение",
+    "duration": 341.904,
+    "audioSrc": "./audio/reading-2/lesson-44.mp3",
+    "textSrc": "./text/reading-2/lesson-44.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 45,
+    "courseTitle": "Чтение",
+    "duration": 234.048,
+    "audioSrc": "./audio/reading-2/lesson-45.mp3",
+    "textSrc": "./text/reading-2/lesson-45.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 46,
+    "courseTitle": "Чтение",
+    "duration": 263.736,
+    "audioSrc": "./audio/reading-2/lesson-46.mp3",
+    "textSrc": "./text/reading-2/lesson-46.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 47,
+    "courseTitle": "Чтение",
+    "duration": 302.376,
+    "audioSrc": "./audio/reading-2/lesson-47.mp3",
+    "textSrc": "./text/reading-2/lesson-47.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 49,
+    "courseTitle": "Чтение",
+    "duration": 632.688,
+    "audioSrc": "./audio/reading-2/lesson-49.mp3",
+    "textSrc": "./text/reading-2/lesson-49.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 50,
+    "courseTitle": "Чтение",
+    "duration": 532.464,
+    "audioSrc": "./audio/reading-2/lesson-50.mp3",
+    "textSrc": "./text/reading-2/lesson-50.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 51,
+    "courseTitle": "Чтение",
+    "duration": 341.424,
+    "audioSrc": "./audio/reading-2/lesson-51.mp3",
+    "textSrc": "./text/reading-2/lesson-51.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 52,
+    "courseTitle": "Чтение",
+    "duration": 280.896,
+    "audioSrc": "./audio/reading-2/lesson-52.mp3",
+    "textSrc": "./text/reading-2/lesson-52.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 53,
+    "courseTitle": "Чтение",
+    "duration": 426.624,
+    "audioSrc": "./audio/reading-2/lesson-53.mp3",
+    "textSrc": "./text/reading-2/lesson-53.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 54,
+    "courseTitle": "Чтение",
+    "duration": 159.936,
+    "audioSrc": "./audio/reading-2/lesson-54.mp3",
+    "textSrc": "./text/reading-2/lesson-54.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 55,
+    "courseTitle": "Чтение",
+    "duration": 448.728,
+    "audioSrc": "./audio/reading-2/lesson-55.mp3",
+    "textSrc": "./text/reading-2/lesson-55.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 56,
+    "courseTitle": "Чтение",
+    "duration": 272.568,
+    "audioSrc": "./audio/reading-2/lesson-56.mp3",
+    "textSrc": "./text/reading-2/lesson-56.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 57,
+    "courseTitle": "Чтение",
+    "duration": 345.144,
+    "audioSrc": "./audio/reading-2/lesson-57.mp3",
+    "textSrc": "./text/reading-2/lesson-57.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 58,
+    "courseTitle": "Чтение",
+    "duration": 468.864,
+    "audioSrc": "./audio/reading-2/lesson-58.mp3",
+    "textSrc": "./text/reading-2/lesson-58.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 59,
+    "courseTitle": "Чтение",
+    "duration": 524.088,
+    "audioSrc": "./audio/reading-2/lesson-59.mp3",
+    "textSrc": "./text/reading-2/lesson-59.json",
+    "courseId": 2
+  },
+  {
+    "lessonId": 60,
+    "courseTitle": "Чтение",
+    "duration": 304.008,
+    "audioSrc": "./audio/reading-2/lesson-60.mp3",
+    "textSrc": "./text/reading-2/lesson-60.json",
+    "courseId": 2
   }
 ]
