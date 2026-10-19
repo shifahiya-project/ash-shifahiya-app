@@ -1,5 +1,6 @@
 import { createListeningReview } from './review.js?v=1';
 import { createListeningTime } from './time.js?v=1';
+import { createListeningPlayback } from './playback.js?v=1';
 /* A standalone player: fetch only the selected recording and transcript. */
 (async function () {
   'use strict';
@@ -14,12 +15,17 @@ import { createListeningTime } from './time.js?v=1';
   let playbackKey;
   let reviewTimer;
   let listeningClock;
+  let positionRestore;
+  let resumedKey;
+  let pendingActivation = false;
   const reviews = createListeningReview();
   const listeningTime = createListeningTime();
+  const playback = createListeningPlayback();
   const courseId = () => lesson.courseId ?? 1;
   const prefix = (id = courseId()) => id === 1 ? '' : `p${id}-`;
   const studyKey = () => `shifahiya-${prefix()}listening-${lesson.lessonId}-v1`;
   const key = () => playbackKey || studyKey();
+  const context = () => ({ courseId: courseId(), lessonId: lesson.lessonId, key: key() });
   const status = get('status');
   const embedded = window.LISTENING_LESSON;
   const rates = [0.5, 0.75, 0.9, 1, 1.25, 1.5, 2];
@@ -32,13 +38,14 @@ import { createListeningTime } from './time.js?v=1';
   function save() {
     if (!lesson || !state) return;
     listeningClock?.flush();
-    if (audio.readyState > 0) state.position = audio.ended ? 0 : audio.currentTime;
+    const restored = positionRestore?.ready() === true && audio.readyState > 0;
+    if (restored) state.position = audio.ended ? 0 : audio.currentTime;
     try {
-      localStorage.setItem(key(), JSON.stringify(state));
-      if (playbackKey) {
-        let study = {};
-        try { study = JSON.parse(localStorage.getItem(studyKey())) || {}; } catch { /* Keep the current preferences. */ }
-        localStorage.setItem(studyKey(), JSON.stringify({ ...state, position: Number.isFinite(study.position) ? study.position : 0 }));
+      playback.savePosition(localStorage, context(), state.position, state);
+      if (restored) {
+        playback.checkpoint(localStorage, context(), { position: state.position, duration: audio.duration,
+          rate: state.rate, loop: state.loop, finished: audio.ended }, pendingActivation);
+        pendingActivation = false;
       }
     } catch { /* Playback still works without storage. */ }
     lastSave = Date.now();
@@ -141,6 +148,7 @@ import { createListeningTime } from './time.js?v=1';
     }
   }
   function reviewPlaybackKey() {
+    if (resumedKey) return resumedKey;
     if (!reviewMode || !lesson) return undefined;
     const record = reviewRecord();
     const date = reviews.nextDate(record);
@@ -153,13 +161,15 @@ import { createListeningTime } from './time.js?v=1';
       const nextKey = reviewPlaybackKey();
       if (state && nextKey && nextKey !== playbackKey) {
         const playing = !audio.paused;
+        pendingActivation ||= playing;
         const position = audio.currentTime;
         save();
         playbackKey = nextKey;
         state = readState();
         if (playing) state.position = position;
         render();
-        if (audio.readyState > 0) audio.currentTime = state.position < audio.duration ? state.position : 0;
+        positionRestore?.dispose();
+        positionRestore = playback.restore(audio, state.position);
       }
       renderCompletion();
     }
@@ -227,12 +237,17 @@ import { createListeningTime } from './time.js?v=1';
     }
   }
   audio.addEventListener('loadedmetadata', () => {
-    audio.currentTime = state.position < audio.duration ? state.position : 0;
     audio.playbackRate = state.rate;
     get('audio-error').hidden = true;
   });
   audio.addEventListener('error', () => { get('audio-error').hidden = false; });
-  audio.addEventListener('playing', () => listeningClock?.start());
+  audio.addEventListener('emptied', () => {
+    positionRestore?.dispose();
+    positionRestore = playback.restore(audio, state?.position || 0);
+  });
+  audio.addEventListener('playing', () => {
+    if (!audio.paused) { pendingActivation = true; listeningClock?.start(); save(); }
+  });
   function resumeListeningClock() {
     if (!audio.paused && !audio.seeking && !audio.ended && audio.readyState >= 3) listeningClock?.start();
   }
@@ -241,7 +256,7 @@ import { createListeningTime } from './time.js?v=1';
   }
   audio.addEventListener('seeked', resumeListeningClock);
   for (const event of ['pause', 'seeked', 'ended']) audio.addEventListener(event, save);
-  audio.addEventListener('timeupdate', () => { if (Date.now() - lastSave > 5000) save(); });
+  audio.addEventListener('timeupdate', () => { if (Date.now() - lastSave > 1000) save(); });
   window.addEventListener('pagehide', () => { listeningClock?.stop(); save(); clearTimeout(reviewTimer); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); else refreshReviews(); });
   get('settings-toggle').onclick = () => {
@@ -315,7 +330,7 @@ import { createListeningTime } from './time.js?v=1';
         reader.readAsDataURL(blob);
       });
       const [html, css, script] = await Promise.all([
-        fetchText('./text-and-audio.html?v=7'), fetchText('./text-and-audio/player.css?v=7'), fetchText('./text-and-audio/player.js?v=7'),
+        fetchText('./text-and-audio.html?v=8'), fetchText('./text-and-audio/player.css?v=8'), fetchText('./text-and-audio/player.js?v=8'),
       ]);
       const doc = new DOMParser().parseFromString(html, 'text/html');
       doc.querySelector('link[rel="stylesheet"]').remove();
@@ -330,7 +345,8 @@ import { createListeningTime } from './time.js?v=1';
       // The factory is self-contained, so the saved lesson needs no module fetch.
       player.textContent = `const createListeningReview = ${createListeningReview.toString()};\n`
         + `const createListeningTime = ${createListeningTime.toString()};\n`
-        + script.replace(/^import \{ createListening(?:Review|Time) \} from ['"].+['"];\s*/gm, '');
+        + `const createListeningPlayback = ${createListeningPlayback.toString()};\n`
+        + script.replace(/^import \{ createListening(?:Review|Time|Playback) \} from ['"].+['"];\s*/gm, '');
       doc.body.append(data, player);
       const href = URL.createObjectURL(new Blob(['<!doctype html>\n' + doc.documentElement.outerHTML], { type: 'text/html;charset=utf-8' }));
       const link = document.createElement('a');
@@ -364,6 +380,15 @@ import { createListeningTime } from './time.js?v=1';
       const entry = requested === null ? catalog[0] : catalog.find(item => String(item.lessonId) === requested);
       if (!entry) throw new Error('Lesson unavailable');
       lesson = { ...entry, ...JSON.parse(await fetchText(entry.textSrc)) };
+      if (params.get('resume') === '1') {
+        try {
+          const previous = playback.active(localStorage);
+          if (previous?.courseId === courseId() && previous.lessonId === lesson.lessonId && previous.key !== studyKey()) {
+            resumedKey = previous.key;
+            reviewMode = true;
+          }
+        } catch { /* Saved playback is optional. */ }
+      }
     }
     if (courseId() >= 2) {
       document.querySelector('nav a').href = embedded
@@ -383,6 +408,7 @@ import { createListeningTime } from './time.js?v=1';
     audio.setAttribute('aria-label', `Аудио урока ${lesson.lessonId}`);
     playbackKey = reviewPlaybackKey();
     state = readState();
+    positionRestore = playback.restore(audio, state.position);
     listeningClock = listeningTime.tracker({
       course: courseId(),
       read: () => {
