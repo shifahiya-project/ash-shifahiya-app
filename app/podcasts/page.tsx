@@ -28,6 +28,7 @@ import {
 import { activeCatalog, podcastStore, todayStore } from "../podcast-store";
 import { fetchCatalog } from "../podcast-youtube";
 import { POLL_MS, isWatchedEnough, loadPlayerApi, type YouTubePlayer } from "../youtube-embed";
+import BaynaYadaykCourse from "./bayna-yadayk-course";
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
@@ -348,6 +349,8 @@ export default function PodcastsPage() {
 
       <section className="home-view podcast-view">
         <p className="eyebrow">{formatDay(today) || " "}</p>
+
+        <BaynaYadaykCourse />
 
         {empty ? (
           <div className="podcast-empty">
