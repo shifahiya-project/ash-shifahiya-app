@@ -1041,12 +1041,15 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
 
 .audio-course-content { display: flex; flex-direction: column; gap: 16px; }
 .audio-course-content h2 { margin: 0 0 5px; font: 500 21px Georgia, serif; }
+.audio-course-sections { display: flex; flex-wrap: wrap; gap: 8px; }
+.audio-course-sections button { min-height: 44px; }
 .audio-course-lessons { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .audio-course-lessons button {
   min-height: 44px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px;
   background: var(--paper); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer;
 }
 .audio-course-lessons button[aria-pressed="true"] { border-color: var(--green); background: var(--mint); color: var(--green); font-weight: 600; }
+.audio-course-lessons button:disabled { opacity: .55; cursor: default; border-style: dashed; }
 .audio-course-current { color: var(--green); font-size: 14px; font-weight: 600; }
 .audio-course-navigation { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
 .audio-course-navigation button { flex: 1 1 180px; padding: 12px; font-size: 13px; }

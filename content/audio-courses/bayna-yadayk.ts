@@ -1,5 +1,19 @@
 // Lesson numbers and order are supplied by the course owner, not playlist indices.
+export type BaynaYadaykLesson = {
+  readonly number: number;
+  readonly videoId: string | null;
+  readonly part?: number;
+};
+
+export type BaynaYadaykSection = {
+  readonly title: string;
+  readonly totalLessons: number;
+  readonly playlistId: string;
+  readonly lessons: readonly BaynaYadaykLesson[];
+};
+
 export const baynaYadaykVolumeTwo = {
+  title: "Том 2",
   totalLessons: 30,
   playlistId: "PLu3huSKRjCrDSna3IAYto2-2Z0eQfiG18",
   lessons: [
@@ -34,8 +48,54 @@ export const baynaYadaykVolumeTwo = {
     { number: 29, videoId: "6bvnNLnf51s" },
     { number: 30, videoId: "fVvbFfbWPqI" },
   ],
-} as const;
+} as const satisfies BaynaYadaykSection;
 
-// The owner has supplied the volume-three playlist, but no per-part lesson list.
-export const baynaYadaykVolumeThreeUrl =
-  "https://www.youtube.com/watch?v=KgGNodTQ2dg&list=PLu3huSKRjCrBkgv1uhYBastQf26rZyrUM";
+export const baynaYadaykVolumeThreePartOne = {
+  title: "Том 3 · Часть 1",
+  totalLessons: 36,
+  playlistId: "PLu3huSKRjCrBkgv1uhYBastQf26rZyrUM",
+  lessons: [
+    { number: 1, videoId: "KgGNodTQ2dg" },
+    { number: 2, videoId: "wAPLxLuLSYE" },
+    { number: 3, videoId: "cu1paojji8Y" },
+    { number: 4, videoId: "RldK_1BAiNo" },
+    { number: 5, videoId: "D4fmM_9culc" },
+    { number: 6, videoId: "UzrnZr4EL3A" },
+    { number: 7, videoId: "62blX_WJEjE" },
+    { number: 8, videoId: "RdQ8zF_FvGc" },
+    { number: 9, videoId: "T6rPGUD2hOI" },
+    { number: 10, videoId: "pLgKn2Z-pMg" },
+    { number: 11, videoId: "yM2PgzaRzAA" },
+    { number: 12, videoId: "koZLANg4xmU" },
+    { number: 13, videoId: "odqx-EwXdjs" },
+    { number: 14, videoId: "bn5nZIFeO9Q" },
+    { number: 15, videoId: "q8L0UaBRo28" },
+    { number: 16, videoId: "6fDwYi_DuBc" },
+    { number: 17, videoId: "aTtJvnt9FKk" },
+    { number: 18, videoId: "yQluCSYgGGw" },
+    { number: 19, videoId: "-_1Me9WLYXM" },
+    { number: 20, videoId: "3VXY6ASeeFQ" },
+    { number: 21, videoId: "59kK8v9PODk" },
+    { number: 22, videoId: "PVxo-fVCBxY" },
+    { number: 23, videoId: "_6MewrbOCPc" },
+    { number: 24, videoId: "zsMaNEeaxXs" },
+    { number: 25, videoId: "wv6K5S-FO4Q" },
+    { number: 26, videoId: "YnBHh8kvryM" },
+    { number: 27, videoId: null },
+    { number: 28, videoId: "vyf4LpyWYZU" },
+    { number: 29, videoId: "S0RxWs-Jbcs" },
+    { number: 30, videoId: "4evEKE5XcTk" },
+    { number: 31, part: 1, videoId: "z40PKxsY8yA" },
+    { number: 31, part: 2, videoId: "5VBBkdocJLk" },
+    { number: 32, videoId: "3QpzJGUJ36U" },
+    { number: 33, videoId: null },
+    { number: 34, videoId: "-zy_WhQOzJA" },
+    { number: 35, videoId: "c0nbrEwwnYs" },
+    { number: 36, videoId: "3RySJY1QdFA" },
+  ],
+} as const satisfies BaynaYadaykSection;
+
+export const baynaYadaykSections: readonly BaynaYadaykSection[] = [
+  baynaYadaykVolumeTwo,
+  baynaYadaykVolumeThreePartOne,
+];
