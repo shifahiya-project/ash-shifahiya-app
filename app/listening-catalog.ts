@@ -1,4 +1,4 @@
-import catalog from "../public/text-and-audio/catalog.json";
+import catalog from "../public/text-and-audio/catalog.json" with { type: "json" };
 
 export const listeningCatalog = catalog;
 
@@ -11,6 +11,6 @@ export function hasListening(id: number, course = 1) {
 
 export function listeningHref(id: number, course = 1) {
   return hasListening(id, course)
-    ? `./text-and-audio.html?lesson=${id}${course === 1 ? "" : `&course=${course}`}`
+    ? `./text-and-audio.html?v=9&lesson=${id}${course === 1 ? "" : `&course=${course}`}`
     : undefined;
 }

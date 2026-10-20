@@ -317,7 +317,7 @@ try {
   assert.match(await hero.innerText(), /Продолжить/);
   const heroAudio = page.locator(".continue-learning-group").getByRole("link", { name: "Текст и аудио", exact: true });
   await heroAudio.waitFor();
-  assert.equal(await heroAudio.getAttribute("href"), "./text-and-audio.html?lesson=91");
+  assert.equal(await heroAudio.getAttribute("href"), "./text-and-audio.html?v=9&lesson=91");
   assert.equal(await hero.locator("a").count(), 0, "The audio action must be separate from the continue button");
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Mobile homepage should fit the viewport");
   await page.screenshot({ path: "/tmp/compact-home-mobile.png", fullPage: true });
@@ -340,7 +340,7 @@ try {
   assert.equal(await cards.count(), lessonSummaries.length);
   assert.equal(await firstVisible(), 1);
   const earlierAudio = card(87).getByRole("link", { name: "Текст и аудио", exact: true });
-  assert.equal(await earlierAudio.getAttribute("href"), "./text-and-audio.html?lesson=87");
+  assert.equal(await earlierAudio.getAttribute("href"), "./text-and-audio.html?v=9&lesson=87");
   await collapseList().click();
   await assertWindow([90, 91, 92]);
   // Every native popover dismissal resets disclosure state and scroll position.
@@ -408,7 +408,7 @@ try {
       listeningEntry(listeningCatalog.filter(({ lessonId }) => lessonId < id).map(({ lessonId }) => lessonId)),
     ]);
     await assertWindow([id - 1, id, id + 1]);
-    assert.equal(await heroAudio.getAttribute("href"), `./text-and-audio.html?lesson=${id}`);
+    assert.equal(await heroAudio.getAttribute("href"), `./text-and-audio.html?v=9&lesson=${id}`);
   }
 
   // Finishing the last exercise should lead straight to this lesson's audio,
@@ -431,11 +431,11 @@ try {
   await page.locator(".result-view").waitFor();
   assert.equal(await page.getByRole("button", { name: "Сбросить результат", exact: true }).count(), 0);
   assert.match(await page.locator(".result-view .eyebrow").innerText(), /Урок 87 · слова и задания пройдены/i);
-  assert.equal(await page.locator(".result-view a.primary").getAttribute("href"), "./text-and-audio.html?lesson=87");
+  assert.equal(await page.locator(".result-view a.primary").getAttribute("href"), "./text-and-audio.html?v=9&lesson=87");
   assert.equal(await page.getByRole("button", { name: /^Перейти к уроку 88/ }).count(), 0);
   await page.getByRole("button", { name: "На главную", exact: true }).click();
   await assertWindow([86, 87, 88]);
-  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=87");
+  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?v=9&lesson=87");
 
   // Completing words and exercises must not hide unfinished text and audio.
   // This is the learner's reported flow: core 87 done, next core step 88.
@@ -444,11 +444,11 @@ try {
     ["shifahiya-session-88", firstSession(88, 3000)],
   ]);
   await assertWindow([86, 87, 88]);
-  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=87");
+  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?v=9&lesson=87");
   assert.match(await hero.innerText(), /Урок 87\./);
   assert.match(await hero.innerText(), /Текст и аудио/);
   assert.equal(await page.locator('.stats-grid > div').filter({ has: page.getByText('уроков завершено', { exact: true }) }).locator('strong').innerText(), "86");
-  assert.equal(await card(87).getByRole("link", { name: "Текст и аудио", exact: true }).getAttribute("href"), "./text-and-audio.html?lesson=87");
+  assert.equal(await card(87).getByRole("link", { name: "Текст и аудио", exact: true }).getAttribute("href"), "./text-and-audio.html?v=9&lesson=87");
   assert.equal(await page.getByRole("button", { name: "Показать все уроки", exact: true }).count(), 1);
   await page.setViewportSize({ width: 390, height: 844 });
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Pending audio should fit the mobile viewport");
@@ -469,7 +469,7 @@ try {
   await assertWindow([87, 88, 89]);
   assert.match(await hero.innerText(), /Урок 88\./);
   assert.equal(await hero.getAttribute("href"), null, "Words and exercises remain the primary step until they are completed");
-  assert.equal(await heroAudio.getAttribute("href"), "./text-and-audio.html?lesson=88");
+  assert.equal(await heroAudio.getAttribute("href"), "./text-and-audio.html?v=9&lesson=88");
   await assertMobileActions(87, "previous-lesson-87");
   await page.screenshot({ path: "/tmp/focused-home-88-mobile.png", fullPage: true });
   await page.locator("#course-lessons").screenshot({ path: "/tmp/focused-lessons-88-mobile.png" });
@@ -512,28 +512,28 @@ try {
     ["shifahiya-session-91", firstSession(91, 5000)],
   ]);
   await assertWindow([86, 87, 88]);
-  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=87");
+  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?v=9&lesson=87");
   assert(await card(88).isVisible(), "Other unfinished audio lessons stay in the same course list");
   await seed([
     ...scoreEntries(lessonSummaries, "shifahiya-lesson-", 88),
     listeningEntry([87]),
   ]);
   await assertWindow([87, 88, 89]);
-  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=88");
+  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?v=9&lesson=88");
 
   // Undoing an audio completion restores its continuation without changing scores.
-  await page.goto(`${origin}text-and-audio.html?lesson=87`, { waitUntil: "networkidle" });
+  await page.goto(`${origin}text-and-audio.html?v=9&lesson=87`, { waitUntil: "networkidle" });
   await page.locator('#complete[aria-pressed="true"]').click();
   await page.getByRole("link", { name: "← К курсу", exact: true }).click();
   await assertWindow([86, 87, 88]);
-  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=87");
+  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?v=9&lesson=87");
   assert.equal(await page.evaluate(() => localStorage.getItem("shifahiya-lesson-87")), "10");
 
   // Existing learners keep pending audio in their focused window and can open
   // every recording in the full list. Exam gates remain based on core work.
   await seed(scoreEntries(lessonSummaries, "shifahiya-lesson-"));
   await assertWindow([86, 87, 88]);
-  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=87");
+  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?v=9&lesson=87");
   for (const title of ["Промежуточный экзамен", "Итоговый экзамен"]) {
     const exam = page.locator(".exam-card").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
     assert(await exam.getByRole("button", { name: /^Начать/ }).isEnabled(), "Pending audio should not close an existing exam");
@@ -580,7 +580,7 @@ try {
   ]);
   await choosePart(/^2 · Чтение/);
   await assertWindow([1, 2]);
-  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=1&course=2");
+  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?v=9&lesson=1&course=2");
   assert.match(await card(1).innerText(), /Чтение пройдено · остались текст и аудио/);
   await assertMobileActions(1, "reading-pending-audio-1");
   await closeMainMenu();
@@ -598,9 +598,9 @@ try {
   await page.getByRole("link", { name: "← К курсу", exact: true }).click();
   await assertWindow([1, 2, 3]);
   assert.equal(await page.locator(".selected-course").innerText(), "Часть 2 · Чтение");
-  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?lesson=2&course=2");
+  assert.equal(await hero.getAttribute("href"), "./text-and-audio.html?v=9&lesson=2&course=2");
   const otherTab = await page.context().newPage();
-  await otherTab.goto(`${origin}text-and-audio.html?lesson=2&course=2`);
+  await otherTab.goto(`${origin}text-and-audio.html?v=9&lesson=2&course=2`);
   await otherTab.getByRole("button", { name: "Текст и аудио пройдены", exact: true }).click();
   await page.waitForFunction(() => document.querySelector(".continue-learning")?.getAttribute("href")?.includes("lesson=3&course=2"));
   await assertWindow([2, 3, 4]);
@@ -644,7 +644,7 @@ try {
   await page.locator(".reading-view").waitFor();
   await page.getByRole("button", { name: /^Урок пройден/ }).click();
   await page.locator(".result-view").waitFor();
-  assert.equal(await page.locator(".result-view .result-listening").getAttribute("href"), "./text-and-audio.html?lesson=1&course=2");
+  assert.equal(await page.locator(".result-view .result-listening").getAttribute("href"), "./text-and-audio.html?v=9&lesson=1&course=2");
   await page.locator(".result-listening").click();
   await page.getByRole("heading", { name: "Чтение · Урок 1", exact: true }).waitFor();
   await page.goto(origin, { waitUntil: "networkidle" });
@@ -682,7 +682,7 @@ try {
   assert((await page.locator(".lesson-list .book-divider").allTextContents()).some((text) => text.includes(part2Summaries[20].book)));
   assert.match(await card(21).innerText(), /Продолжить/);
   assert.match(await hero.innerText(), /[Уу]рок 21\./);
-  assert.equal(await page.locator(".continue-learning-group").getByRole("link", { name: "Текст и аудио", exact: true }).getAttribute("href"), "./text-and-audio.html?lesson=21&course=2");
+  assert.equal(await page.locator(".continue-learning-group").getByRole("link", { name: "Текст и аудио", exact: true }).getAttribute("href"), "./text-and-audio.html?v=9&lesson=21&course=2");
   await showAll().click();
   await card(1).waitFor();
   assert.equal(await cards.count(), part2Summaries.length);
