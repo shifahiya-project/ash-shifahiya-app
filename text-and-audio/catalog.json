@@ -38,15 +38,15 @@
     "lessonId": 96,
     "courseTitle": "Шифахия",
     "duration": 530.736,
-    "audioSrc": "./audio/shifahiya-1/lesson-96.mp3",
-    "textSrc": "./text/shifahiya-1/lesson-96.json"
+    "audioSrc": "./audio/shifahiya-1/lesson-96.mp3?v=2d1b09f67f998e7f",
+    "textSrc": "./text/shifahiya-1/lesson-96.json?v=843da9b042e6b68d"
   },
   {
     "lessonId": 97,
     "courseTitle": "Шифахия",
-    "duration": 392.904,
-    "audioSrc": "./audio/shifahiya-1/lesson-97.mp3",
-    "textSrc": "./text/shifahiya-1/lesson-97.json"
+    "duration": 429.816,
+    "audioSrc": "./audio/shifahiya-1/lesson-97.mp3?v=4fd8d889b73a1469",
+    "textSrc": "./text/shifahiya-1/lesson-97.json?v=32934021edd82476"
   },
   {
     "lessonId": 98,
