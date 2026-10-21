@@ -61,7 +61,7 @@ try {
   }, [listeningKey, readingListeningKey]);
   for (const entry of catalog) {
     const scopedKey = entry.courseId === 2 ? readingListeningKey : listeningKey;
-    const transcript = JSON.parse(await readFile(resolve(root, entry.textSrc), 'utf8'));
+    const transcript = JSON.parse(await readFile(resolve(root, entry.textSrc.split('?')[0]), 'utf8'));
     assert.equal(transcript.lessonId, entry.lessonId);
     if (entry.lessonId === 87 || entry.lessonId === 88) {
       await page.evaluate((id) => {
@@ -95,7 +95,7 @@ try {
       assert.equal(await audio.evaluate(a => a.playbackRate), 0.9, 'The original pilot speed should survive the shared-player migration');
       assert.equal(await page.getByLabel('Скорость').inputValue(), '0.9');
     }
-    assert(requests.filter(url => /\.mp3/.test(url)).every(url => url.endsWith(`lesson-${entry.lessonId}.mp3`)), 'Fetched another recording');
+    assert(requests.filter(url => /\.mp3/.test(url)).every(url => new URL(url).pathname.endsWith(`lesson-${entry.lessonId}.mp3`)), 'Fetched another recording');
     const startPosition = await audio.evaluate(a => a.currentTime);
     await audio.evaluate(a => a.play());
     await page.waitForFunction(start => document.querySelector('audio').currentTime > start + 0.2, startPosition);
