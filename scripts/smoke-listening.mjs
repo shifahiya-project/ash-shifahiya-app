@@ -115,7 +115,7 @@ try {
   await links.first().waitFor();
   assert.equal(await links.count(), 2);
   for (let index = 0; index < 2; index++) {
-    assert.equal(await links.nth(index).getAttribute('href'), `./text-and-audio.html?lesson=${87 + index}`);
+    assert.equal(await links.nth(index).getAttribute('href'), `./text-and-audio.html?v=9&lesson=${87 + index}`);
   }
   await links.nth(1).click();
   await page.getByText('Шифахия · Урок 88', { exact: true }).waitFor();

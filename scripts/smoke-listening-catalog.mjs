@@ -69,7 +69,7 @@ try {
       }, entry.lessonId);
     }
     requests.length = 0;
-    await page.goto(`${origin}${base}text-and-audio.html?lesson=${entry.lessonId}${entry.courseId === 2 ? '&course=2' : ''}`);
+    await page.goto(`${origin}${base}text-and-audio.html?v=9&lesson=${entry.lessonId}${entry.courseId === 2 ? '&course=2' : ''}`);
     await page.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
     assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), `${entry.courseTitle} · Урок ${entry.lessonId}`);
     assert.equal(await page.getByLabel('Выбрать урок').locator('option').count(), entry.courseId === 2 ? readingCatalog.length : firstCourseCatalog.length);
@@ -180,7 +180,7 @@ try {
     if (entry.lessonId === 87) {
       const otherTab = await context.newPage();
       otherTab.on('pageerror', error => errors.push(error.message));
-      await otherTab.goto(`${origin}${base}text-and-audio.html?lesson=87`);
+      await otherTab.goto(`${origin}${base}text-and-audio.html?v=9&lesson=87`);
       await otherTab.locator('#complete[aria-pressed="true"]').click();
       await page.locator('#complete[aria-pressed="false"]').waitFor();
       await page.getByRole('button', { name: 'Текст и аудио пройдены', exact: true }).click();
@@ -226,8 +226,8 @@ try {
   await links.first().waitFor();
   assert.equal(await links.count(), firstCourseCatalog.length);
   const hrefs = await links.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
-  for (const entry of firstCourseCatalog) assert(hrefs.includes(`./text-and-audio.html?lesson=${entry.lessonId}`));
-  await page.goto(`${origin}${base}text-and-audio.html?lesson=91`);
+  for (const entry of firstCourseCatalog) assert(hrefs.includes(`./text-and-audio.html?v=9&lesson=${entry.lessonId}`));
+  await page.goto(`${origin}${base}text-and-audio.html?v=9&lesson=91`);
   await page.getByText('Шифахия · Урок 91', { exact: true }).waitFor();
   assert.equal(await page.getByLabel('Выбрать урок').locator('option').count(), firstCourseCatalog.length);
   await page.getByLabel('Выбрать урок').selectOption('87');
@@ -248,14 +248,14 @@ try {
   const readingLinks = page.getByRole('link', { name: 'Текст и аудио', exact: true });
   assert.equal(await readingLinks.count(), readingCatalog.length);
   const readingHrefs = await readingLinks.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
-  for (const entry of readingCatalog) assert(readingHrefs.includes(`./text-and-audio.html?lesson=${entry.lessonId}&course=2`));
+  for (const entry of readingCatalog) assert(readingHrefs.includes(`./text-and-audio.html?v=9&lesson=${entry.lessonId}&course=2`));
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Reading menu overflows on mobile');
   const missing = Array.from({ length: 100 }, (_, index) => index + 1).find(id => !firstCourseCatalog.some(entry => entry.lessonId === id));
-  await page.goto(`${origin}${base}text-and-audio.html?lesson=${missing ?? 101}`);
+  await page.goto(`${origin}${base}text-and-audio.html?v=9&lesson=${missing ?? 101}`);
   await page.getByRole('status').filter({ hasText: 'Не удалось открыть урок' }).waitFor();
   assert.equal(await page.locator('audio').getAttribute('src'), null);
   for (const lesson of [15, 41, 48, 61, 63, 65]) {
-    await page.goto(`${origin}${base}text-and-audio.html?lesson=${lesson}&course=2`);
+    await page.goto(`${origin}${base}text-and-audio.html?v=9&lesson=${lesson}&course=2`);
     await page.getByRole('status').filter({ hasText: 'Не удалось открыть урок' }).waitFor();
     assert.equal(await page.locator('audio').getAttribute('src'), null, 'A skipped reading lesson must not load another recording');
   }
