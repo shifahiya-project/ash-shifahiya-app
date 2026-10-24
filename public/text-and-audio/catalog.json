@@ -65,9 +65,9 @@
   {
     "lessonId": 100,
     "courseTitle": "Шифахия",
-    "duration": 303.408,
-    "audioSrc": "./audio/shifahiya-1/lesson-100.mp3",
-    "textSrc": "./text/shifahiya-1/lesson-100.json"
+    "duration": 338.544,
+    "audioSrc": "./audio/shifahiya-1/lesson-100.mp3?v=1d0fb9d43b9cd37f",
+    "textSrc": "./text/shifahiya-1/lesson-100.json?v=b807f6b328d26558"
   },
   {
     "lessonId": 1,
