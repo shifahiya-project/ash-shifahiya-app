@@ -205,6 +205,78 @@ try {
     await page.locator("#course-parts").waitFor();
   };
 
+  // The hero follows the curriculum even when the menu or a saved link points
+  // at another part. Completed lessons include their audio where available.
+  const audioCatalog = JSON.parse(await readFile("public/text-and-audio/catalog.json", "utf8"));
+  await page.evaluate((catalog) => {
+    localStorage.clear();
+    for (let id = 1; id <= 100; id += 1) localStorage.setItem(`shifahiya-lesson-${id}`, "10");
+    const listening = Object.fromEntries(catalog.filter((entry) => !entry.courseId || entry.courseId === 1)
+      .map((entry) => [entry.lessonId, { completed: true, updatedAt: Date.now() }]));
+    localStorage.setItem("shifahiya-listening-progress-v1", JSON.stringify(listening));
+    localStorage.setItem("shifahiya-exams-v1", JSON.stringify({ final: { best: 0, attempts: 1 } }));
+  }, audioCatalog);
+  await page.goto(`${origin}?course=8`, { waitUntil: "networkidle" });
+  const hero = page.locator(".continue-learning");
+  assert.match(await hero.innerText(), /Часть 1 · Итоговый экзамен/);
+  await hero.click();
+  await page.locator(".options button").first().click();
+  await page.getByRole("button", { name: "На главную", exact: true }).click();
+  assert.match(await hero.innerText(), /Продолжить экзамен/);
+  await page.reload({ waitUntil: "networkidle" });
+  assert.match(await hero.innerText(), /Продолжите с вопроса 2 из 114/);
+
+  await page.evaluate(() => {
+    localStorage.setItem("shifahiya-exams-v1", JSON.stringify({ final: { best: 114, attempts: 2 } }));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  assert.match(await hero.innerText(), /Часть 2 · Урок 1\./);
+  await openMainMenu();
+  const progressToggle = page.locator('[aria-controls="personal-progress"]');
+  assert.match(await progressToggle.innerText(), /100 из 205 уроков завершено/);
+  await page.getByRole("button", { name: "Закрыть меню", exact: true }).click();
+  await hero.click();
+  await page.locator(".word-card").waitFor();
+  assert.match(await page.locator(".stage-label").innerText(), /Новые слова урока/i);
+  await page.getByRole("button", { name: "На главную", exact: true }).click();
+
+  await page.evaluate(() => {
+    localStorage.setItem("shifahiya-p2-lesson-1", "10");
+    localStorage.removeItem("shifahiya-p2-session-1");
+    localStorage.setItem("shifahiya-p2-listening-progress-v1", JSON.stringify({
+      1: { completed: true, updatedAt: Date.now() },
+    }));
+    localStorage.setItem("shifahiya-p2-session-2", JSON.stringify({
+      lessonId: 2, view: "learn", index: 1, score: 0, mistakes: [], updatedAt: Date.now(),
+    }));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
+  await openCourseParts();
+  await page.getByRole("tab", { name: /8 · Хадис/ }).click();
+  await page.getByRole("button", { name: "Закрыть меню", exact: true }).click();
+  assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
+  await page.reload({ waitUntil: "networkidle" });
+  assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
+  await openMainMenu();
+  assert.match(await progressToggle.innerText(), /101 из 205 уроков завершено/);
+  await progressToggle.click();
+  assert.match(await page.locator(".course-progress-list").innerText(), /Часть 2 · Чтение\s+1 из 105 уроков/);
+  await page.getByRole("button", { name: "Закрыть меню", exact: true }).click();
+  await hero.click();
+  await page.locator(".word-card").waitFor();
+  assert.match(await page.locator(".repeat-badge").innerText(), /слово 2 из/);
+  await page.evaluate(() => {
+    localStorage.setItem("shifahiya-p2-lesson-2", "10");
+    const listening = JSON.parse(localStorage.getItem("shifahiya-p2-listening-progress-v1"));
+    listening[2] = { completed: true, updatedAt: Date.now() };
+    localStorage.setItem("shifahiya-p2-listening-progress-v1", JSON.stringify(listening));
+  });
+  await page.goto(origin, { waitUntil: "networkidle" });
+  await openMainMenu();
+  assert.match(await progressToggle.innerText(), /102 из 205 уроков завершено/);
+  await page.getByRole("button", { name: "Закрыть меню", exact: true }).click();
+
   // Lesson 82 used to enter a trailing empty deck instead of its second-half
   // questions. Check both finishing the last card and resuming that stuck deck.
   for (const deckIndex of [7, 8]) {

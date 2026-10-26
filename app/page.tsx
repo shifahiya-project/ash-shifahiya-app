@@ -58,6 +58,7 @@ import type {
 } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
 import { homeLessonWindow } from "./home-lesson-window";
+import { learningPathProgress, nextLearningStep, type LearningCourse } from "./learning-path";
 import { normalizeListeningProgress } from "./listening-progress";
 import { listeningTimeSeconds, normalizeListeningTime } from "./listening-time";
 import { nextPopulatedDeck } from "./lesson-navigation";
@@ -957,6 +958,59 @@ export default function Home() {
         ) * 70
     : 0;
 
+  // The hero and personal totals follow the whole course, regardless of which
+  // part the learner last inspected in the menu or opened through a URL.
+  const learningCourses = useMemo<LearningCourse[]>(() => [
+    {
+      id: 1, ready: true,
+      lessons: lessonSummaries.map((item) => ({
+        id: item.id, available: unlockedLessons.has(item.id),
+        coreComplete: isLessonComplete(item, stored),
+        complete: isCourseLessonComplete(item, stored),
+      })),
+    },
+    {
+      id: 2, ready: part2Ready,
+      lessons: part2Summaries.map((item) => ({
+        id: item.id, available: unlockedPart2.has(item.id),
+        coreComplete: part2Scores[item.id] !== undefined,
+        complete: isPart2CourseLessonComplete(item, stored),
+      })),
+    },
+    ...Object.entries(TEXT_COURSES).map(([key, data]) => {
+      const id = Number(key) as TextCourseId;
+      const progress = textCourseProgress[id];
+      return {
+        id, ready: progress.ready,
+        lessons: data.summaries.map((item) => ({
+          id: item.id, available: progress.unlocked.has(item.id),
+          coreComplete: progress.scores[item.id] !== undefined,
+          complete: progress.scores[item.id] !== undefined &&
+            (!hasListening(item.id, id) || isLaterListeningComplete(item.id, id, stored)),
+        })),
+      };
+    }),
+  ], [stored, unlockedLessons, part2Ready, unlockedPart2, part2Scores, textCourseProgress]);
+  const overallProgress = useMemo(() => learningPathProgress(learningCourses), [learningCourses]);
+  const learningStep = useMemo(() => nextLearningStep(learningCourses, {
+    open: !!finalExam && examReadiness(finalExam, lessonSummaries, stored).open,
+    passed: part2Ready,
+  }), [learningCourses, finalExam, stored, part2Ready]);
+  const continueCourse = (learningStep?.course ?? 1) as 1 | 2 | TextCourseId;
+  const continueSummaries = continueCourse === 1 ? lessonSummaries
+    : continueCourse === 2 ? part2Summaries : TEXT_COURSES[continueCourse].summaries;
+  const continueLesson = learningStep && learningStep.kind !== "exam"
+    ? continueSummaries.find((item) => item.id === learningStep.lessonId) : undefined;
+  const continueIsListening = learningStep?.kind === "listening";
+  const continueSession = learningStep?.kind !== "lesson" || !continueLesson ? undefined
+    : continueCourse === 1 ? savedSessions[continueLesson.id]
+      : continueCourse === 2 ? part2Sessions[continueLesson.id]
+        : textCourseProgress[continueCourse].sessions[continueLesson.id];
+  const continueListeningHref = continueLesson ? listeningHref(continueLesson.id, continueCourse) : undefined;
+  const continueExamSession = learningStep?.kind === "exam" && examSession?.examId === "final" &&
+    examSession.order.length === (finalExam ? visibleExamSummary(finalExam).questionCount : 0)
+    ? examSession : undefined;
+
   const selectedSummaries = course === 1 ? lessonSummaries : course === 2 ? part2Summaries : TEXT_COURSES[course].summaries;
   const readingScores = course === 2 ? part2Scores : isTextCourse(course) ? textCourseProgress[course].scores : {};
   const readingSessions = course === 2 ? part2Sessions : isTextCourse(course) ? textCourseProgress[course].sessions : {};
@@ -978,10 +1032,6 @@ export default function Home() {
     ? pendingReadingListeningLesson : undefined;
   const recommendedReadingLesson = recommendedReadingListeningLesson ?? recommendedReadingCoreLesson;
   const homeLesson = course === 1 ? recommendedLesson : recommendedReadingLesson;
-  const homeIsListening = course === 1 ? recommendedListeningLesson !== undefined
-    : recommendedReadingListeningLesson !== undefined;
-  const homeSession = homeIsListening ? undefined : course === 1 ? latestSession : latestReadingSession;
-  const homeListeningHref = homeLesson ? listeningHref(homeLesson.id, course) : undefined;
   const firstCourseCompletedCount = lessonSummaries.filter((item) => isCourseLessonComplete(item, stored)).length;
   const completedLessonCount = course === 1
     ? firstCourseCompletedCount
@@ -1007,12 +1057,16 @@ export default function Home() {
   }
 
   function continueHomeLesson() {
-    if (!homeLesson) return;
-    if (course === 1) {
-      if (latestSession) void restoreSession(latestSession);
-      else void startLesson(homeLesson.id);
-    } else if (course === 2) void startPart2(homeLesson.id);
-    else void startTextCourse(course, homeLesson.id);
+    if (learningStep?.kind === "exam") {
+      setCourse(1);
+      void startExam(learningStep.examId);
+      return;
+    }
+    if (!continueLesson) return;
+    setCourse(continueCourse);
+    if (continueCourse === 1) void startLesson(continueLesson.id);
+    else if (continueCourse === 2) void startPart2(continueLesson.id);
+    else void startTextCourse(continueCourse, continueLesson.id);
   }
 
   async function restoreSession(session: SavedSession) {
@@ -2037,14 +2091,14 @@ export default function Home() {
           <button className="main-menu-close" onClick={closeMainMenu} aria-label="Закрыть меню">×</button>
         </div>
         <div className="home-extras" aria-label="Дополнительно">
-          <HomeDisclosure label="Личный прогресс" detail={`${firstCourseCompletedCount} из ${lessonSummaries.length} уроков завершено · ${formatStudyTime(learningStats.totalSeconds)} в учёбе`} open={showPersonalProgress} controls="personal-progress" onToggle={() => setShowPersonalProgress((value) => !value)}>
+          <HomeDisclosure label="Личный прогресс" detail={`${overallProgress.completed} из ${overallProgress.total} уроков завершено · ${formatStudyTime(learningStats.totalSeconds)} в учёбе`} open={showPersonalProgress} controls="personal-progress" onToggle={() => setShowPersonalProgress((value) => !value)}>
             <div className="progress-heading">
               <h2 id="student-progress-title">Ваш путь в цифрах</h2>
               <small>Статистика обновляется во время занятий</small>
             </div>
             <div className="stats-grid">
               <div><strong>{learningStats.activeDates.length}</strong><span>дней занятий</span></div>
-              <div><strong>{firstCourseCompletedCount}</strong><span>уроков завершено</span></div>
+              <div><strong>{overallProgress.completed}</strong><span>уроков завершено из {overallProgress.total}</span></div>
               <div><strong>{formatStudyTime(learningStats.totalSeconds)}</strong><span>времени в учёбе</span></div>
               <div><strong>{wordProgress.encountered}</strong><span>новых слов пройдено</span></div>
               <div><strong>{wordProgress.mastered}</strong><span>слов выучено</span></div>
@@ -2052,6 +2106,14 @@ export default function Home() {
               <div><strong>{studyStreaks.longest}</strong><span>рекорд без перерыва</span></div>
               <div><strong>{listeningSeconds ? formatStudyTime(listeningSeconds) : "0 мин"}</strong><span>прослушано аудио</span></div>
             </div>
+            <ul className="course-progress-list" aria-label="Прогресс по частям курса">
+              {overallProgress.parts.map((part) => (
+                <li key={part.course}>
+                  <span>Часть {part.course} · {COURSE_NAMES[part.course as keyof typeof COURSE_NAMES]}</span>
+                  <strong>{part.completed} из {part.total} уроков</strong>
+                </li>
+              ))}
+            </ul>
             <div className="backup-tools">
               <span>{sync.email ? `Прогресс синхронизируется · ${sync.email}` : "Прогресс хранится на этом устройстве"}</span>
               <div>
@@ -2646,15 +2708,29 @@ export default function Home() {
             </div>
           )}
 
-          {homeLesson && (
+          {learningStep?.kind === "exam" && finalExam && (
+            <button className="continue-learning" onClick={continueHomeLesson}>
+              <span className="continue-mark">▶</span>
+              <span className="continue-copy">
+                <small>Продолжить обучение</small>
+                <strong>Часть 1 · {finalExam.title}</strong>
+                <em>{continueExamSession
+                  ? `Продолжите с вопроса ${continueExamSession.index + 1} из ${continueExamSession.order.length}`
+                  : "Уроки первой части пройдены · сдайте экзамен, чтобы открыть часть 2"}</em>
+              </span>
+              <span className="continue-action">{continueExamSession ? "Продолжить экзамен" : "Начать экзамен"} <b>→</b></span>
+            </button>
+          )}
+
+          {continueLesson && (
             <div className="continue-learning-group">
-              {homeIsListening ? (
-                <a className="continue-learning" href={homeListeningHref}>
+              {continueIsListening ? (
+                <a className="continue-learning" href={continueListeningHref}>
                   <span className="continue-mark">▶</span>
                   <span className="continue-copy">
                     <small>Продолжить обучение</small>
-                    <strong>{course !== 1 ? `Часть ${course} · ` : ""}Урок {homeLesson.id}. {homeLesson.title}</strong>
-                    <em>{course !== 1 ? "Чтение пройдено" : "Слова и задания пройдены"} · остались текст и аудио</em>
+                    <strong>Часть {continueCourse} · Урок {continueLesson.id}. {continueLesson.title}</strong>
+                    <em>{continueCourse !== 1 ? "Чтение пройдено" : "Слова и задания пройдены"} · остались текст и аудио</em>
                   </span>
                   <span className="continue-action">Текст и аудио <b>→</b></span>
                 </a>
@@ -2664,14 +2740,16 @@ export default function Home() {
               >
                 <span className="continue-mark">▶</span>
                 <span className="continue-copy">
-                  <small>{homeSession ? "Продолжить обучение" : "Следующий шаг"}</small>
-                  <strong>{course !== 1 ? `Часть ${course} · ` : ""}Урок {homeLesson.id}. {homeLesson.title}</strong>
-                  <em>{homeSession ? (course === 1 ? latestSessionPosition || "Продолжите с места остановки" : "Продолжите с места остановки") : "Начните урок — прогресс будет сохранён автоматически"}</em>
-                  {course === 1 && <i><b style={{ width: `${latestSession ? Math.min(latestSessionProgress, 100) : 0}%` }} /></i>}
+                  <small>{continueSession ? "Продолжить обучение" : "Следующий шаг"}</small>
+                  <strong>Часть {continueCourse} · Урок {continueLesson.id}. {continueLesson.title}</strong>
+                  <em>{continueSession ? (continueCourse === 1 && latestSession?.lessonId === continueLesson.id
+                    ? latestSessionPosition || "Продолжите с места остановки" : "Продолжите с места остановки")
+                    : "Начните урок — прогресс будет сохранён автоматически"}</em>
+                  {continueCourse === 1 && <i><b style={{ width: `${continueSession && latestSession?.lessonId === continueLesson.id ? Math.min(latestSessionProgress, 100) : 0}%` }} /></i>}
                 </span>
-                <span className="continue-action">{homeSession ? "Продолжить" : "Начать урок"} <b>→</b></span>
+                <span className="continue-action">{continueSession ? "Продолжить" : "Начать урок"} <b>→</b></span>
               </button>}
-              {homeListeningHref && !homeIsListening && <a className="listening-link continue-listening" href={homeListeningHref}>Текст и аудио</a>}
+              {continueListeningHref && !continueIsListening && <a className="listening-link continue-listening" href={continueListeningHref}>Текст и аудио</a>}
             </div>
           )}
 
