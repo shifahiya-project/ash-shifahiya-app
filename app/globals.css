@@ -457,6 +457,7 @@ h1 em { color: var(--green); font-weight: inherit; }
 .course-progress-list { list-style: none; padding: 0; margin: 18px 0; }
 .course-progress-list li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
 .course-progress-list strong { color: var(--green); font-weight: 500; }
+.lesson-listening-frame { display: block; width: 100%; height: min(75vh, 780px); min-height: 420px; border: 1px solid var(--line); border-radius: 16px; background: var(--cream); }
 .home-view > h1 { margin-bottom: 28px; }
 .home-extras { display: grid; gap: 12px; margin-top: 28px; }
 .home-disclosure { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.72); }

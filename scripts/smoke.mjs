@@ -33,6 +33,9 @@ import { join, normalize } from "node:path";
 import assert from "node:assert/strict";
 import { part11LessonOne } from "../content/part11/lesson-001.ts";
 import { part11LessonNinetyFour } from "../content/part11/lesson-094.ts";
+import { part2LessonOne } from "../content/part2/lesson-01.ts";
+import { part2Questions } from "../content/part2/questions.ts";
+import { part2VocabularyQuestions } from "../content/part2/vocabulary-questions.ts";
 
 const SITE = ".static-site";
 
@@ -109,6 +112,7 @@ const TYPES = {
   ".css": "text/css; charset=utf-8",
   ".svg": "image/svg+xml",
   ".json": "application/json; charset=utf-8",
+  ".mp3": "audio/mpeg",
 };
 
 /**
@@ -179,7 +183,11 @@ try {
     if (message.type() === "error") failures.push(`консоль: ${message.text()}`);
   });
   page.on("requestfailed", (request) => {
-    failures.push(`запрос не выполнен: ${request.url()}`);
+    const reason = request.failure()?.errorText ?? "неизвестная ошибка";
+    // Browsers cancel an unfinished media preload when its frame is removed
+    // or reloaded. Every other failed request is still a broken smoke run.
+    if (request.resourceType() === "media" && reason === "net::ERR_ABORTED") return;
+    failures.push(`запрос не выполнен: ${request.url()} (${reason})`);
   });
   // A 404 is a perfectly successful response, so requestfailed never sees it —
   // and a 404 on the entry chunk is precisely how a page renders and stays
@@ -276,6 +284,115 @@ try {
   await openMainMenu();
   assert.match(await progressToggle.innerText(), /102 из 205 уроков завершено/);
   await page.getByRole("button", { name: "Закрыть меню", exact: true }).click();
+
+  // The second part teaches words in both directions before reading, then
+  // checks the words in context only after the recording has been studied.
+  await page.evaluate((catalog) => {
+    localStorage.clear();
+    for (let id = 1; id <= 100; id += 1) localStorage.setItem(`shifahiya-lesson-${id}`, "10");
+    localStorage.setItem("shifahiya-exams-v1", JSON.stringify({ final: { best: 114, attempts: 1 } }));
+    localStorage.setItem("shifahiya-listening-progress-v1", JSON.stringify(Object.fromEntries(
+      catalog.filter((entry) => !entry.courseId || entry.courseId === 1)
+        .map((entry) => [entry.lessonId, { completed: true, updatedAt: Date.now() }]),
+    )));
+    // A previously completed lesson must remain complete when the flow changes.
+    localStorage.setItem("shifahiya-p2-lesson-105", "7");
+  }, audioCatalog);
+  await page.goto(`${origin}?course=2`, { waitUntil: "networkidle" });
+  await hero.click();
+  const p2Stage = (stage) => page.locator(`[data-part2-stage="${stage}"]`);
+  const p2Session = () => page.evaluate(() => JSON.parse(localStorage.getItem("shifahiya-p2-session-1")));
+  const p2NotFinished = async () => assert.equal(
+    await page.evaluate(() => localStorage.getItem("shifahiya-p2-lesson-1")), null,
+    "part 2 must not finish before the final contextual exercise",
+  );
+  const resumePart2 = async (stage) => {
+    await page.reload({ waitUntil: "networkidle" });
+    assert.match(await hero.innerText(), /Часть 2 · Урок 1\./);
+    await hero.click();
+    await p2Stage(stage).waitFor();
+  };
+  for (let round = 1; round <= 2; round += 1) {
+    for (let index = 0; index < part2LessonOne.words.length; index += 1) {
+      const learning = p2Stage("learn");
+      await learning.waitFor();
+      assert.match(await learning.locator(".repeat-badge").innerText(), new RegExp(`круг ${round} из 2`, "i"));
+      assert.equal((await learning.locator(".arabic-word").textContent()).trim(), part2LessonOne.words[index].arabic);
+      await learning.getByRole("button", { name: "Показать перевод", exact: true }).click();
+      assert.equal(await learning.locator(".word-context").count(), 0, "word cards must not reveal a context sentence");
+      assert.equal((await learning.locator(".translation strong").textContent()).trim(), part2LessonOne.words[index].russian);
+      await learning.getByRole("button", { name: /Запомнил/ }).click();
+      if (round === 2 && index === 0) {
+        const saved = await p2Session();
+        assert.equal(saved.round, 2);
+        assert.equal(saved.index, 1);
+        await resumePart2("learn");
+      }
+    }
+  }
+  await p2Stage("vocabulary").waitFor();
+  await p2NotFinished();
+  const p2Vocabulary = part2VocabularyQuestions(part2LessonOne);
+  const seenDirections = new Set();
+  for (let index = 0; index < p2Vocabulary.length; index += 1) {
+    const question = p2Vocabulary[index];
+    const vocabulary = p2Stage("vocabulary");
+    seenDirections.add(question.promptLang);
+    assert.equal((await vocabulary.locator(".prompt-card strong").textContent()).trim(), question.prompt);
+    await vocabulary.locator(".options").getByRole("button", { name: question.answer, exact: true }).click();
+    if (index === 0) {
+      assert.equal((await p2Session()).vocabularyScore, 1);
+      await resumePart2("vocabulary");
+      assert.equal((await p2Session()).vocabularyScore, 1, "reload must not count the same vocabulary answer twice");
+      assert.equal(await vocabulary.locator(".options button:disabled").count(), question.options.length);
+    }
+    await vocabulary.locator(".feedback button").click();
+  }
+  assert.deepEqual([...seenDirections].sort(), ["ar", "ru"]);
+  await p2Stage("reading").waitFor();
+  await p2NotFinished();
+  assert.equal((await p2Session()).vocabularyScore, p2Vocabulary.length);
+  await p2Stage("reading").getByRole("button", { name: /К тексту и аудио/ }).click();
+  await p2Stage("listening").waitFor();
+  await p2NotFinished();
+  assert.equal(await p2Stage("listening").getByRole("button", { name: /К закреплению/ }).isDisabled(), true);
+  await page.waitForLoadState("networkidle");
+  await resumePart2("listening");
+  const player = page.frameLocator('iframe[title="Текст и аудио урока"]');
+  await page.waitForFunction(() => {
+    const audio = document.querySelector('iframe[title="Текст и аудио урока"]')
+      ?.contentDocument?.querySelector("audio");
+    return audio && audio.readyState >= 1 && audio.error === null;
+  });
+  await player.locator("#complete").click();
+  await page.waitForFunction(() => {
+    const marks = JSON.parse(localStorage.getItem("shifahiya-p2-listening-progress-v1") || "{}");
+    return marks[1]?.completed === true;
+  });
+  await p2Stage("listening").getByRole("button", { name: /К закреплению/ }).click();
+  await p2Stage("context").waitFor();
+  await p2NotFinished();
+  const p2Contexts = part2Questions(part2LessonOne);
+  for (let index = 0; index < p2Contexts.length; index += 1) {
+    const question = p2Contexts[index];
+    const contextual = p2Stage("context");
+    assert.equal((await contextual.locator(".prompt-card strong").textContent()).trim(), question.prompt);
+    await contextual.locator(".options").getByRole("button", { name: question.answer, exact: true }).click();
+    if (index === 0) {
+      assert.equal((await p2Session()).score, 1);
+      await resumePart2("context");
+      assert.equal((await p2Session()).score, 1, "reload must not count the same contextual answer twice");
+    }
+    await contextual.locator(".feedback button").click();
+  }
+  await p2Stage("result").waitFor();
+  assert.equal(await p2Session(), null);
+  assert.equal(await page.evaluate(() => Number(localStorage.getItem("shifahiya-p2-lesson-1"))), p2Contexts.length);
+  assert.equal(await page.evaluate(() => localStorage.getItem("shifahiya-p2-lesson-105")), "7");
+  await page.getByRole("button", { name: "На главную", exact: true }).click();
+  assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
+  console.log("Вторая часть: два круга слов, перевод в обе стороны, чтение, аудио, контекст в конце и возобновление проверены.");
+  await page.goto(origin, { waitUntil: "networkidle" });
 
   // Lesson 82 used to enter a trailing empty deck instead of its second-half
   // questions. Check both finishing the last card and resuming that stuck deck.

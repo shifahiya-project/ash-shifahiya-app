@@ -6,6 +6,7 @@ import type {
   ExamSession,
   LearningStats,
   ListeningProgress,
+  Part2Session,
   Progress,
   ReadingCourseSession,
   ReadingProgress,
@@ -213,6 +214,36 @@ function mergeReadingSessions(
   return merged;
 }
 
+/** Second-course phases have different index ranges, so an index alone cannot settle a tie. */
+function mergePart2Sessions(mine: Record<number, Part2Session>, theirs: Record<number, Part2Session>) {
+  const phases = { learn: 0, vocabulary: 1, reading: 2, listening: 3, practice: 4 };
+  const rank = (session: Part2Session) => [
+    session.updatedAt ?? 0,
+    session.flowVersion ?? 1,
+    session.flowVersion === 2 ? phases[session.view] : ({ learn: 0, practice: 1, reading: 2 }[session.view as ReadingCourseSession["view"]] ?? 0),
+    session.view === "learn" ? session.round ?? 1 : 0,
+    session.index,
+    Number(!!session.answered),
+    session.vocabularyScore ?? 0,
+    session.score,
+    // A deterministic final tie-break keeps same-millisecond merges commutative.
+    JSON.stringify(session),
+  ];
+  const merged = { ...mine };
+  for (const [id, session] of Object.entries(theirs)) {
+    const key = Number(id);
+    const existing = merged[key];
+    if (!existing) {
+      merged[key] = session;
+      continue;
+    }
+    const [ours, incoming] = [rank(existing), rank(session)];
+    const difference = ours.findIndex((value, index) => value !== incoming[index]);
+    if (difference !== -1 && incoming[difference] > ours[difference]) merged[key] = session;
+  }
+  return merged;
+}
+
 function mergeStats(mine: LearningStats, theirs: LearningStats): LearningStats {
   return {
     // A day spent studying on either device is a day studied.
@@ -251,7 +282,7 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
     exams: mergeExams(mine.exams ?? {}, theirs.exams ?? {}),
     examSession: laterExamSession(mine.examSession ?? null, theirs.examSession ?? null),
     part2Scores: mergeScores(mine.part2Scores ?? {}, theirs.part2Scores ?? {}),
-    part2Sessions: mergeReadingSessions(mine.part2Sessions ?? {}, theirs.part2Sessions ?? {}),
+    part2Sessions: mergePart2Sessions(mine.part2Sessions ?? {}, theirs.part2Sessions ?? {}),
     part3Scores: mergeScores(mine.part3Scores ?? {}, theirs.part3Scores ?? {}),
     part3Sessions: mergeReadingSessions(mine.part3Sessions ?? {}, theirs.part3Sessions ?? {}),
     part4Scores: mergeScores(mine.part4Scores ?? {}, theirs.part4Scores ?? {}),
