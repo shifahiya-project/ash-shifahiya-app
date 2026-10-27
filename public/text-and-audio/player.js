@@ -28,6 +28,9 @@ import { createListeningPlayback } from './playback.js?v=1';
   const context = () => ({ courseId: courseId(), lessonId: lesson.lessonId, key: key() });
   const status = get('status');
   const embedded = window.LISTENING_LESSON;
+  // Inside a course lesson, navigation stays with the parent lesson screen.
+  const inLesson = !embedded && new URLSearchParams(location.search).get('embedded') === '1';
+  if (inLesson) document.querySelector('nav').hidden = true;
   const rates = [0.5, 0.75, 0.9, 1, 1.25, 1.5, 2];
   const progressKey = (id = courseId()) => `shifahiya-${prefix(id)}listening-progress-v1`;
   async function fetchText(url) {
@@ -143,7 +146,7 @@ import { createListeningPlayback } from './playback.js?v=1';
       .find(entry => (entry.courseId || 1) !== courseId() || entry.lessonId !== lesson.lessonId);
     get('review-next').hidden = !reviewMode || !next;
     if (next) {
-      get('review-next').href = `./text-and-audio.html?v=9&lesson=${next.lessonId}&course=${next.courseId}&review=1`;
+      get('review-next').href = `./text-and-audio.html?v=10&lesson=${next.lessonId}&course=${next.courseId}&review=1`;
       get('review-next').textContent = `Следующее аудио: ${next.courseTitle || `Часть ${next.courseId}`} · Урок ${next.lessonId}`;
     }
   }
@@ -330,7 +333,7 @@ import { createListeningPlayback } from './playback.js?v=1';
         reader.readAsDataURL(blob);
       });
       const [html, css, script] = await Promise.all([
-        fetchText('./text-and-audio.html?v=9'), fetchText('./text-and-audio/player.css?v=8'), fetchText('./text-and-audio/player.js?v=9'),
+        fetchText('./text-and-audio.html?v=10'), fetchText('./text-and-audio/player.css?v=8'), fetchText('./text-and-audio/player.js?v=10'),
       ]);
       const doc = new DOMParser().parseFromString(html, 'text/html');
       doc.querySelector('link[rel="stylesheet"]').remove();

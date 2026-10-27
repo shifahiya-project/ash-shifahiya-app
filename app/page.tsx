@@ -13,6 +13,8 @@ import { examSummaries, loadExam } from "../content/exams";
 import { part2Summaries } from "../content/part2/manifest";
 import { loadPart2Lesson, loadPart2Lessons } from "../content/part2/lessons";
 import { BLANK, part2Questions } from "../content/part2/questions";
+import { part2VocabularyQuestions } from "../content/part2/vocabulary-questions";
+import { upgradePart2Session } from "./part2-session";
 import { part2CardId, part2LessonIdsInCards, unlockedPart2Ids } from "./part2-access";
 import { part3Summaries } from "../content/part3/manifest";
 import { loadPart3Lesson, loadPart3Lessons } from "../content/part3/lessons";
@@ -58,6 +60,7 @@ import type {
 } from "../content/types";
 import { cardPhaseProgress } from "./lesson-progress";
 import { homeLessonWindow } from "./home-lesson-window";
+import { learningPathProgress, nextLearningStep, type LearningCourse } from "./learning-path";
 import { normalizeListeningProgress } from "./listening-progress";
 import { listeningTimeSeconds, normalizeListeningTime } from "./listening-time";
 import { nextPopulatedDeck } from "./lesson-navigation";
@@ -86,6 +89,7 @@ import {
   progressStore,
   type CardProgress,
   type Progress,
+  type Part2Session,
   type SavedSession,
 } from "./progress-store";
 import { dueReadingIds, nextReadingProgress } from "./reading-review";
@@ -555,7 +559,7 @@ export default function Home() {
   const [view, setView] = useState<
     | "home" | "learn" | "practice" | "grammar" | "reading" | "review" | "result"
     | "exam" | "exam-result"
-    | "p2-learn" | "p2-practice" | "p2-reading" | "p2-result"
+    | "p2-learn" | "p2-vocabulary" | "p2-practice" | "p2-reading" | "p2-listening" | "p2-result"
     // The third and fourth courses run a lesson the same way, so one set of
     // screens serves both and the course itself is held beside them.
     | "text-learn" | "text-practice" | "text-reading" | "text-result"
@@ -626,6 +630,9 @@ export default function Home() {
       courseHeading.current?.scrollIntoView({ block: "start" });
     });
   }
+  const [p2Round, setP2Round] = useState<1 | 2>(1);
+  const [p2VocabularyScore, setP2VocabularyScore] = useState(0);
+  const [p2ContextIndex, setP2ContextIndex] = useState(0);
   const [part2, setPart2] = useState<Part2Lesson | null>(null);
   /** Which text course is on screen, and the lesson of it that is open. */
   const [textCourseId, setTextCourseId] = useState<TextCourseId>(3);
@@ -760,8 +767,10 @@ export default function Home() {
   );
   const p2Words = part2?.words ?? [];
   const p2Tasks = useMemo(() => (part2 ? part2Questions(part2) : []), [part2]);
+  const p2VocabularyTasks = useMemo(() => (part2 ? part2VocabularyQuestions(part2) : []), [part2]);
+  const p2ActiveTasks = view === "p2-vocabulary" ? p2VocabularyTasks : p2Tasks;
   const p2Word = p2Words[stepIndex];
-  const p2Task = p2Tasks[stepIndex];
+  const p2Task = p2ActiveTasks[stepIndex];
   const part3Scores = stored.part3Scores;
   const part3Sessions = stored.part3Sessions;
   const part4Scores = stored.part4Scores;
@@ -957,6 +966,59 @@ export default function Home() {
         ) * 70
     : 0;
 
+  // The hero and personal totals follow the whole course, regardless of which
+  // part the learner last inspected in the menu or opened through a URL.
+  const learningCourses = useMemo<LearningCourse[]>(() => [
+    {
+      id: 1, ready: true,
+      lessons: lessonSummaries.map((item) => ({
+        id: item.id, available: unlockedLessons.has(item.id),
+        coreComplete: isLessonComplete(item, stored),
+        complete: isCourseLessonComplete(item, stored),
+      })),
+    },
+    {
+      id: 2, ready: part2Ready,
+      lessons: part2Summaries.map((item) => ({
+        id: item.id, available: unlockedPart2.has(item.id),
+        coreComplete: part2Scores[item.id] !== undefined,
+        complete: isPart2CourseLessonComplete(item, stored),
+      })),
+    },
+    ...Object.entries(TEXT_COURSES).map(([key, data]) => {
+      const id = Number(key) as TextCourseId;
+      const progress = textCourseProgress[id];
+      return {
+        id, ready: progress.ready,
+        lessons: data.summaries.map((item) => ({
+          id: item.id, available: progress.unlocked.has(item.id),
+          coreComplete: progress.scores[item.id] !== undefined,
+          complete: progress.scores[item.id] !== undefined &&
+            (!hasListening(item.id, id) || isLaterListeningComplete(item.id, id, stored)),
+        })),
+      };
+    }),
+  ], [stored, unlockedLessons, part2Ready, unlockedPart2, part2Scores, textCourseProgress]);
+  const overallProgress = useMemo(() => learningPathProgress(learningCourses), [learningCourses]);
+  const learningStep = useMemo(() => nextLearningStep(learningCourses, {
+    open: !!finalExam && examReadiness(finalExam, lessonSummaries, stored).open,
+    passed: part2Ready,
+  }), [learningCourses, finalExam, stored, part2Ready]);
+  const continueCourse = (learningStep?.course ?? 1) as 1 | 2 | TextCourseId;
+  const continueSummaries = continueCourse === 1 ? lessonSummaries
+    : continueCourse === 2 ? part2Summaries : TEXT_COURSES[continueCourse].summaries;
+  const continueLesson = learningStep && learningStep.kind !== "exam"
+    ? continueSummaries.find((item) => item.id === learningStep.lessonId) : undefined;
+  const continueIsListening = learningStep?.kind === "listening";
+  const continueSession = learningStep?.kind !== "lesson" || !continueLesson ? undefined
+    : continueCourse === 1 ? savedSessions[continueLesson.id]
+      : continueCourse === 2 ? part2Sessions[continueLesson.id]
+        : textCourseProgress[continueCourse].sessions[continueLesson.id];
+  const continueListeningHref = continueLesson ? listeningHref(continueLesson.id, continueCourse) : undefined;
+  const continueExamSession = learningStep?.kind === "exam" && examSession?.examId === "final" &&
+    examSession.order.length === (finalExam ? visibleExamSummary(finalExam).questionCount : 0)
+    ? examSession : undefined;
+
   const selectedSummaries = course === 1 ? lessonSummaries : course === 2 ? part2Summaries : TEXT_COURSES[course].summaries;
   const readingScores = course === 2 ? part2Scores : isTextCourse(course) ? textCourseProgress[course].scores : {};
   const readingSessions = course === 2 ? part2Sessions : isTextCourse(course) ? textCourseProgress[course].sessions : {};
@@ -978,10 +1040,6 @@ export default function Home() {
     ? pendingReadingListeningLesson : undefined;
   const recommendedReadingLesson = recommendedReadingListeningLesson ?? recommendedReadingCoreLesson;
   const homeLesson = course === 1 ? recommendedLesson : recommendedReadingLesson;
-  const homeIsListening = course === 1 ? recommendedListeningLesson !== undefined
-    : recommendedReadingListeningLesson !== undefined;
-  const homeSession = homeIsListening ? undefined : course === 1 ? latestSession : latestReadingSession;
-  const homeListeningHref = homeLesson ? listeningHref(homeLesson.id, course) : undefined;
   const firstCourseCompletedCount = lessonSummaries.filter((item) => isCourseLessonComplete(item, stored)).length;
   const completedLessonCount = course === 1
     ? firstCourseCompletedCount
@@ -1007,12 +1065,16 @@ export default function Home() {
   }
 
   function continueHomeLesson() {
-    if (!homeLesson) return;
-    if (course === 1) {
-      if (latestSession) void restoreSession(latestSession);
-      else void startLesson(homeLesson.id);
-    } else if (course === 2) void startPart2(homeLesson.id);
-    else void startTextCourse(course, homeLesson.id);
+    if (learningStep?.kind === "exam") {
+      setCourse(1);
+      void startExam(learningStep.examId);
+      return;
+    }
+    if (!continueLesson) return;
+    setCourse(continueCourse);
+    if (continueCourse === 1) void startLesson(continueLesson.id);
+    else if (continueCourse === 2) void startPart2(continueLesson.id);
+    else void startTextCourse(continueCourse, continueLesson.id);
   }
 
   async function restoreSession(session: SavedSession) {
@@ -1330,7 +1392,7 @@ export default function Home() {
   }, [view, lessonId, partIndex, ruleIndex, deckIndex, round, cardIndex, questionIndex, score, grammarScore, mistakes, lesson, selected, selectedCorrect, currentQuestion]);
 
   useEffect(() => {
-    if (!["learn", "practice", "grammar", "reading", "review", "exam", "p2-learn", "p2-practice", "p2-reading", "text-learn", "text-practice", "text-reading"].includes(view)) return;
+    if (!["learn", "practice", "grammar", "reading", "review", "exam", "p2-learn", "p2-vocabulary", "p2-practice", "p2-reading", "text-learn", "text-practice", "text-reading"].includes(view)) return;
     const recordActivity = (seconds: number) => {
       if (document.visibilityState !== "visible") return;
       progressStore.updateStats((items) => ({
@@ -1348,9 +1410,9 @@ export default function Home() {
 
   const grammarRules = lesson?.grammar?.rules ?? [];
   const progress = view === "p2-learn"
-    ? (stepIndex / Math.max(p2Words.length, 1)) * 100
-    : view === "p2-practice"
-    ? ((stepIndex + (selected ? 1 : 0)) / Math.max(p2Tasks.length, 1)) * 100
+    ? ((stepIndex + (p2Round - 1) * p2Words.length) / Math.max(p2Words.length * 2, 1)) * 100
+    : view === "p2-practice" || view === "p2-vocabulary"
+    ? ((stepIndex + (selected ? 1 : 0)) / Math.max(p2ActiveTasks.length, 1)) * 100
     : view === "text-learn"
     ? (stepIndex / Math.max(textWords.length, 1)) * 100
     : view === "text-practice"
@@ -1481,33 +1543,49 @@ export default function Home() {
     setBackupMessage("Текст прочитан — вернётся на повторение.");
   }
 
-  /**
-   * Opens a lesson of the second course. It runs in three passes — the new
-   * words, one question on each, then the text they were taken from — and the
-   * position is remembered after every step.
-   */
+  /** Open or resume the second course's words → translation → text → audio → context sequence. */
   async function startPart2(id: number, from: "start" | "resume" = "resume") {
     if (!unlockedPart2.has(id)) return;
     const lesson = await loadPart2Lesson(id);
+    const contextTotal = part2Questions(lesson).length;
+    const parked = from === "resume" ? part2Sessions[id] : undefined;
+    let session: Part2Session = parked ? upgradePart2Session(parked, contextTotal) : {
+      lessonId: id, view: lesson.words.length ? "learn" : "reading", index: 0,
+      score: 0, mistakes: [], flowVersion: 2, round: 1, vocabularyScore: 0, contextIndex: 0,
+    };
+    if (session.view === "listening" && (!hasListening(id, 2) || isLaterListeningComplete(id, 2, stored))) {
+      session = { ...session, view: "practice", index: session.contextIndex ?? 0, answered: undefined };
+    }
     setOpenPart2((items) => ({ ...items, [id]: lesson }));
     setPart2(lesson);
-    setSelected(null);
+    setSelected(session.answered?.option ?? null);
     setRevealed(false);
     setStepOpen([]);
-
-    const parked = from === "resume" ? part2Sessions[id] : undefined;
-    setStepIndex(parked?.index ?? 0);
-    setStepScore(parked?.score ?? 0);
-    setStepMistakes(parked?.mistakes ?? []);
-    setView(parked ? `p2-${parked.view}` as "p2-learn" | "p2-practice" | "p2-reading" : "p2-learn");
+    setP2Round(session.round ?? 1);
+    setP2VocabularyScore(session.vocabularyScore ?? 0);
+    setP2ContextIndex(session.contextIndex ?? 0);
+    setStepIndex(session.index);
+    setStepScore(session.score);
+    setStepMistakes(session.mistakes);
+    if (session.view === "practice" && session.index >= contextTotal) {
+      progressStore.finishPart2Lesson(id, session.score);
+      setView("p2-result");
+    } else {
+      progressStore.savePart2Session(session);
+      setView(`p2-${session.view}`);
+    }
   }
 
-  function savePart2(view: "learn" | "practice" | "reading", index: number, score = stepScore, mistakes = stepMistakes) {
+  function savePart2(view: Part2Session["view"], index: number, changes: Partial<Part2Session> = {}) {
     if (!part2) return;
-    progressStore.savePart2Session({ lessonId: part2.id, view, index, score, mistakes });
+    progressStore.savePart2Session({
+      lessonId: part2.id, view, index, score: stepScore, mistakes: stepMistakes,
+      flowVersion: 2, round: p2Round, vocabularyScore: p2VocabularyScore,
+      contextIndex: p2ContextIndex, ...changes,
+    });
   }
 
-  /** A word of the second course enters the same boxes the first course uses. */
+  /** A word enters the shared review boxes without changing its persistent address. */
   function ratePart2Card(remembered: boolean) {
     if (!part2) return;
     const forward = part2CardId(part2.id, stepIndex, "ar-ru");
@@ -1516,51 +1594,77 @@ export default function Home() {
       ...items,
       [forward]: nextCardProgress(items[forward], remembered),
       [reverse]: items[reverse] ?? {
-        box: 0,
-        nextReview: localDate(),
-        lastReviewed: "",
-        correct: 0,
-        wrong: 0,
+        box: 0, nextReview: localDate(), lastReviewed: "", correct: 0, wrong: 0,
       },
     }));
-
     setRevealed(false);
     if (stepIndex < p2Words.length - 1) {
       setStepIndex(stepIndex + 1);
       savePart2("learn", stepIndex + 1);
-      return;
+    } else if (p2Round === 1) {
+      setP2Round(2);
+      setStepIndex(0);
+      savePart2("learn", 0, { round: 2 });
+    } else {
+      setStepIndex(0);
+      savePart2("vocabulary", 0);
+      setView("p2-vocabulary");
     }
-    setStepIndex(0);
-    savePart2("practice", 0);
-    setView("p2-practice");
   }
 
   function answerPart2(option: string) {
     if (!p2Task || selected) return;
+    const correct = option === p2Task.answer;
+    const vocabulary = view === "p2-vocabulary";
+    const score = stepScore + (!vocabulary && correct ? 1 : 0);
+    const vocabularyScore = p2VocabularyScore + (vocabulary && correct ? 1 : 0);
+    const mistakes = correct ? stepMistakes : [...stepMistakes, p2Task.prompt];
     setSelected(option);
-    if (option === p2Task.answer) setStepScore((value) => value + 1);
-    else setStepMistakes((items) => [...items, p2Task.prompt]);
+    setStepScore(score);
+    setP2VocabularyScore(vocabularyScore);
+    setStepMistakes(mistakes);
+    savePart2(vocabulary ? "vocabulary" : "practice", stepIndex, {
+      score, vocabularyScore, mistakes, answered: { option, correct },
+    });
   }
 
   function nextPart2Task() {
-    if (!p2Task) return;
-    const right = selected === p2Task.answer;
-    const score = stepScore;
-    const mistakes = stepMistakes;
+    if (!p2Task || !selected) return;
+    const vocabulary = view === "p2-vocabulary";
     setSelected(null);
-
-    if (stepIndex < p2Tasks.length - 1) {
+    if (stepIndex < p2ActiveTasks.length - 1) {
       setStepIndex(stepIndex + 1);
-      savePart2("practice", stepIndex + 1, score, mistakes);
-      return;
+      savePart2(vocabulary ? "vocabulary" : "practice", stepIndex + 1);
+    } else if (vocabulary) {
+      setStepIndex(0);
+      setStepOpen([]);
+      savePart2("reading", 0);
+      setView("p2-reading");
+    } else {
+      finishPart2();
     }
-    setStepOpen([]);
-    savePart2("reading", 0, score, mistakes);
-    setView("p2-reading");
-    void right;
   }
 
-  /** The text is the point of the lesson, so finishing it finishes the lesson. */
+  function beginPart2Context() {
+    if (p2ContextIndex >= p2Tasks.length) {
+      finishPart2();
+      return;
+    }
+    setStepIndex(p2ContextIndex);
+    setSelected(null);
+    savePart2("practice", p2ContextIndex);
+    setView("p2-practice");
+  }
+
+  function finishPart2Reading() {
+    if (!part2) return;
+    if (hasListening(part2.id, 2) && !isLaterListeningComplete(part2.id, 2, stored)) {
+      savePart2("listening", 0);
+      setView("p2-listening");
+    } else beginPart2Context();
+  }
+
+  /** Only the final context paper finishes a new lesson and opens the next one. */
   function finishPart2() {
     if (!part2) return;
     progressStore.finishPart2Lesson(part2.id, stepScore);
@@ -1568,12 +1672,9 @@ export default function Home() {
   }
 
   /**
-   * Opens a lesson of a text course. Both of them run it in the same three
-   * passes as the second course — the new words, one question on each, then
-   * the text — and the position is remembered after every step. What differs
-   * from the second course is the middle pass: these glossaries have no example
-   * sentences, so the question asks a word's meaning rather than hiding it
-   * inside a phrase.
+   * Opens a lesson of a text course: new words, one meaning question per word,
+   * then reading. These courses keep their existing three-step sequence and
+   * remember the position after every step.
    */
   async function startTextCourse(
     courseId: TextCourseId,
@@ -2037,14 +2138,14 @@ export default function Home() {
           <button className="main-menu-close" onClick={closeMainMenu} aria-label="Закрыть меню">×</button>
         </div>
         <div className="home-extras" aria-label="Дополнительно">
-          <HomeDisclosure label="Личный прогресс" detail={`${firstCourseCompletedCount} из ${lessonSummaries.length} уроков завершено · ${formatStudyTime(learningStats.totalSeconds)} в учёбе`} open={showPersonalProgress} controls="personal-progress" onToggle={() => setShowPersonalProgress((value) => !value)}>
+          <HomeDisclosure label="Личный прогресс" detail={`${overallProgress.completed} из ${overallProgress.total} уроков завершено · ${formatStudyTime(learningStats.totalSeconds)} в учёбе`} open={showPersonalProgress} controls="personal-progress" onToggle={() => setShowPersonalProgress((value) => !value)}>
             <div className="progress-heading">
               <h2 id="student-progress-title">Ваш путь в цифрах</h2>
               <small>Статистика обновляется во время занятий</small>
             </div>
             <div className="stats-grid">
               <div><strong>{learningStats.activeDates.length}</strong><span>дней занятий</span></div>
-              <div><strong>{firstCourseCompletedCount}</strong><span>уроков завершено</span></div>
+              <div><strong>{overallProgress.completed}</strong><span>уроков завершено из {overallProgress.total}</span></div>
               <div><strong>{formatStudyTime(learningStats.totalSeconds)}</strong><span>времени в учёбе</span></div>
               <div><strong>{wordProgress.encountered}</strong><span>новых слов пройдено</span></div>
               <div><strong>{wordProgress.mastered}</strong><span>слов выучено</span></div>
@@ -2052,6 +2153,14 @@ export default function Home() {
               <div><strong>{studyStreaks.longest}</strong><span>рекорд без перерыва</span></div>
               <div><strong>{listeningSeconds ? formatStudyTime(listeningSeconds) : "0 мин"}</strong><span>прослушано аудио</span></div>
             </div>
+            <ul className="course-progress-list" aria-label="Прогресс по частям курса">
+              {overallProgress.parts.map((part) => (
+                <li key={part.course}>
+                  <span>Часть {part.course} · {COURSE_NAMES[part.course as keyof typeof COURSE_NAMES]}</span>
+                  <strong>{part.completed} из {part.total} уроков</strong>
+                </li>
+              ))}
+            </ul>
             <div className="backup-tools">
               <span>{sync.email ? `Прогресс синхронизируется · ${sync.email}` : "Прогресс хранится на этом устройстве"}</span>
               <div>
@@ -2556,21 +2665,22 @@ export default function Home() {
           {view === "exam" && <span className="part-badge">Экзамен</span>}
           {(view.startsWith("p2-") || view.startsWith("text-")) && (
             <span className="part-badge">
-              {view.endsWith("-learn") ? "Слова" : view.endsWith("-practice") ? "Задания" : "Чтение"}
+              {view.endsWith("-learn") ? "Слова" : view === "p2-listening" ? "Текст и аудио"
+                : view.endsWith("-practice") || view === "p2-vocabulary" ? "Задания" : "Чтение"}
             </span>
           )}
-          {view !== "reading" && view !== "p2-reading" && view !== "text-reading" && (
+          {view !== "reading" && view !== "p2-reading" && view !== "p2-listening" && view !== "text-reading" && (
           <div className="track"><span style={{ width: `${Math.min(progress, 100)}%` }} /></div>
           )}
           <span className="counter">
-            {view === "p2-reading"
+            {view === "p2-listening" ? "Шаг 4 из 5" : view === "p2-reading"
               ? `${plural(part2?.stories.length ?? 0, "рассказ", "рассказа", "рассказов")}`
               : view === "text-reading"
                 ? `${plural(textLesson?.fragments.length ?? 0, "фрагмент", "фрагмента", "фрагментов")}`
               : view === "p2-learn"
                 ? `${stepIndex + 1}/${p2Words.length}`
-                : view === "p2-practice"
-                  ? `${stepIndex + 1}/${p2Tasks.length}`
+                : view === "p2-practice" || view === "p2-vocabulary"
+                  ? `${stepIndex + 1}/${p2ActiveTasks.length}`
                   : view === "text-learn"
                     ? `${stepIndex + 1}/${textWords.length}`
                     : view === "text-practice"
@@ -2646,15 +2756,29 @@ export default function Home() {
             </div>
           )}
 
-          {homeLesson && (
+          {learningStep?.kind === "exam" && finalExam && (
+            <button className="continue-learning" onClick={continueHomeLesson}>
+              <span className="continue-mark">▶</span>
+              <span className="continue-copy">
+                <small>Продолжить обучение</small>
+                <strong>Часть 1 · {finalExam.title}</strong>
+                <em>{continueExamSession
+                  ? `Продолжите с вопроса ${continueExamSession.index + 1} из ${continueExamSession.order.length}`
+                  : "Уроки первой части пройдены · сдайте экзамен, чтобы открыть часть 2"}</em>
+              </span>
+              <span className="continue-action">{continueExamSession ? "Продолжить экзамен" : "Начать экзамен"} <b>→</b></span>
+            </button>
+          )}
+
+          {continueLesson && (
             <div className="continue-learning-group">
-              {homeIsListening ? (
-                <a className="continue-learning" href={homeListeningHref}>
+              {continueIsListening ? (
+                <a className="continue-learning" href={continueListeningHref}>
                   <span className="continue-mark">▶</span>
                   <span className="continue-copy">
                     <small>Продолжить обучение</small>
-                    <strong>{course !== 1 ? `Часть ${course} · ` : ""}Урок {homeLesson.id}. {homeLesson.title}</strong>
-                    <em>{course !== 1 ? "Чтение пройдено" : "Слова и задания пройдены"} · остались текст и аудио</em>
+                    <strong>Часть {continueCourse} · Урок {continueLesson.id}. {continueLesson.title}</strong>
+                    <em>{continueCourse !== 1 ? "Чтение пройдено" : "Слова и задания пройдены"} · остались текст и аудио</em>
                   </span>
                   <span className="continue-action">Текст и аудио <b>→</b></span>
                 </a>
@@ -2664,14 +2788,16 @@ export default function Home() {
               >
                 <span className="continue-mark">▶</span>
                 <span className="continue-copy">
-                  <small>{homeSession ? "Продолжить обучение" : "Следующий шаг"}</small>
-                  <strong>{course !== 1 ? `Часть ${course} · ` : ""}Урок {homeLesson.id}. {homeLesson.title}</strong>
-                  <em>{homeSession ? (course === 1 ? latestSessionPosition || "Продолжите с места остановки" : "Продолжите с места остановки") : "Начните урок — прогресс будет сохранён автоматически"}</em>
-                  {course === 1 && <i><b style={{ width: `${latestSession ? Math.min(latestSessionProgress, 100) : 0}%` }} /></i>}
+                  <small>{continueSession ? "Продолжить обучение" : "Следующий шаг"}</small>
+                  <strong>Часть {continueCourse} · Урок {continueLesson.id}. {continueLesson.title}</strong>
+                  <em>{continueSession ? (continueCourse === 1 && latestSession?.lessonId === continueLesson.id
+                    ? latestSessionPosition || "Продолжите с места остановки" : "Продолжите с места остановки")
+                    : "Начните урок — прогресс будет сохранён автоматически"}</em>
+                  {continueCourse === 1 && <i><b style={{ width: `${continueSession && latestSession?.lessonId === continueLesson.id ? Math.min(latestSessionProgress, 100) : 0}%` }} /></i>}
                 </span>
-                <span className="continue-action">{homeSession ? "Продолжить" : "Начать урок"} <b>→</b></span>
+                <span className="continue-action">{continueSession ? "Продолжить" : "Начать урок"} <b>→</b></span>
               </button>}
-              {homeListeningHref && !homeIsListening && <a className="listening-link continue-listening" href={homeListeningHref}>Текст и аудио</a>}
+              {continueListeningHref && !continueIsListening && <a className="listening-link continue-listening" href={continueListeningHref}>Текст и аудио</a>}
             </div>
           )}
 
@@ -2813,12 +2939,12 @@ export default function Home() {
       )}
 
       {view === "p2-learn" && part2 && p2Word && (
-        <section className="study-view">
+        <section className="study-view" data-part2-stage="learn">
           <div className="stage-label"><span>1</span>Новые слова урока</div>
-          <div className="repeat-badge active">{part2.title} · слово {stepIndex + 1} из {p2Words.length}</div>
+          <div className="repeat-badge active">{part2.title} · круг {p2Round} из 2 · слово {stepIndex + 1} из {p2Words.length}</div>
           <p className="instruction">
             {revealed
-              ? "Прочитайте фразу — в ней это слово вам и встретится"
+              ? "Прочитайте перевод и вспомните значение слова"
               : "Познакомьтесь со словом и попробуйте его произнести"}
           </p>
           <article className={`word-card ${revealed ? "is-revealed" : ""}`}>
@@ -2829,10 +2955,6 @@ export default function Home() {
             {revealed ? (
               <div className="translation">
                 <strong>{p2Word.russian}</strong>
-                <div className="word-context">
-                  <span lang="ar" dir="rtl">{p2Word.contextArabic}</span>
-                  <small>{p2Word.contextRussian}</small>
-                </div>
               </div>
             ) : <div className="hidden-translation">перевод скрыт</div>}
           </article>
@@ -2849,18 +2971,19 @@ export default function Home() {
         </section>
       )}
 
-      {view === "p2-practice" && part2 && p2Task && (
-        <section className="practice-view">
-          <div className="stage-label"><span>2</span>Узнаём слово в тексте</div>
-          <div className="repeat-badge active">{part2.title} · задание {stepIndex + 1} из {p2Tasks.length}</div>
+      {(view === "p2-vocabulary" || view === "p2-practice") && part2 && p2Task && (
+        <section className="practice-view" data-part2-stage={view === "p2-vocabulary" ? "vocabulary" : "context"}>
+          <div className="stage-label"><span>{view === "p2-vocabulary" ? 2 : 5}</span>{view === "p2-vocabulary" ? "Закрепляем новые слова" : "Закрепляем слова в предложениях"}</div>
+          <div className="repeat-badge active">{part2.title} · задание {stepIndex + 1} из {p2ActiveTasks.length}</div>
           <p className="instruction">
-            {p2Task.prompt.includes(BLANK)
+            {view === "p2-vocabulary" ? (p2Task.promptLang === "ar" ? "Вспомните перевод на русский" : "Вспомните слово на арабском")
+              : p2Task.prompt.includes(BLANK)
               ? "Какое слово стояло на месте пропуска"
               : "Что говорит эта фраза"}
           </p>
           <div className="prompt-card">
-            <span>Арабский</span>
-            <strong className="arabic-prompt" dir={promptDirection(p2Task.prompt, p2Task.promptLang)}>
+            <span>{p2Task.promptLang === "ar" ? "Арабский" : "Русский"}</span>
+            <strong className={p2Task.promptLang === "ar" ? "arabic-prompt" : "russian-prompt"} dir={promptDirection(p2Task.prompt, p2Task.promptLang)}>
               {p2Task.prompt}
             </strong>
           </div>
@@ -2884,7 +3007,7 @@ export default function Home() {
                 <p>{p2Task.explanation}</p>
               </div>
               <button className="primary" onClick={nextPart2Task}>
-                {stepIndex === p2Tasks.length - 1 ? "К чтению" : "Дальше"} <span>→</span>
+                {stepIndex === p2ActiveTasks.length - 1 ? (view === "p2-vocabulary" ? "К чтению" : "Завершить урок") : "Дальше"} <span>→</span>
               </button>
             </div>
           )}
@@ -2892,7 +3015,7 @@ export default function Home() {
       )}
 
       {view === "p2-reading" && part2 && (
-        <section className="study-view reading-view">
+        <section className="study-view reading-view" data-part2-stage="reading">
           <div className="stage-label"><span>3</span>Чтение · {part2.book}</div>
           <p className="instruction">
             Читайте вслух целиком. Если предложение не сложилось — нажмите на него, и появится перевод.
@@ -2926,16 +3049,30 @@ export default function Home() {
           ))}
           <div className="study-actions">
             <button className="secondary" onClick={() => setView("home")}>Вернуться позже</button>
-            <button className="primary" onClick={finishPart2}>Урок пройден <span>✓</span></button>
+            <button className="primary" onClick={finishPart2Reading}>{hasListening(part2.id, 2) && !isLaterListeningComplete(part2.id, 2, stored) ? "К тексту и аудио" : "К закреплению"} <span>→</span></button>
+          </div>
+        </section>
+      )}
+
+      {view === "p2-listening" && part2 && (
+        <section className="study-view reading-view" data-part2-stage="listening">
+          <div className="stage-label"><span>4</span>Текст и аудио · урок {part2.id}</div>
+          <p className="instruction">Прослушайте запись с текстом и отметьте её как пройденную. Затем закрепите слова в предложениях.</p>
+          <iframe className="lesson-listening-frame" title="Текст и аудио урока"
+            src={`${listeningHref(part2.id, 2)}&embedded=1`} />
+          <div className="study-actions">
+            <button className="secondary" onClick={() => setView("home")}>Вернуться позже</button>
+            <button className="primary" disabled={!isLaterListeningComplete(part2.id, 2, stored)} onClick={beginPart2Context}>К закреплению <span>→</span></button>
           </div>
         </section>
       )}
 
       {view === "p2-result" && part2 && (
-        <section className="study-view result-view">
+        <section className="study-view result-view" data-part2-stage="result">
           <div className="result-mark">✓</div>
           <h2>Урок {part2.id} пройден</h2>
-          <p className="result-score">{stepScore} из {p2Tasks.length}</p>
+          <p className="result-score">{p2VocabularyScore} из {p2VocabularyTasks.length} · перевод слов</p>
+          <p className="result-score">{stepScore} из {p2Tasks.length} · слова в предложениях</p>
           <p className="instruction">
             {plural(p2Words.length, "новое слово", "новых слова", "новых слов")} ушли в повторение —
             они вернутся вместе со словами первой части.

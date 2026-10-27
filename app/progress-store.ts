@@ -57,7 +57,19 @@ export type ReadingCourseSession = {
   updatedAt?: number;
 };
 
-export type Part2Session = ReadingCourseSession;
+/** The second course has its own sequence; completed scores remain contextual scores. */
+export type Part2Session = Omit<ReadingCourseSession, "view"> & {
+  view: "learn" | "vocabulary" | "reading" | "listening" | "practice";
+  /** Missing on sessions saved before the vocabulary-first sequence. */
+  flowVersion?: 2;
+  round?: 1 | 2;
+  /** Translation practice is scored separately from the original context paper. */
+  vocabularyScore?: number;
+  /** Context questions already answered in a session from the old sequence. */
+  contextIndex?: number;
+  /** The current answer is already included in its phase's score. */
+  answered?: { option: string; correct: boolean };
+};
 export type Part3Session = ReadingCourseSession;
 export type Part4Session = ReadingCourseSession;
 export type Part5Session = ReadingCourseSession;
