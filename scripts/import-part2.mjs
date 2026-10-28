@@ -155,6 +155,8 @@ function renderWord(word) {
     `      contextArabic: ${quote(word.contextArabic)},`,
     `      contextRussian: ${quote(word.contextRussian)},`,
   ];
+  if (word.reviewIndex !== undefined) lines.push(`      reviewIndex: ${word.reviewIndex},`);
+  if (word.source) lines.push(`      source: ${JSON.stringify(word.source)},`);
   if (word.contextForm) lines.push(`      contextForm: ${quote(word.contextForm)},`);
   return `    {\n${lines.join("\n")}\n    },`;
 }
@@ -179,7 +181,7 @@ function render(lesson) {
 
 export const part2Lesson${numberName(lesson.id)}: Part2Lesson = {
   id: ${lesson.id},
-  book: ${quote(lesson.book)},
+${lesson.revision ? `  revision: ${quote(lesson.revision)},\n  reviewIndexCeiling: ${lesson.reviewIndexCeiling},\n` : ""}  book: ${quote(lesson.book)},
   title: ${quote(lesson.title)},
   words: [
 ${lesson.words.map(renderWord).join("\n")}
@@ -199,6 +201,11 @@ if (!glossaryPath || !textPath) {
 
 const glossary = JSON.parse(await readFile(glossaryPath, "utf8"));
 const text = JSON.parse(await readFile(textPath, "utf8"));
+if (glossary.schemaVersion === 2 && text.lessons) {
+  const { importRevision } = await import("./part2-revision.mjs");
+  await importRevision(glossary, text, { directory: fileURLToPath(new URL("../content/part2/", import.meta.url)), render, locate });
+  process.exit(0);
+}
 // The export titles the last two books by name and subtitle at once —
 // «Та‘лим аль-мута‘аллим»: обучение учащегося пути приобретения знания. Over
 // its lessons the list needs the name, so the quoted part is the book.
@@ -352,6 +359,9 @@ async function loadImported() {
 const imported = await loadImported();
 const already = imported.filter(({ lesson }) => lesson.book === book);
 const lastId = imported.length ? imported.at(-1).lesson.id : 0;
+if (already.some(({ lesson }) => lesson.revision)) {
+  throw new Error("Эта книга использует полную исправленную редакцию. Используйте словарь schemaVersion 2 и полный reading.json, чтобы сохранить адреса повторения.");
+}
 
 // A book already loaded keeps the numbers it has; a new one continues after
 // the last. Numbers are what a learner's progress is stored under, so a

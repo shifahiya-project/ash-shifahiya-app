@@ -15,6 +15,7 @@ import type {
 import { normalizeListeningProgress } from "./listening-progress.ts";
 import { mergeListeningReviews, normalizeListeningReviews } from "./listening-review.ts";
 import { mergeListeningTime, normalizeListeningTime } from "./listening-time.ts";
+import { mergePart2Results, normalizePart2Results, part2ScoresFromResults } from "./part2-results.ts";
 import type { PodcastWatch } from "./podcast-catalog";
 import type { DayPlan } from "./podcast-day";
 import type { TopicCard, TopicExamResult } from "./topic-schedule";
@@ -263,6 +264,10 @@ function mergeStats(mine: LearningStats, theirs: LearningStats): LearningStats {
  * result is the same whichever side is passed first.
  */
 export function mergeProgress(mine: Progress, theirs: Progress): Progress {
+  const part2Results = mergePart2Results(
+    normalizePart2Results(mine.part2Scores, mine.part2Results),
+    normalizePart2Results(theirs.part2Scores, theirs.part2Results),
+  );
   return {
     scores: mergeScores(mine.scores, theirs.scores),
     scoreTotals: mergeScoreTotals(
@@ -281,7 +286,8 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
     listeningTime: mergeListeningTime(mine.listeningTime, theirs.listeningTime),
     exams: mergeExams(mine.exams ?? {}, theirs.exams ?? {}),
     examSession: laterExamSession(mine.examSession ?? null, theirs.examSession ?? null),
-    part2Scores: mergeScores(mine.part2Scores ?? {}, theirs.part2Scores ?? {}),
+    part2Scores: part2ScoresFromResults(part2Results),
+    part2Results,
     part2Sessions: mergePart2Sessions(mine.part2Sessions ?? {}, theirs.part2Sessions ?? {}),
     part3Scores: mergeScores(mine.part3Scores ?? {}, theirs.part3Scores ?? {}),
     part3Sessions: mergeReadingSessions(mine.part3Sessions ?? {}, theirs.part3Sessions ?? {}),
@@ -307,6 +313,7 @@ export function mergeProgress(mine: Progress, theirs: Progress): Progress {
 
 /** Fills in anything a stored payload is missing, so old backups still load. */
 export function normalizeProgress(value: Partial<Progress> | null | undefined): Progress {
+  const part2Results = normalizePart2Results(value?.part2Scores, value?.part2Results);
   return {
     scores: value?.scores ?? {},
     scoreTotals: value?.scoreTotals ?? {},
@@ -320,7 +327,8 @@ export function normalizeProgress(value: Partial<Progress> | null | undefined): 
     listeningTime: normalizeListeningTime(value?.listeningTime),
     exams: value?.exams ?? {},
     examSession: value?.examSession ?? null,
-    part2Scores: value?.part2Scores ?? {},
+    part2Scores: part2ScoresFromResults(part2Results),
+    part2Results,
     part2Sessions: value?.part2Sessions ?? {},
     part3Scores: value?.part3Scores ?? {},
     part3Sessions: value?.part3Sessions ?? {},

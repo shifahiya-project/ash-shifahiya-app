@@ -15,6 +15,7 @@ import { loadPart2Lesson, loadPart2Lessons } from "../content/part2/lessons";
 import { BLANK, part2Questions } from "../content/part2/questions";
 import { part2VocabularyQuestions } from "../content/part2/vocabulary-questions";
 import { upgradePart2Session } from "./part2-session";
+import { part2ResultFor, part2ResultLabel } from "./part2-results";
 import { part2CardId, part2LessonIdsInCards, unlockedPart2Ids } from "./part2-access";
 import { part3Summaries } from "../content/part3/manifest";
 import { loadPart3Lesson, loadPart3Lessons } from "../content/part3/lessons";
@@ -203,7 +204,7 @@ function reviewCardsOf(lesson: Lesson): ReviewCard[] {
 function part2ReviewCardsOf(lesson: Part2Lesson): ReviewCard[] {
   return lesson.words.flatMap((word, index) => [
     {
-      id: part2CardId(lesson.id, index, "ar-ru"),
+      id: part2CardId(lesson.id, word.reviewIndex ?? index, "ar-ru"),
       lessonId: lesson.id,
       prompt: word.arabic,
       answer: word.russian,
@@ -211,7 +212,7 @@ function part2ReviewCardsOf(lesson: Part2Lesson): ReviewCard[] {
       answerLang: "ru" as const,
     },
     {
-      id: part2CardId(lesson.id, index, "ru-ar"),
+      id: part2CardId(lesson.id, word.reviewIndex ?? index, "ru-ar"),
       lessonId: lesson.id,
       prompt: word.russian,
       answer: word.arabic,
@@ -1549,9 +1550,9 @@ export default function Home() {
     const lesson = await loadPart2Lesson(id);
     const contextTotal = part2Questions(lesson).length;
     const parked = from === "resume" ? part2Sessions[id] : undefined;
-    let session: Part2Session = parked ? upgradePart2Session(parked, contextTotal) : {
+    let session: Part2Session = parked ? upgradePart2Session(parked, contextTotal, lesson.revision) : {
       lessonId: id, view: lesson.words.length ? "learn" : "reading", index: 0,
-      score: 0, mistakes: [], flowVersion: 2, round: 1, vocabularyScore: 0, contextIndex: 0,
+      score: 0, mistakes: [], flowVersion: 2, round: 1, vocabularyScore: 0, contextIndex: 0, contentRevision: lesson.revision,
     };
     if (session.view === "listening" && (!hasListening(id, 2) || isLaterListeningComplete(id, 2, stored))) {
       session = { ...session, view: "practice", index: session.contextIndex ?? 0, answered: undefined };
@@ -1568,7 +1569,7 @@ export default function Home() {
     setStepScore(session.score);
     setStepMistakes(session.mistakes);
     if (session.view === "practice" && session.index >= contextTotal) {
-      progressStore.finishPart2Lesson(id, session.score);
+      progressStore.finishPart2Lesson(id, session.score, contextTotal, lesson.revision);
       setView("p2-result");
     } else {
       progressStore.savePart2Session(session);
@@ -1580,7 +1581,7 @@ export default function Home() {
     if (!part2) return;
     progressStore.savePart2Session({
       lessonId: part2.id, view, index, score: stepScore, mistakes: stepMistakes,
-      flowVersion: 2, round: p2Round, vocabularyScore: p2VocabularyScore,
+      flowVersion: 2, contentRevision: part2.revision, round: p2Round, vocabularyScore: p2VocabularyScore,
       contextIndex: p2ContextIndex, ...changes,
     });
   }
@@ -1588,8 +1589,8 @@ export default function Home() {
   /** A word enters the shared review boxes without changing its persistent address. */
   function ratePart2Card(remembered: boolean) {
     if (!part2) return;
-    const forward = part2CardId(part2.id, stepIndex, "ar-ru");
-    const reverse = part2CardId(part2.id, stepIndex, "ru-ar");
+    const forward = part2CardId(part2.id, p2Words[stepIndex].reviewIndex ?? stepIndex, "ar-ru");
+    const reverse = part2CardId(part2.id, p2Words[stepIndex].reviewIndex ?? stepIndex, "ru-ar");
     progressStore.updateCards((items) => ({
       ...items,
       [forward]: nextCardProgress(items[forward], remembered),
@@ -1667,7 +1668,7 @@ export default function Home() {
   /** Only the final context paper finishes a new lesson and opens the next one. */
   function finishPart2() {
     if (!part2) return;
-    progressStore.finishPart2Lesson(part2.id, stepScore);
+    progressStore.finishPart2Lesson(part2.id, stepScore, p2Tasks.length, part2.revision);
     setView("p2-result");
   }
 
@@ -1876,7 +1877,7 @@ export default function Home() {
   function exportProgress() {
     const payload = {
       format: "shifahiya-progress",
-      version: 5,
+      version: 6,
       exportedAt: new Date().toISOString(),
       scores: savedScores,
       scoreTotals: savedScoreTotals,
@@ -1894,6 +1895,7 @@ export default function Home() {
       // whatever the file says about it.
       examSession,
       part2Scores,
+      part2Results: stored.part2Results,
       part2Sessions,
       part3Scores,
       part3Sessions,
@@ -1930,7 +1932,7 @@ export default function Home() {
     if (!file) return;
     try {
       const payload = JSON.parse(await file.text());
-      if (payload.format !== "shifahiya-progress" || ![1, 2, 3, 4, 5].includes(payload.version)) throw new Error("Invalid backup");
+      if (payload.format !== "shifahiya-progress" || ![1, 2, 3, 4, 5, 6].includes(payload.version)) throw new Error("Invalid backup");
       const scores = payload.scores ?? {};
       // Backups written before the totals were kept simply have none of them,
       // and the card then shows the result without a denominator.
@@ -1960,6 +1962,7 @@ export default function Home() {
         exams: payload.exams ?? {},
         examSession: payload.examSession ?? null,
         part2Scores: payload.part2Scores ?? {},
+        part2Results: payload.part2Results ?? {},
         part2Sessions: payload.part2Sessions ?? {},
         // Backups written before the third course simply have none of it.
         part3Scores: payload.part3Scores ?? {},
@@ -2307,6 +2310,7 @@ export default function Home() {
                 )}
                 {visiblePart2Summaries.flatMap((item, index) => {
                   const score = part2Scores[item.id];
+                  const result = part2ResultFor(stored.part2Results, item.id);
                   const coreCompleted = score !== undefined;
                   const done = isPart2CourseLessonComplete(item, stored);
                   const audioHref = listeningHref(item.id, 2);
@@ -2359,7 +2363,7 @@ export default function Home() {
                           {parked ? "Продолжить" : "Начать урок"} <span>→</span>
                         </button>
                       )}
-                      {coreCompleted && <div className="card-score">✓ {score}/{item.wordCount}</div>}
+                      {coreCompleted && result && <div className="card-score">✓ {part2ResultLabel(result)}{result.revision === "legacy" && " · прежняя редакция"}</div>}
                     </div>
                   );
                   if (!opensBook) return [card];
