@@ -13,6 +13,7 @@ import { GRAMMAR_ENABLED } from "./features.ts";
 import { LISTENING_PROGRESS_KEY, PART2_LISTENING_PROGRESS_KEY, normalizeListeningProgress, type ListeningProgress } from "./listening-progress.ts";
 import { LISTENING_REVIEW_PROGRESS_KEY, normalizeListeningReviews, type ListeningReviewMap } from "./listening-review.ts";
 import { LISTENING_TIME_KEY, normalizeListeningTime, mergeListeningTime, type ListeningTime } from "./listening-time.ts";
+import { mergePart2Results, normalizePart2Results, part2ScoresFromResults, type Part2Results } from "./part2-results.ts";
 
 export { LISTENING_PROGRESS_KEY, PART2_LISTENING_PROGRESS_KEY } from "./listening-progress.ts";
 export { LISTENING_REVIEW_PROGRESS_KEY } from "./listening-review.ts";
@@ -156,6 +157,8 @@ export type Progress = {
   examSession: ExamSession | null;
   /** The second course keeps its own results; the review cards are shared. */
   part2Scores: Record<number, number>;
+  /** Best context papers kept with their own edition and denominator. */
+  part2Results: Part2Results;
   part2Sessions: Record<number, Part2Session>;
   /** The third course likewise: its own results, the same boxes. */
   part3Scores: Record<number, number>;
@@ -194,6 +197,7 @@ export const lessonScoreTotalKey = (id: number | string) => `shifahiya-lesson-to
 export const grammarScoreKey = (id: number | string) => `shifahiya-grammar-${id}`;
 export const lessonSessionKey = (id: number | string) => `shifahiya-session-${id}`;
 export const part2ScoreKey = (id: number | string) => `shifahiya-p2-lesson-${id}`;
+export const PART2_RESULTS_KEY = "shifahiya-p2-results-v1";
 export const part2SessionKey = (id: number | string) => `shifahiya-p2-session-${id}`;
 export const part3ScoreKey = (id: number | string) => `shifahiya-p3-lesson-${id}`;
 export const part3SessionKey = (id: number | string) => `shifahiya-p3-session-${id}`;
@@ -229,6 +233,7 @@ const EMPTY: Progress = {
   exams: {},
   examSession: null,
   part2Scores: {},
+  part2Results: {},
   part2Sessions: {},
   part3Scores: {},
   part3Sessions: {},
@@ -294,6 +299,7 @@ function readProgress(): Progress {
     const session = read<Part2Session | null>(part2SessionKey(summary.id), null);
     if (session && session.lessonId === summary.id) part2Sessions[summary.id] = session;
   }
+  const part2Results = normalizePart2Results(part2Scores, read<Part2Results>(PART2_RESULTS_KEY, {}));
 
   const part3Scores: Record<number, number> = {};
   const part3Sessions: Record<number, Part3Session> = {};
@@ -410,7 +416,8 @@ function readProgress(): Progress {
     listeningReviews: normalizeListeningReviews(read<unknown>(LISTENING_REVIEW_PROGRESS_KEY, {})),
     listeningTime: normalizeListeningTime(read<unknown>(LISTENING_TIME_KEY, {})),
     exams: read<Record<string, ExamResult>>(EXAM_RESULTS_KEY, {}),
-    part2Scores,
+    part2Scores: part2ScoresFromResults(part2Results),
+    part2Results,
     part2Sessions,
     part3Scores,
     part3Sessions,
@@ -544,10 +551,13 @@ export const progressStore = {
     publish();
   },
 
-  /** Same rule as the first course: a repeat can only raise the result. */
-  finishPart2Lesson(lessonId: number, score: number) {
-    const earned = progressStore.getSnapshot().part2Scores[lessonId] ?? 0;
-    window.localStorage.setItem(part2ScoreKey(lessonId), String(Math.max(score, earned)));
+  /** A repeat only competes with papers of the same edition and size. */
+  finishPart2Lesson(lessonId: number, score: number, total: number, revision = "legacy") {
+    const results = mergePart2Results(progressStore.getSnapshot().part2Results, {
+      [lessonId]: [{ revision, score, total }],
+    });
+    window.localStorage.setItem(PART2_RESULTS_KEY, JSON.stringify(results));
+    window.localStorage.setItem(part2ScoreKey(lessonId), String(part2ScoresFromResults(results)[lessonId]));
     window.localStorage.removeItem(part2SessionKey(lessonId));
     publish();
   },
@@ -737,7 +747,11 @@ export const progressStore = {
     } else {
       window.localStorage.removeItem(EXAM_SESSION_KEY);
     }
-    for (const [id, score] of Object.entries(progress.part2Scores ?? {})) {
+    // Old backups cannot erase the edition history already held on this device.
+    const part2Results = mergePart2Results(progressStore.getSnapshot().part2Results,
+      normalizePart2Results(progress.part2Scores, progress.part2Results));
+    window.localStorage.setItem(PART2_RESULTS_KEY, JSON.stringify(part2Results));
+    for (const [id, score] of Object.entries(part2ScoresFromResults(part2Results))) {
       window.localStorage.setItem(part2ScoreKey(id), String(score));
     }
     for (const [id, session] of Object.entries(progress.part2Sessions ?? {})) {

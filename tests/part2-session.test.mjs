@@ -115,9 +115,9 @@ test("save, JSON backup, restore and finish retain the new position without alte
   assert.deepEqual(JSON.parse(items.get(part2SessionKey(2))), saved);
   assert.equal(progressStore.getSnapshot().part2Scores[1], 15);
   assert.equal(progressStore.getSnapshot().part2Scores[2], undefined, "a saved phase is not a completed lesson");
-  progressStore.finishPart2Lesson(2, 8);
+  progressStore.finishPart2Lesson(2, 8, 33);
   assert.equal(progressStore.getSnapshot().part2Scores[2], 8);
   assert.equal(progressStore.getSnapshot().part2Sessions[2], undefined);
-  progressStore.finishPart2Lesson(1, 2);
+  progressStore.finishPart2Lesson(1, 2, 39);
   assert.equal(progressStore.getSnapshot().part2Scores[1], 15, "an old best result cannot be lowered");
 });

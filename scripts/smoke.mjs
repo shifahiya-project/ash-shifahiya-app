@@ -248,19 +248,22 @@ try {
   assert.match(await page.locator(".stage-label").innerText(), /Новые слова урока/i);
   await page.getByRole("button", { name: "На главную", exact: true }).click();
 
-  await page.evaluate(() => {
-    localStorage.setItem("shifahiya-p2-lesson-1", "10");
+  await page.evaluate((revision) => {
+    localStorage.setItem("shifahiya-p2-lesson-1", "39");
     localStorage.removeItem("shifahiya-p2-session-1");
     localStorage.setItem("shifahiya-p2-listening-progress-v1", JSON.stringify({
       1: { completed: true, updatedAt: Date.now() },
     }));
     localStorage.setItem("shifahiya-p2-session-2", JSON.stringify({
-      lessonId: 2, view: "learn", index: 1, score: 0, mistakes: [], updatedAt: Date.now(),
+      lessonId: 2, contentRevision: revision, view: "learn", index: 1, score: 0, mistakes: [], updatedAt: Date.now(),
     }));
-  });
+  }, part2LessonOne.revision);
   await page.reload({ waitUntil: "networkidle" });
   assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
   await openCourseParts();
+  await page.getByRole("tab", { name: /2 · Чтение/ }).click();
+  const firstPart2Card = page.locator(".lesson-card").filter({ has: page.locator(".lesson-label", { hasText: /^Часть 2 · урок 1$/ }) });
+  assert.match(await firstPart2Card.locator(".card-score").innerText(), /39\/39.*прежняя редакция/);
   await page.getByRole("tab", { name: /8 · Хадис/ }).click();
   await page.getByRole("button", { name: "Закрыть меню", exact: true }).click();
   assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
@@ -388,6 +391,9 @@ try {
   await p2Stage("result").waitFor();
   assert.equal(await p2Session(), null);
   assert.equal(await page.evaluate(() => Number(localStorage.getItem("shifahiya-p2-lesson-1"))), p2Contexts.length);
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem("shifahiya-p2-results-v1"))[1]), [
+    { revision: part2LessonOne.revision, score: p2Contexts.length, total: p2Contexts.length },
+  ]);
   assert.equal(await page.evaluate(() => localStorage.getItem("shifahiya-p2-lesson-105")), "7");
   await page.getByRole("button", { name: "На главную", exact: true }).click();
   assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
