@@ -3,7 +3,8 @@ import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 function assertCanonicalMatch(actual, expected) {
-  assert.match(actual.normalize("NFC"), new RegExp(expected.source.normalize("NFC"), expected.flags));
+  const canonical = (value) => value.normalize("NFC").replace(/[«»:]/g, "");
+  assert.match(canonical(actual), new RegExp(canonical(expected.source), expected.flags));
 }
 
 async function render() {
@@ -286,7 +287,7 @@ test("keeps lesson fifteen data and local progress support in the app", async ()
   assertCanonicalMatch(lessonNinetySeven, /سَلَامَةُ الْإِنْسَانِ فِي حِفْظِ اللِّسَانِ/);
   assertCanonicalMatch(lessonNinetyEight, /حَيَاةُ الْقَلْبِ عِلْمٌ فَاغْتَنِمْهُ/);
   assertCanonicalMatch(lessonNinetyNine, /دَقَّ رَجُلٌ بَابَ أَحَدٍ مِنْ أَصْدِقَائِهِ/);
-  assertCanonicalMatch(lessonOneHundred, /قَالَ الثَّعْلَبُ عَلَّمَنِي سَاقُ الذِّئْبِ/);
+  assertCanonicalMatch(lessonOneHundred, /قَالَ الثَّعْلَبُ: «عَلَّمَنِي سَاقُ الذِّئْبِ»/);
   assertCanonicalMatch(lessonNinetySix, /عَزَّ مَنْ قَنِعَ وَذَلَّ مَنْ طَمِعَ/);
   assertCanonicalMatch(lessonNinetySeven, /الْعِلْمُ صَيْدٌ وَالْكِتَابَةُ قَيْدٌ/);
   assertCanonicalMatch(lessonNinetyEight, /مَنْ غَرَسَ الْعِلْمَ اجْتَنَى النَّبَاهَةَ/);

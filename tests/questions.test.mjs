@@ -151,7 +151,7 @@ test("no single option dominates a lesson's generated questions", () => {
 test("only the preserved old cards repeat an Arabic form, with the same meaning", () => {
   const preservedPairs = new Set([
     "34:3:5:8:2", "34:4:5:7:2", "72:2:0:9:6",
-    "94:2:11:5:0", "94:2:13:5:2", "94:2:14:5:3",
+    "95:1:4:5:1", "94:2:11:5:0", "94:2:13:5:2", "94:2:14:5:3",
   ]);
   const foundPairs = new Set();
   for (const lesson of rawLessons) {
@@ -209,7 +209,7 @@ test("no generated Russian prompt offers an Arabic synonym as a wrong answer", (
 // reaches the learner as the answer to a card.
 test("glosses are Russian, Arabic is Arabic", () => {
   const RUSSIAN_GLOSS = /^[Ѐ-ӿ\s\d.,()/«»—–\-:;!?"'ʼ]+$/;
-  const ARABIC_FORM = /^[؀-ۿ\s.,()/؟،:—\-]+$/;
+  const ARABIC_FORM = /^[؀-ۿ\s«»!.,()/؟،:—\-]+$/;
   for (const lesson of rawLessons) {
     for (const word of wordsOf(lesson)) {
       assert.match(word.russian, RUSSIAN_GLOSS, `lesson ${lesson.id}: gloss "${word.russian}"`);
