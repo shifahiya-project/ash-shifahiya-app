@@ -27,7 +27,7 @@ export const lessonFiftyThree: Lesson = {
       title: "Пищевод, горло и дыхание",
       words: [
         { arabic: "مَرِيءٌ", russian: "пищевод" }, { arabic: "مُرُؤٌ", russian: "пищеводы" },
-        { arabic: "حُلْقُومٌ", russian: "горло" }, { arabic: "حَلَاقِيمُ", russian: "гортани" },
+        { arabic: "حُلْقُومٌ", russian: "горло / дыхательное горло" }, { arabic: "حَلَاقِيمُ", russian: "горла / дыхательные горла" },
         { arabic: "نَفَسٌ", russian: "дыхание" }, { arabic: "أَنْفَاسٌ", russian: "вздохи" },
       ],
     },
@@ -35,8 +35,8 @@ export const lessonFiftyThree: Lesson = {
       title: "Желудок, внутренности и мясо",
       words: [
         { arabic: "مَعِدَةٌ", russian: "желудок" }, { arabic: "أَمْعِدَةٌ", russian: "желудки" },
-        { arabic: "مِعًى", russian: "кишка" }, { arabic: "أَمْعَاءُ", russian: "внутренности" },
-        { arabic: "لَحْمٌ", russian: "мясо" }, { arabic: "لُحُومٌ", russian: "мясные части" },
+        { arabic: "مِعًى", russian: "кишка" }, { arabic: "أَمْعَاءُ", russian: "кишки / кишечник" },
+        { arabic: "لَحْمٌ", russian: "мясо" }, { arabic: "لُحُومٌ", russian: "мясо / виды мяса" },
       ],
     },
     {
@@ -51,7 +51,7 @@ export const lessonFiftyThree: Lesson = {
       title: "Кровь, костный мозг и жир",
       words: [
         { arabic: "دَمٌ", russian: "кровь" }, { arabic: "دِمَاءٌ", russian: "кровь (мн.)" },
-        { arabic: "مُخٌّ", russian: "костный мозг" }, { arabic: "مِخَاخٌ", russian: "костные мозги" },
+        { arabic: "مُخٌّ", russian: "костный мозг" }, { arabic: "مِخَاخٌ", russian: "костный мозг (мн. ч.)" },
         { arabic: "شَحْمٌ", russian: "жир" }, { arabic: "شُحُومٌ", russian: "жиры" },
       ],
     },

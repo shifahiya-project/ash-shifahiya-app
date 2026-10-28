@@ -12,7 +12,7 @@ export const lessonSixty: Lesson = {
       words: [
         { arabic: "أَرْضٌ", russian: "земля", note: "женского рода" }, { arabic: "أَرَاضٍ", russian: "земли" },
         { arabic: "سَمَاءٌ", russian: "небо", note: "женского рода" }, { arabic: "سَمَاوَاتٌ", russian: "небеса" },
-        { arabic: "كَوْكَبٌ", russian: "звезда" }, { arabic: "كَوَاكِبُ", russian: "звёзды" },
+        { arabic: "كَوْكَبٌ", russian: "планета / небесное светило", note: "в традиционном употреблении книги также звезда" }, { arabic: "كَوَاكِبُ", russian: "планеты / небесные светила" },
         { arabic: "شَمْسٌ", russian: "солнце", note: "женского рода" }, { arabic: "شُمُوسٌ", russian: "солнца" },
         { arabic: "قَمَرٌ", russian: "луна" }, { arabic: "أَقْمَارٌ", russian: "луны" },
         { arabic: "هِلَالٌ", russian: "молодой месяц" },
@@ -21,10 +21,10 @@ export const lessonSixty: Lesson = {
     {
       title: "Свет и тьма",
       words: [
-        { arabic: "نُورٌ", russian: "свет" }, { arabic: "أَنْوَارٌ", russian: "лучи света" },
-        { arabic: "ظُلْمَةٌ", russian: "тьма" }, { arabic: "ظُلُمَاتٌ", russian: "мраки" },
-        { arabic: "مُضِيءٌ", russian: "светлый" }, { arabic: "مُظْلِمٌ", russian: "тёмный" },
-        { arabic: "مُنِيرٌ", russian: "яркий" },
+        { arabic: "نُورٌ", russian: "свет" }, { arabic: "أَنْوَارٌ", russian: "огни / свет (мн. ч.)" },
+        { arabic: "ظُلْمَةٌ", russian: "тьма" }, { arabic: "ظُلُمَاتٌ", russian: "мрак / тьма (мн. ч.)" },
+        { arabic: "مُضِيءٌ", russian: "светящийся / светлый" }, { arabic: "مُظْلِمٌ", russian: "тёмный" },
+        { arabic: "مُنِيرٌ", russian: "сияющий / освещающий" },
       ],
     },
     {

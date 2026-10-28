@@ -5,7 +5,7 @@ export const lessonSeventySix: Lesson = {
   decks: [
     { title: "Масдары", words: [
       { arabic: "إِكْرَامٌ", russian: "уважение / оказание почёта" }, { arabic: "تَعْلِيمٌ", russian: "обучение" }, { arabic: "تَعَلُّمٌ", russian: "учёба" }, { arabic: "مُجَالَسَةٌ", russian: "совместное сидение" },
-      { arabic: "تَبَاعُدٌ", russian: "удаление друг от друга" }, { arabic: "اِجْتِمَاعٌ", russian: "собрание" }, { arabic: "اِنْكِسَارٌ", russian: "разбивание / разрушение" }, { arabic: "اِسْتِغْفَارٌ", russian: "просьба о прощении" },
+      { arabic: "تَبَاعُدٌ", russian: "удаление друг от друга" }, { arabic: "اِجْتِمَاعٌ", russian: "собрание" }, { arabic: "اِنْكِسَارٌ", russian: "поломка / разбитость" }, { arabic: "اِسْتِغْفَارٌ", russian: "просьба о прощении" },
     ] },
     { title: "إِكْرَام", words: [
       { arabic: "أَكْرَمَ", russian: "он оказал почёт" }, { arabic: "يُكْرِمُ", russian: "он оказывает почёт" }, { arabic: "أَكْرِمْ", russian: "окажи почёт" }, { arabic: "لَا تُكْرِمْ", russian: "не оказывай почёт" },

@@ -22,7 +22,7 @@ export const lessonFortyFive: Lesson = {
         { arabic: "رَأْيٌ", russian: "мнение" }, { arabic: "آرَاءٌ", russian: "мнения" },
         { arabic: "اِسْمٌ", russian: "имя" }, { arabic: "أَسْمَاءُ", russian: "имена" },
         { arabic: "سَمِيٌّ", russian: "тёзка" }, { arabic: "أَسْمِيَاءُ", russian: "тёзки" },
-        { arabic: "قِيَافَةٌ", russian: "вид / облик" }, { arabic: "قِيَافَاتٌ", russian: "облики" },
+        { arabic: "قِيَافَةٌ", russian: "вид / облик", note: "в книге — внешний вид, облик; другие значения: распознавание по внешним признакам, следопытство" }, { arabic: "قِيَافَاتٌ", russian: "облики" },
       ],
     },
     {
@@ -39,7 +39,7 @@ export const lessonFortyFive: Lesson = {
       words: [
         { arabic: "مُسْلِمٌ", russian: "мусульманин" }, { arabic: "مُسْلِمُونَ", russian: "мусульмане" },
         { arabic: "نَصْرَانِيٌّ", russian: "христианин" }, { arabic: "نَصَارَى", russian: "христиане" },
-        { arabic: "يَهُودِيٌّ", russian: "иудей" }, { arabic: "يَهُودُ", russian: "иудеи" },
+        { arabic: "يَهُودِيٌّ", russian: "иудей" }, { arabic: "يَهُودٌ", russian: "иудеи" },
         { arabic: "مَجُوسِيٌّ", russian: "огнепоклонник" }, { arabic: "مَجُوسٌ", russian: "огнепоклонники" },
         { arabic: "مُؤْمِنٌ", russian: "верующий" }, { arabic: "كَافِرٌ", russian: "неверующий" },
         { arabic: "مُنَافِقٌ", russian: "лицемер" },
@@ -51,7 +51,7 @@ export const lessonFortyFive: Lesson = {
         { arabic: "حَقٌّ", russian: "истина / истинный" }, { arabic: "بَاطِلٌ", russian: "ложный" },
         { arabic: "صَوَابٌ", russian: "правильное" }, { arabic: "خَطَأٌ", russian: "ошибка" },
         { arabic: "مُخْتَلِفٌ", russian: "различный" }, { arabic: "شَتَّى", russian: "разные" },
-        { arabic: "مَرْغُوبٌ", russian: "желательный" }, { arabic: "مَنْفُورٌ", russian: "отвратительный" },
+        { arabic: "مَرْغُوبٌ", russian: "желательный" }, { arabic: "مَنْفُورٌ", russian: "вызывающий отвращение / отталкивающий", note: "обычно مَنْفُورٌ مِنْهُ — то, чего сторонятся" },
         { arabic: "مَشْكُوكٌ فِيهِ", russian: "сомнительный" },
       ],
     },

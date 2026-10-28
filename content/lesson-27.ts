@@ -51,8 +51,8 @@ export const lessonTwentySeven: Lesson = {
       words: [
         { arabic: "مُحَرَّمُ الْحَرَامِ", russian: "Мухаррам" },
         { arabic: "صَفَرُ الْخَيْرِ", russian: "Сафар" },
-        { arabic: "رَبِيعُ الْأَوَّلِ", russian: "Раби аль-авваль" },
-        { arabic: "رَبِيعُ الثَّانِي", russian: "Раби ас-сани" },
+        { arabic: "رَبِيعٌ الْأَوَّلُ", russian: "Раби аль-авваль" },
+        { arabic: "رَبِيعٌ الثَّانِي", russian: "Раби ас-сани" },
         { arabic: "جُمَادَى الْأُولَى", russian: "Джумада аль-уля" },
         { arabic: "جُمَادَى الْأُخْرَى", russian: "Джумада аль-ухра" },
       ],
@@ -113,7 +113,7 @@ export const lessonTwentySeven: Lesson = {
       words: [
         { arabic: "مَاضٍ", russian: "прошлый / прошедший" },
         { arabic: "فَجْأَةٌ", russian: "неожиданность" },
-        { arabic: "رَبِيعُ الْآخِرِ", russian: "Раби аль-ахир" },
+        { arabic: "رَبِيعٌ الْآخِرُ", russian: "Раби аль-ахир" },
       ],
     },
   ],

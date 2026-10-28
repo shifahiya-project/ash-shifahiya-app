@@ -9,7 +9,7 @@ export const lessonSixtyThree: Lesson = {
     ] },
     { title: "Напитки и качества", words: [
       { arabic: "شَايٌ", russian: "чай" }, { arabic: "قَهْوَةٌ", russian: "кофе" }, { arabic: "نَفِيسٌ", russian: "ценный" }, { arabic: "تَافِهٌ", russian: "безвкусный / ничтожный" },
-      { arabic: "نَيِّءٌ", russian: "сырой" }, { arabic: "مَشْوِيٌّ", russian: "жареный" }, { arabic: "صَحْنٌ", russian: "тарелка" }, { arabic: "قَدَحٌ", russian: "стакан" },
+      { arabic: "نَيِّئٌ", russian: "сырой" }, { arabic: "مَشْوِيٌّ", russian: "жареный" }, { arabic: "صَحْنٌ", russian: "тарелка" }, { arabic: "قَدَحٌ", russian: "стакан" },
     ] },
     { title: "Посуда и состояние", words: [
       { arabic: "فِنْجَانٌ", russian: "чашка" }, { arabic: "سَمٌّ", russian: "яд" }, { arabic: "دَوَاءٌ", russian: "лекарство" }, { arabic: "جَوْعَانُ", russian: "голодный" },

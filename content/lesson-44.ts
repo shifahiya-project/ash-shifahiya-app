@@ -19,8 +19,8 @@ export const lessonFortyFour: Lesson = {
     {
       title: "Платок, пояс и фартук",
       words: [
-        { arabic: "خِمَارٌ", russian: "шаль / покрывало" }, { arabic: "خُمُرٌ", russian: "шали / покрывала" },
-        { arabic: "إِزَارٌ", russian: "фартук / изар" }, { arabic: "أُزُرٌ", russian: "фартуки" },
+        { arabic: "خِمَارٌ", russian: "головное покрывало / платок" }, { arabic: "خُمُرٌ", russian: "головные покрывала / платки" },
+        { arabic: "إِزَارٌ", russian: "изар / поясное полотнище", note: "полотно, которым оборачивают нижнюю часть тела" }, { arabic: "أُزُرٌ", russian: "изары / поясные полотнища" },
         { arabic: "مِنْطَقَةٌ", russian: "пояс" }, { arabic: "مَنَاطِقُ", russian: "пояса" },
         { arabic: "مِنْدِيلٌ", russian: "платок" }, { arabic: "مَنَادِيلُ", russian: "платки" },
       ],
@@ -32,7 +32,7 @@ export const lessonFortyFour: Lesson = {
         { arabic: "خُفٌّ", russian: "сапожок" }, { arabic: "خِفَافٌ", russian: "сапожки" },
         { arabic: "جُرْمُوقٌ", russian: "калоша" }, { arabic: "جَرَامِيقُ", russian: "калоши" },
         { arabic: "جَوْرَبٌ", russian: "носок" }, { arabic: "جَوَارِبُ", russian: "носки" },
-        { arabic: "قُفَّازٌ", russian: "варежка" }, { arabic: "أَقْفِزَةٌ", russian: "варежки" },
+        { arabic: "قُفَّازٌ", russian: "перчатка / варежка" }, { arabic: "قُفَّازَاتٌ", russian: "перчатки / варежки" },
       ],
     },
     {

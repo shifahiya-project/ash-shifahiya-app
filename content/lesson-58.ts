@@ -10,9 +10,9 @@ export const lessonFiftyEight: Lesson = {
     {
       title: "Орехи и злаки",
       words: [
-        { arabic: "جَوْزٌ", russian: "орех" }, { arabic: "أَجْوَازٌ", russian: "орехи" },
+        { arabic: "جَوْزٌ", russian: "грецкий орех / орех" }, { arabic: "أَجْوَازٌ", russian: "грецкие орехи / орехи" },
         { arabic: "بُنْدُقٌ", russian: "лесной орех" }, { arabic: "بَنَادِقُ", russian: "лесные орехи" },
-        { arabic: "لَوْزٌ", russian: "миндаль" }, { arabic: "أَلْوَازٌ", russian: "миндалины" },
+        { arabic: "لَوْزٌ", russian: "миндаль" }, { arabic: "أَلْوَازٌ", russian: "миндальные орехи" },
         { arabic: "حِنْطَةٌ", russian: "пшеница" }, { arabic: "شَعِيرٌ", russian: "ячмень" },
         { arabic: "جَاوْدَارٌ", russian: "рожь" },
       ],
@@ -30,7 +30,7 @@ export const lessonFiftyEight: Lesson = {
       words: [
         { arabic: "بَذْرٌ", russian: "семя" }, { arabic: "بُذُورٌ", russian: "семена" },
         { arabic: "تِبْنَةٌ", russian: "соломина" }, { arabic: "تِبْنٌ", russian: "солома" },
-        { arabic: "سُنْبُلٌ", russian: "колос" }, { arabic: "سَنَابِلُ", russian: "колосья" },
+        { arabic: "سُنْبُلٌ", russian: "колосья", note: "собирательное; один колос — سُنْبُلَةٌ" }, { arabic: "سَنَابِلُ", russian: "колосья" },
         { arabic: "قِشْرٌ", russian: "кожура" }, { arabic: "قُشُورٌ", russian: "кожура (мн.)" },
       ],
     },

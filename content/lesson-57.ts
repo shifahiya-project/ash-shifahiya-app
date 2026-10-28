@@ -22,18 +22,18 @@ export const lessonFiftySeven: Lesson = {
       title: "Плоды деревьев",
       words: [
         { arabic: "تُفَّاحٌ", russian: "яблоки" }, { arabic: "كُمَّثْرَى", russian: "груша" },
-        { arabic: "سَفَرْجَلٌ", russian: "айва" }, { arabic: "رُمَّانٌ", russian: "гранат" },
-        { arabic: "لَيْمُونٌ", russian: "лимон" }, { arabic: "بُرْتُقَالٌ", russian: "апельсин" },
+        { arabic: "سَفَرْجَلٌ", russian: "айва" }, { arabic: "رُمَّانٌ", russian: "гранаты", note: "собирательное; один гранат — رُمَّانَةٌ" },
+        { arabic: "لَيْمُونٌ", russian: "лимоны", note: "собирательное; один лимон — لَيْمُونَةٌ" }, { arabic: "بُرْتُقَالٌ", russian: "апельсины", note: "собирательное; один апельсин — بُرْتُقَالَةٌ" },
         { arabic: "تِينٌ", russian: "инжир" }, { arabic: "زَيْتُونٌ", russian: "оливки" },
-        { arabic: "إِجَّاصٌ", russian: "слива" },
+        { arabic: "إِجَّاصٌ", russian: "сливы / груши", note: "в книге — слива; значение зависит от регионального употребления" },
       ],
     },
     {
       title: "Финик, виноград и бахча",
       words: [
-        { arabic: "رُطَبٌ", russian: "свежий финик" }, { arabic: "تَمْرٌ", russian: "сушёный финик" },
+        { arabic: "رُطَبٌ", russian: "спелые свежие финики", note: "собирательное" }, { arabic: "تَمْرٌ", russian: "сушёные финики", note: "собирательное; один финик — تَمْرَةٌ" },
         { arabic: "عِنَبٌ", russian: "виноград" }, { arabic: "زَبِيبٌ", russian: "изюм" },
-        { arabic: "بِطِّيخٌ", russian: "дыня" }, { arabic: "حَبْحَبٌ", russian: "арбуз" },
+        { arabic: "بِطِّيخٌ", russian: "арбуз / дыня", note: "в книге — дыня; в современном употреблении часто арбуз" }, { arabic: "حَبْحَبٌ", russian: "арбуз" },
         { arabic: "قَرْعٌ", russian: "тыква" },
       ],
     },
@@ -75,7 +75,7 @@ export const lessonFiftySeven: Lesson = {
     {
       title: "Сад и плод",
       words: [
-        { arabic: "ثَمَرٌ", russian: "плод" }, { arabic: "أَثْمَارٌ", russian: "плоды" },
+        { arabic: "ثَمَرٌ", russian: "плоды", note: "собирательное; один плод — ثَمَرَةٌ" }, { arabic: "أَثْمَارٌ", russian: "плоды" },
         { arabic: "حَدِيقَةٌ", russian: "сад" }, { arabic: "حَدَائِقُ", russian: "сады" },
         { arabic: "بُسْتَانٌ", russian: "плодовый сад" }, { arabic: "بَسَاتِينُ", russian: "плодовые сады" },
         { arabic: "حَبَّةٌ", russian: "зёрнышко" }, { arabic: "حَبَّاتٌ", russian: "зёрнышки" },

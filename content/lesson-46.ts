@@ -32,14 +32,14 @@ export const lessonFortySix: Lesson = {
         { arabic: "دَارٌ", russian: "дом / обитель" }, { arabic: "دُورٌ", russian: "дома" },
         { arabic: "دِيَارٌ", russian: "страны" }, { arabic: "أَمْرٌ", russian: "дело" },
         { arabic: "أُمُورٌ", russian: "дела" }, { arabic: "دُنْيَا", russian: "этот мир" },
-        { arabic: "آخِرَةٌ", russian: "тот мир" },
+        { arabic: "آخِرَةٌ", russian: "будущая жизнь / тот мир" },
       ],
     },
     {
       title: "Рай, ад и Судный день",
       words: [
         { arabic: "جَنَّةٌ", russian: "рай" }, { arabic: "جَهَنَّمُ", russian: "ад" },
-        { arabic: "يَوْمُ الْقِيَامَةِ", russian: "Судный день" }, { arabic: "مَحْشَرٌ", russian: "место сбора" },
+        { arabic: "يَوْمُ الْقِيَامَةِ", russian: "Судный день" }, { arabic: "مَحْشَرٌ", russian: "место сбора в Судный день" },
         { arabic: "مَوْجُودٌ", russian: "существующий" }, { arabic: "مَعْدُومٌ", russian: "несуществующий" },
       ],
     },
@@ -47,7 +47,7 @@ export const lessonFortySix: Lesson = {
       title: "Вечное и бренное",
       words: [
         { arabic: "بَاقٍ", russian: "вечный / остающийся" }, { arabic: "فَانٍ", russian: "бренный" },
-        { arabic: "أَبَدًا", russian: "вечно / никогда" }, { arabic: "جَمِيعٌ", russian: "все" },
+        { arabic: "أَبَدًا", russian: "вечно / никогда", note: "«никогда» — в отрицательных предложениях" }, { arabic: "جَمِيعٌ", russian: "все" },
         { arabic: "سَائِرٌ", russian: "остальной" }, { arabic: "إِلَّا", russian: "кроме" },
         { arabic: "مَا", russian: "то, что" }, { arabic: "كُلٌّ", russian: "каждый / всякий" },
       ],
@@ -81,7 +81,7 @@ export const lessonFortySix: Lesson = {
       title: "Причастия и качества",
       words: [
         { arabic: "مَخْلُوقٌ", russian: "сотворённый" }, { arabic: "مَخْلُوقَاتٌ", russian: "творения" },
-        { arabic: "مَأْمُورٌ", russian: "приказанный" }, { arabic: "مَمْنُوعٌ", russian: "запрещённый" },
+        { arabic: "مَأْمُورٌ", russian: "тот, кому приказано", note: "о предписанном действии: مَأْمُورٌ بِهِ" }, { arabic: "مَمْنُوعٌ", russian: "запрещённый" },
         { arabic: "مَبْعُوثٌ", russian: "посланный" }, { arabic: "شَرِيكٌ", russian: "сотоварищ" },
         { arabic: "رَفِيقٌ", russian: "спутник" }, { arabic: "عَيْبٌ", russian: "порок" },
         { arabic: "عُيُوبٌ", russian: "пороки" }, { arabic: "نِعْمَةٌ", russian: "благо / милость" },

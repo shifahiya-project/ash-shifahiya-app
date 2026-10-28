@@ -37,10 +37,10 @@ export const lessonFiftyFour: Lesson = {
     {
       title: "Овцы и козы",
       words: [
-        { arabic: "غَنَمٌ", russian: "овцы", note: "собирательное" }, { arabic: "أَغْنَامٌ", russian: "отары овец" },
+        { arabic: "غَنَمٌ", russian: "овцы / мелкий рогатый скот", note: "собирательное; может включать овец и коз" }, { arabic: "أَغْنَامٌ", russian: "овцы / мелкий рогатый скот", note: "множественная форма собирательного غَنَمٌ" },
         { arabic: "حَمَلٌ", russian: "ягнёнок" }, { arabic: "حُمْلَانٌ", russian: "ягнята" },
         { arabic: "كَبْشٌ", russian: "баран" }, { arabic: "كِبَاشٌ", russian: "бараны" },
-        { arabic: "مَعْزٌ", russian: "козы", note: "собирательное" }, { arabic: "مَوَاعِزُ", russian: "козьи стада" },
+        { arabic: "مَعْزٌ", russian: "козы", note: "собирательное" }, { arabic: "مَوَاعِزُ", russian: "козы" },
       ],
     },
     {
@@ -56,7 +56,7 @@ export const lessonFiftyFour: Lesson = {
       words: [
         { arabic: "صُوفٌ", russian: "шерсть" }, { arabic: "أَصْوَافٌ", russian: "шерстяные покровы" },
         { arabic: "جِلْدٌ", russian: "кожа" }, { arabic: "جُلُودٌ", russian: "кожи" },
-        { arabic: "لَبَنٌ", russian: "молоко" }, { arabic: "أَلْبَانٌ", russian: "молочные продукты" },
+        { arabic: "لَبَنٌ", russian: "молоко" }, { arabic: "أَلْبَانٌ", russian: "молоко / виды молока; молочные продукты" },
         { arabic: "حَامِلٌ", russian: "беременная" }, { arabic: "عَقِيمٌ", russian: "бесплодная" },
       ],
     },
@@ -64,8 +64,8 @@ export const lessonFiftyFour: Lesson = {
       title: "Стадо, пастух и польза",
       words: [
         { arabic: "خَصِيٌّ", russian: "оскоплённый" }, { arabic: "خِصْيَانٌ", russian: "оскоплённые" },
-        { arabic: "فَائِدَةٌ", russian: "польза" }, { arabic: "فَوَائِدُ", russian: "пользы" },
-        { arabic: "مَضَرَّةٌ", russian: "вред" }, { arabic: "مَضَرَّاتٌ", russian: "вреды" },
+        { arabic: "فَائِدَةٌ", russian: "польза" }, { arabic: "فَوَائِدُ", russian: "полезные свойства / выгоды" },
+        { arabic: "مَضَرَّةٌ", russian: "вред" }, { arabic: "مَضَرَّاتٌ", russian: "виды вреда / вредные последствия" },
         { arabic: "قَطِيعٌ", russian: "стадо" }, { arabic: "قُطْعَانٌ", russian: "стада" },
         { arabic: "رَاعٍ", russian: "пастух" }, { arabic: "رُعَاةٌ", russian: "пастухи" },
         { arabic: "بَقَرَةٌ", russian: "корова" }, { arabic: "شَاةٌ", russian: "овца" },
