@@ -4,8 +4,9 @@ import { createListeningPlayback } from './playback.js?v=1';
 /* A standalone player: fetch only the selected recording and transcript. */
 (async function () {
   'use strict';
-  const get = (id) => document.getElementById(id);
-  const audio = document.querySelector('audio');
+  const panel = document.querySelector('.listening-player');
+  const get = (id) => document.getElementById(id) || panel.querySelector(`#${id}`);
+  const audio = panel.querySelector('audio');
   const defaults = { position: 0, rate: 1, loop: false, showText: true, vocalized: true, fontSize: 30 };
   let lesson;
   let state;
@@ -30,7 +31,29 @@ import { createListeningPlayback } from './playback.js?v=1';
   const embedded = window.LISTENING_LESSON;
   // Inside a course lesson, navigation stays with the parent lesson screen.
   const inLesson = !embedded && new URLSearchParams(location.search).get('embedded') === '1';
-  if (inLesson) document.querySelector('nav').hidden = true;
+  if (inLesson) {
+    document.querySelector('nav').hidden = true;
+    // Dock the original controls before assigning the media source. A second
+    // audio element would split playback, saved positions and listening time.
+    // Shadow DOM keeps player styles and IDs out of the course application.
+    const host = window.frameElement?.parentElement?.querySelector('[data-lesson-player]');
+    if (host) {
+      const root = host.shadowRoot || host.attachShadow({ mode: 'open' });
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = new URL('./player.css?v=9', import.meta.url).href;
+      panel.classList.add('is-docked');
+      root.replaceChildren(stylesheet, panel);
+      host.hidden = false;
+      const section = host.closest('[data-part2-stage="listening"]');
+      const resize = new ResizeObserver(() => {
+        section.style.setProperty('--lesson-player-height', `${panel.getBoundingClientRect().height}px`);
+      });
+      resize.observe(panel);
+      window.addEventListener('pagehide', () => { audio.pause(); resize.disconnect(); });
+      window.addEventListener('pageshow', () => resize.observe(panel));
+    }
+  }
   const rates = [0.5, 0.75, 0.9, 1, 1.25, 1.5, 2];
   const progressKey = (id = courseId()) => `shifahiya-${prefix(id)}listening-progress-v1`;
   async function fetchText(url) {
@@ -333,7 +356,7 @@ import { createListeningPlayback } from './playback.js?v=1';
         reader.readAsDataURL(blob);
       });
       const [html, css, script] = await Promise.all([
-        fetchText('./text-and-audio.html?v=10'), fetchText('./text-and-audio/player.css?v=8'), fetchText('./text-and-audio/player.js?v=10'),
+        fetchText('./text-and-audio.html?v=11'), fetchText('./text-and-audio/player.css?v=9'), fetchText('./text-and-audio/player.js?v=11'),
       ]);
       const doc = new DOMParser().parseFromString(html, 'text/html');
       doc.querySelector('link[rel="stylesheet"]').remove();
@@ -427,7 +450,7 @@ import { createListeningPlayback } from './playback.js?v=1';
     audio.src = lesson.audioSrc;
     get('audio-download').href = lesson.audioSrc;
     get('audio-download').setAttribute('download', `${courseId() === 1 ? '' : courseId() === 2 ? 'reading-' : `course-${courseId()}-`}lesson-${lesson.lessonId}.mp3`);
-    document.querySelector('.listening-player').hidden = false;
+    panel.hidden = false;
     document.querySelector('.listening-completion').hidden = false;
     document.querySelector('footer').hidden = false;
     status.hidden = true;

@@ -363,17 +363,54 @@ try {
   await resumePart2("listening");
   const player = page.frameLocator('iframe[title="Текст и аудио урока"]');
   await page.waitForFunction(() => {
-    const audio = document.querySelector('iframe[title="Текст и аудио урока"]')
-      ?.contentDocument?.querySelector("audio");
+    const audio = document.querySelector('[data-lesson-player]')?.shadowRoot?.querySelector("audio");
     return audio && audio.readyState >= 1 && audio.error === null;
   });
+  const dock = page.locator('[data-lesson-player]');
+  const dockAudio = dock.locator('audio');
+  await dockAudio.waitFor({ state: 'visible' });
+  assert.equal(await player.locator('audio').count(), 0, 'The iframe must not retain a second recording');
+  assert.equal(await dockAudio.count(), 1, 'The floating panel owns the original recording');
+  const viewport = page.viewportSize();
+  for (const size of [{ width: 390, height: 480 }, { width: 1280, height: 800 }]) {
+    await page.setViewportSize(size);
+    await page.evaluate(() => {
+      scrollTo(0, document.documentElement.scrollHeight);
+      const frame = document.querySelector('iframe[title="Текст и аудио урока"]');
+      frame.contentWindow.scrollTo(0, frame.contentDocument.documentElement.scrollHeight);
+    });
+    const bounds = await dock.boundingBox();
+    assert(bounds && bounds.height > 0 && bounds.y >= 0 && bounds.y + bounds.height <= size.height,
+      'The panel must stay in the parent viewport after both documents scroll');
+    assert(bounds.x >= 0 && bounds.x + bounds.width <= size.width, 'The panel must fit a narrow screen');
+    await dock.getByRole('button', { name: 'Настройки', exact: true }).click();
+    const expanded = await dock.boundingBox();
+    assert(expanded.y >= 0 && expanded.y + expanded.height <= size.height, 'Open settings must fit the viewport');
+    await dock.getByRole('button', { name: 'Настройки', exact: true }).click();
+  }
+  await dock.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await dock.getByLabel('Скорость').selectOption('1.25');
+  assert.equal(await dockAudio.evaluate(audio => audio.playbackRate), 1.25);
+  await dock.getByRole('button', { name: 'Скрыть текст', exact: true }).click();
+  assert(await player.locator('#listening-transcript').isHidden(), 'Docked settings must still control the transcript');
+  await dock.getByRole('button', { name: 'Показать текст', exact: true }).click();
+  await dock.getByRole('button', { name: 'Настройки', exact: true }).click();
+  const beforePlayback = await dockAudio.evaluate(audio => audio.currentTime);
+  await dockAudio.evaluate(audio => audio.play());
+  await page.waitForFunction(before => document.querySelector('[data-lesson-player]').shadowRoot.querySelector('audio').currentTime > before + 0.2, beforePlayback);
+  await dockAudio.evaluate(audio => audio.pause());
+  await page.setViewportSize(viewport);
+  await page.evaluate(() => scrollTo(0, 0));
   await player.locator("#complete").click();
   await page.waitForFunction(() => {
     const marks = JSON.parse(localStorage.getItem("shifahiya-p2-listening-progress-v1") || "{}");
     return marks[1]?.completed === true;
   });
+  await dockAudio.evaluate(audio => audio.play());
+  const ownedAudio = await dockAudio.elementHandle();
   await p2Stage("listening").getByRole("button", { name: /К закреплению/ }).click();
   await p2Stage("context").waitFor();
+  assert.equal(await ownedAudio.evaluate(audio => audio.paused), true, 'Leaving the lesson must stop its adopted recording');
   await p2NotFinished();
   const p2Contexts = part2Questions(part2LessonOne);
   for (let index = 0; index < p2Contexts.length; index += 1) {
