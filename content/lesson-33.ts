@@ -35,7 +35,7 @@ export const lessonThirtyThree: Lesson = {
         { arabic: "اِحْفَظْ", russian: "выучи / запомни!" }, { arabic: "اِفْرَحْ", russian: "радуйся!" },
         { arabic: "اِضْحَكْ", russian: "смейся!" }, { arabic: "اِنْدَمْ", russian: "сожалей!" },
         { arabic: "اِلْعَبْ", russian: "играй!" }, { arabic: "اِسْأَلْ", russian: "спроси!" },
-        { arabic: "اِطْمَعْ", russian: "желай!" }, { arabic: "اِقْنَعْ", russian: "довольствуйся!" },
+        { arabic: "اِطْمَعْ", russian: "страстно желай / надейся!" }, { arabic: "اِقْنَعْ", russian: "довольствуйся!" },
         { arabic: "اِطْرَحْ", russian: "брось!" }, { arabic: "اِفْعَلْ", russian: "сделай!" },
         { arabic: "اِقْطَعْ", russian: "отрежь / сруби!" }, { arabic: "اِخْدَعْ", russian: "обмани!" },
       ],

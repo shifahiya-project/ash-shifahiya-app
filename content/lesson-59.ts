@@ -56,7 +56,7 @@ export const lessonFiftyNine: Lesson = {
       words: [
         { arabic: "خِوَانٌ", russian: "стол" }, { arabic: "أَخْوِنَةٌ", russian: "столы" },
         { arabic: "كُرْسِيٌّ", russian: "стул" }, { arabic: "كَرَاسِيُّ", russian: "стулья" },
-        { arabic: "مَصْطَبَةٌ", russian: "тахта" }, { arabic: "مَصَاطِبُ", russian: "тахты" },
+        { arabic: "مَصْطَبَةٌ", russian: "возвышение / скамья", note: "приподнятая площадка для сидения или лежания; в книге — тахта" }, { arabic: "مَصَاطِبُ", russian: "возвышения / скамьи" },
         { arabic: "رَفٌّ", russian: "полка" }, { arabic: "رُفُوفٌ", russian: "полки" },
       ],
     },

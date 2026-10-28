@@ -27,7 +27,7 @@ export const lessonFiftySix: Lesson = {
     {
       title: "Орёл, ворон и сокол",
       words: [
-        { arabic: "نَسْرٌ", russian: "орёл" }, { arabic: "نُسُورٌ", russian: "орлы" },
+        { arabic: "نَسْرٌ", russian: "гриф / орёл", note: "в книге — орёл; в современной зоологической терминологии нередко гриф; орёл — также عُقَابٌ" }, { arabic: "نُسُورٌ", russian: "грифы / орлы" },
         { arabic: "غُرَابٌ", russian: "ворон" }, { arabic: "غِرْبَانٌ", russian: "вороны" },
         { arabic: "بَازٍ", russian: "ястреб / сокол" }, { arabic: "بُزَاةٌ", russian: "соколы" },
       ],
@@ -53,25 +53,25 @@ export const lessonFiftySix: Lesson = {
       words: [
         { arabic: "عُشٌّ", russian: "гнездо" }, { arabic: "عِشَاشٌ", russian: "гнёзда" },
         { arabic: "جَنَاحٌ", russian: "крыло" }, { arabic: "أَجْنِحَةٌ", russian: "крылья" },
-        { arabic: "رِيشٌ", russian: "перо" }, { arabic: "أَرْيَاشٌ", russian: "перья" },
+        { arabic: "رِيشٌ", russian: "перья / оперение", note: "собирательное; одно перо — رِيشَةٌ" }, { arabic: "أَرْيَاشٌ", russian: "перья" },
       ],
     },
     {
       title: "Клюв, яйцо и летучая мышь",
       words: [
         { arabic: "مِنْقَارٌ", russian: "клюв" }, { arabic: "مَنَاقِيرُ", russian: "клювы" },
-        { arabic: "بَيْضٌ", russian: "яйца" }, { arabic: "بَيْضَاتٌ", russian: "яйца (мн.)" },
+        { arabic: "بَيْضٌ", russian: "яйца" }, { arabic: "بَيْضَاتٌ", russian: "яйца (мн.)", note: "множественное число от بَيْضَةٌ «яйцо»" },
         { arabic: "خُفَّاشٌ", russian: "летучая мышь" }, { arabic: "خَفَافِيشُ", russian: "летучие мыши" },
       ],
     },
     {
-      title: "Насекомые",
+      title: "Насекомые и пауки",
       words: [
         { arabic: "جَرَادَةٌ", russian: "саранча (одна)" }, { arabic: "جَرَادٌ", russian: "саранча" },
         { arabic: "عَنْكَبُوتٌ", russian: "паук" }, { arabic: "عَنَاكِبُ", russian: "пауки" },
         { arabic: "نَمْلَةٌ", russian: "муравей" }, { arabic: "نَمْلٌ", russian: "муравьи" },
         { arabic: "نَحْلَةٌ", russian: "пчела" }, { arabic: "نَحْلٌ", russian: "пчёлы" },
-        { arabic: "ذُبَابٌ", russian: "муха" }, { arabic: "ذُبَّانٌ", russian: "мухи" },
+        { arabic: "ذُبَابٌ", russian: "мухи", note: "собирательное; одна муха — ذُبَابَةٌ" }, { arabic: "ذُبَّانٌ", russian: "мухи" },
         { arabic: "بُرْغُوثٌ", russian: "блоха" }, { arabic: "بَرَاغِيثُ", russian: "блохи" },
       ],
     },

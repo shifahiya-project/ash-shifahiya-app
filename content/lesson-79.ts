@@ -5,11 +5,11 @@ export const lessonSeventyNine: Lesson = {
   decks: [
     { title: "مَرَّ — проходить", words: [
       { arabic: "مَرَّ", russian: "он прошёл" }, { arabic: "يَمُرُّ", russian: "он проходит" }, { arabic: "مُرَّ", russian: "проходи" }, { arabic: "لَا تَمُرَّ", russian: "не проходи" },
-      { arabic: "مَارٌّ", russian: "проходящий" }, { arabic: "مَمْرُورٌ", russian: "пройденный" }, { arabic: "مَمَرٌّ", russian: "проход" }, { arabic: "أَمُرُّ", russian: "я прохожу / пройду" },
+      { arabic: "مَارٌّ", russian: "проходящий" }, { arabic: "مَمْرُورٌ", russian: "тот, мимо кого прошли", note: "употребляется с предлогом: مَمْرُورٌ بِهِ" }, { arabic: "مَمَرٌّ", russian: "проход" }, { arabic: "أَمُرُّ", russian: "я прохожу / пройду" },
     ] },
     { title: "فَرَّ — убегать", words: [
       { arabic: "فَرَّ", russian: "он убежал" }, { arabic: "يَفِرُّ", russian: "он убегает" }, { arabic: "فِرَّ", russian: "убегай" }, { arabic: "لَا تَفِرَّ", russian: "не убегай" },
-      { arabic: "فَارٌّ", russian: "убегающий" }, { arabic: "مَفْرُورٌ", russian: "тот, от кого убежали" }, { arabic: "فِرَارٌ", russian: "бегство" }, { arabic: "أَفِرُّ", russian: "я убегаю" },
+      { arabic: "فَارٌّ", russian: "убегающий" }, { arabic: "مَفْرُورٌ", russian: "тот, от кого убежали", note: "употребляется с предлогом: مَفْرُورٌ مِنْهُ" }, { arabic: "فِرَارٌ", russian: "бегство" }, { arabic: "أَفِرُّ", russian: "я убегаю" },
     ] },
     { title: "مَسَّ — трогать", words: [
       { arabic: "مَسَّ", russian: "он тронул", note: "форма повеления совпадает" }, { arabic: "يَمَسُّ", russian: "он трогает" }, { arabic: "لَا تَمَسَّ", russian: "не трогай" },
@@ -84,7 +84,7 @@ export const lessonSeventyNine: Lesson = {
     ] },
     { title: "Слова урока", words: [
       { arabic: "قِصَّةٌ", russian: "рассказ" },
-      { arabic: "قَصَصٌ", russian: "рассказы" },
+      { arabic: "قِصَصٌ", russian: "рассказы" },
       { arabic: "حَوْجَمَةٌ", russian: "цветок красной розы" },
       { arabic: "حَوَاجِمُ", russian: "красные розы" },
       { arabic: "لَذَّةٌ", russian: "удовольствие / наслаждение" },

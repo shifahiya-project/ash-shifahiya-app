@@ -3,13 +3,13 @@ export const lessonSixtyOne: Lesson = {
   id: 61, arabicTitle: "الدَّرْسُ الْحَادِي وَالسِّتُّونَ", title: "Металлы, минералы и материалы.",
   description: "73 формы · 2 круга повторения · 146 заданий", tags: ["Металлы", "Минералы", "Материалы", "Ремёсла"],
   decks: [
-    { title: "Драгоценные металлы", words: [
+    { title: "Металлы и драгоценные материалы", words: [
       { arabic: "جَوْهَرٌ", russian: "драгоценность" }, { arabic: "ذَهَبٌ", russian: "золото" }, { arabic: "فِضَّةٌ", russian: "серебро" }, { arabic: "نُحَاسٌ", russian: "медь" },
       { arabic: "بُرُونْزٌ", russian: "бронза" }, { arabic: "رَصَاصٌ", russian: "свинец" }, { arabic: "حَدِيدٌ", russian: "железо" }, { arabic: "زِئْبَقٌ", russian: "ртуть" },
     ] },
-    { title: "Полезные ископаемые", words: [
+    { title: "Минералы и другие вещества", words: [
       { arabic: "كِبْرِيتٌ", russian: "сера" }, { arabic: "نَفْطٌ", russian: "нефть" }, { arabic: "فَحْمٌ", russian: "уголь" }, { arabic: "رَمَادٌ", russian: "зола" },
-      { arabic: "يَاقُوتٌ", russian: "яхонт / рубин" }, { arabic: "عَقِيقٌ", russian: "агат" }, { arabic: "كَهْرَبَاءُ", russian: "янтарь" }, { arabic: "فَيْرُوزَجٌ", russian: "бирюза" },
+      { arabic: "يَاقُوتٌ", russian: "яхонт / рубин" }, { arabic: "عَقِيقٌ", russian: "агат" }, { arabic: "كَهْرَبَاءُ", russian: "янтарь", note: "в контексте этого урока — янтарь; современное обычное значение — электричество" }, { arabic: "فَيْرُوزَجٌ", russian: "бирюза" },
     ] },
     { title: "Земля и строительство", words: [
       { arabic: "زُجَاجٌ", russian: "стекло" }, { arabic: "تُرَابٌ", russian: "земля / пыль" }, { arabic: "رَمْلٌ", russian: "песок" }, { arabic: "حَجَرٌ", russian: "камень" },
@@ -24,7 +24,7 @@ export const lessonSixtyOne: Lesson = {
       { arabic: "صَنَعَ", russian: "он изготовил" }, { arabic: "يَصْنَعُ", russian: "он изготавливает" }, { arabic: "مَلَكَ", russian: "он владел" }, { arabic: "ذُو مَالٍ", russian: "обладатель богатства" },
     ] },
     { title: "Формы из словаря", words: [
-      { arabic: "جَوَاهِرُ", russian: "драгоценности" }, { arabic: "صُفْرٌ", russian: "бронза / жёлтая медь" }, { arabic: "غُبَارٌ", russian: "пыль" }, { arabic: "خَوَاتِمُ", russian: "перстни" },
+      { arabic: "جَوَاهِرُ", russian: "драгоценности" }, { arabic: "صُفْرٌ", russian: "латунь / жёлтая медь" }, { arabic: "غُبَارٌ", russian: "пыль" }, { arabic: "خَوَاتِمُ", russian: "перстни" },
       { arabic: "فُصُوصٌ", russian: "камни в перстнях" }, { arabic: "أَقْرَاطٌ", russian: "серёжки" }, { arabic: "أَسْوِرَةٌ", russian: "браслеты" }, { arabic: "حُفَرٌ", russian: "ямы" },
       { arabic: "ذُو", russian: "обладатель (м.р.)" }, { arabic: "ذَوُو", russian: "обладатели" }, { arabic: "ذَاتُ", russian: "обладательница" }, { arabic: "ذَوَاتُ", russian: "обладательницы" },
     ] },
