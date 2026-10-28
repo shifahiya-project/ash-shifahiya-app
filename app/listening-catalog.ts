@@ -11,6 +11,6 @@ export function hasListening(id: number, course = 1) {
 
 export function listeningHref(id: number, course = 1) {
   return hasListening(id, course)
-    ? `./text-and-audio.html?v=10&lesson=${id}${course === 1 ? "" : `&course=${course}`}`
+    ? `./text-and-audio.html?v=11&lesson=${id}${course === 1 ? "" : `&course=${course}`}`
     : undefined;
 }

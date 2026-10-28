@@ -106,6 +106,12 @@ type ReviewCard = {
 };
 
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
+
+/** The adopted recording must stop when React removes its lesson screen. */
+function attachLessonPlayer(host: HTMLDivElement | null) {
+  if (!host) return;
+  return () => { host.shadowRoot?.querySelector("audio")?.pause(); };
+}
 const WORD_ACHIEVEMENTS = [100, 250, 500, 1000, 2500, 5000, 7500, 10000];
 const DAY_ACHIEVEMENTS = [7, 14, 30, 50, 100, 150, 250, 365];
 
@@ -3064,6 +3070,7 @@ export default function Home() {
           <p className="instruction">Прослушайте запись с текстом и отметьте её как пройденную. Затем закрепите слова в предложениях.</p>
           <iframe className="lesson-listening-frame" title="Текст и аудио урока"
             src={`${listeningHref(part2.id, 2)}&embedded=1`} />
+          <div ref={attachLessonPlayer} className="lesson-listening-controls" data-lesson-player="" hidden />
           <div className="study-actions">
             <button className="secondary" onClick={() => setView("home")}>Вернуться позже</button>
             <button className="primary" disabled={!isLaterListeningComplete(part2.id, 2, stored)} onClick={beginPart2Context}>К закреплению <span>→</span></button>
