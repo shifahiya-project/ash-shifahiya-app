@@ -59,6 +59,9 @@ export type ReadingCourseSession = {
 
 /** The second course has its own sequence; completed scores remain contextual scores. */
 export type Part2Session = Omit<ReadingCourseSession, "view"> & {
+  contentRevision?: string;
+  /** Keep the prior unfinished paper when its content is replaced. */
+  archivedSession?: Part2Session;
   view: "learn" | "vocabulary" | "reading" | "listening" | "practice";
   /** Missing on sessions saved before the vocabulary-first sequence. */
   flowVersion?: 2;
@@ -535,7 +538,8 @@ export const progressStore = {
   },
 
   savePart2Session(session: Omit<Part2Session, "updatedAt">) {
-    const stamped: Part2Session = { ...session, updatedAt: Date.now() };
+    const archivedSession = session.archivedSession ?? progressStore.getSnapshot().part2Sessions[session.lessonId]?.archivedSession;
+    const stamped: Part2Session = { ...session, ...(archivedSession ? { archivedSession } : {}), updatedAt: Date.now() };
     window.localStorage.setItem(part2SessionKey(session.lessonId), JSON.stringify(stamped));
     publish();
   },

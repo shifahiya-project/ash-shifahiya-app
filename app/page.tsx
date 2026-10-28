@@ -203,7 +203,7 @@ function reviewCardsOf(lesson: Lesson): ReviewCard[] {
 function part2ReviewCardsOf(lesson: Part2Lesson): ReviewCard[] {
   return lesson.words.flatMap((word, index) => [
     {
-      id: part2CardId(lesson.id, index, "ar-ru"),
+      id: part2CardId(lesson.id, word.reviewIndex ?? index, "ar-ru"),
       lessonId: lesson.id,
       prompt: word.arabic,
       answer: word.russian,
@@ -211,7 +211,7 @@ function part2ReviewCardsOf(lesson: Part2Lesson): ReviewCard[] {
       answerLang: "ru" as const,
     },
     {
-      id: part2CardId(lesson.id, index, "ru-ar"),
+      id: part2CardId(lesson.id, word.reviewIndex ?? index, "ru-ar"),
       lessonId: lesson.id,
       prompt: word.russian,
       answer: word.arabic,
@@ -1549,9 +1549,9 @@ export default function Home() {
     const lesson = await loadPart2Lesson(id);
     const contextTotal = part2Questions(lesson).length;
     const parked = from === "resume" ? part2Sessions[id] : undefined;
-    let session: Part2Session = parked ? upgradePart2Session(parked, contextTotal) : {
+    let session: Part2Session = parked ? upgradePart2Session(parked, contextTotal, lesson.revision) : {
       lessonId: id, view: lesson.words.length ? "learn" : "reading", index: 0,
-      score: 0, mistakes: [], flowVersion: 2, round: 1, vocabularyScore: 0, contextIndex: 0,
+      score: 0, mistakes: [], flowVersion: 2, round: 1, vocabularyScore: 0, contextIndex: 0, contentRevision: lesson.revision,
     };
     if (session.view === "listening" && (!hasListening(id, 2) || isLaterListeningComplete(id, 2, stored))) {
       session = { ...session, view: "practice", index: session.contextIndex ?? 0, answered: undefined };
@@ -1580,7 +1580,7 @@ export default function Home() {
     if (!part2) return;
     progressStore.savePart2Session({
       lessonId: part2.id, view, index, score: stepScore, mistakes: stepMistakes,
-      flowVersion: 2, round: p2Round, vocabularyScore: p2VocabularyScore,
+      flowVersion: 2, contentRevision: part2.revision, round: p2Round, vocabularyScore: p2VocabularyScore,
       contextIndex: p2ContextIndex, ...changes,
     });
   }
@@ -1588,8 +1588,8 @@ export default function Home() {
   /** A word enters the shared review boxes without changing its persistent address. */
   function ratePart2Card(remembered: boolean) {
     if (!part2) return;
-    const forward = part2CardId(part2.id, stepIndex, "ar-ru");
-    const reverse = part2CardId(part2.id, stepIndex, "ru-ar");
+    const forward = part2CardId(part2.id, p2Words[stepIndex].reviewIndex ?? stepIndex, "ar-ru");
+    const reverse = part2CardId(part2.id, p2Words[stepIndex].reviewIndex ?? stepIndex, "ru-ar");
     progressStore.updateCards((items) => ({
       ...items,
       [forward]: nextCardProgress(items[forward], remembered),

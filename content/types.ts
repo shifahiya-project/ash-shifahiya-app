@@ -61,6 +61,10 @@ export type Part2WordKind =
   | "expression";
 
 export type Part2Word = {
+  /** Stable review address; independent of the revised teaching order. */
+  reviewIndex?: number;
+  /** Original editorial metadata, including verb forms and lexical exceptions. */
+  source?: Record<string, unknown>;
   /** The dictionary form as the glossary gives it: مَكَثَ (يَمْكُثُ), مَخْزَنٌ (مَخَازِنُ). */
   arabic: string;
   russian: string;
@@ -85,6 +89,9 @@ export type Part2Story = {
 };
 
 export type Part2Lesson = {
+  revision?: string;
+  /** Never reuse a retired word address on later imports. */
+  reviewIndexCeiling?: number;
   id: number;
   /** Which book the lesson is taken from — the course runs through six. */
   book: string;
