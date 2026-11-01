@@ -264,6 +264,7 @@ try {
   await page.getByRole("tab", { name: /2 · Чтение/ }).click();
   const firstPart2Card = page.locator(".lesson-card").filter({ has: page.locator(".lesson-label", { hasText: /^Часть 2 · урок 1$/ }) });
   assert.match(await firstPart2Card.locator(".card-score").innerText(), /39\/39.*прежняя редакция/);
+  await openCourseParts();
   await page.getByRole("tab", { name: /8 · Хадис/ }).click();
   await page.getByRole("button", { name: "Закрыть меню", exact: true }).click();
   assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
@@ -372,7 +373,26 @@ try {
     const marks = JSON.parse(localStorage.getItem("shifahiya-p2-listening-progress-v1") || "{}");
     return marks[1]?.completed === true;
   });
-  await p2Stage("listening").getByRole("button", { name: /К закреплению/ }).click();
+  const listeningSession = await p2Session();
+  await page.locator('iframe[title="Текст и аудио урока"]').evaluate(frame => {
+    frame.style.height = '440px'; frame.style.minHeight = '0';
+    frame.contentWindow.scrollTo(0, 500);
+  });
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('iframe[title="Текст и аудио урока"]')?.contentDocument?.querySelector('.listening-player');
+    return panel && Math.abs(panel.getBoundingClientRect().top - 8) < 2;
+  });
+  assert.deepEqual(await player.locator('.listening-actions button:visible').allTextContents(), ['Прослушал', 'Прослушать ещё раз']);
+  // Only this frame may request returning to the parent course.
+  await page.evaluate(() => dispatchEvent(new MessageEvent('message', {
+    origin: location.origin, source: window, data: { type: 'shifahiya:return-to-course' },
+  })));
+  assert(await p2Stage('listening').isVisible());
+  await player.locator('#return-course').click();
+  await page.locator('.home-view').waitFor();
+  assert.equal((await p2Session()).view, listeningSession.view);
+  assert.equal(await p2Stage('listening').count(), 0);
+  await resumePart2('context');
   await p2Stage("context").waitFor();
   await p2NotFinished();
   const p2Contexts = part2Questions(part2LessonOne);

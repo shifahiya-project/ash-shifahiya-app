@@ -68,6 +68,23 @@ try {
   const home = () => page.goto(site, { waitUntil: 'networkidle' });
   const audioCard = page.locator('.listening-due');
   const repeat = page.locator('#review-complete');
+  const simpleActions = async () => {
+    assert.deepEqual(await page.locator('.listening-actions button:visible').allTextContents(), ['Прослушал', 'Прослушать ещё раз']);
+    assert.doesNotMatch(await page.locator('.listening-completion').innerText(), /Отменить/);
+    assert.equal(new URL(await page.locator('#return-course').getAttribute('href')).searchParams.get('course'), '2');
+  };
+  const replayWithoutResetting = async () => {
+    const before = await records();
+    await page.locator('audio').evaluate(audio => { audio.currentTime = 25; });
+    await page.waitForFunction(() => !document.querySelector('audio').seeking);
+    await page.locator('#listen-again').click();
+    await page.waitForFunction(() => {
+      const audio = document.querySelector('audio');
+      return !audio.paused && audio.currentTime > 0.1 && audio.currentTime < 4;
+    });
+    await page.locator('audio').evaluate(audio => audio.pause());
+    assert.deepEqual(await records(), before, 'Replay must preserve the study mark and all earned review stages');
+  };
   const openBackup = async () => {
     await page.getByRole('button', { name: 'Меню', exact: true }).click();
     await page.getByRole('button', { name: 'Показать личный прогресс', exact: true }).click();
@@ -105,12 +122,28 @@ try {
   await page.waitForFunction(({ key, before }) => Object.values(JSON.parse(localStorage.getItem(key) || '{}')).reduce((sum, ms) => sum + ms, 0) > before + 1000,
     { key: timeKey, before: seekCheckpoint });
   assert(await repeat.isHidden());
-  await page.getByRole('button', { name: 'Текст и аудио пройдены', exact: true }).click();
+  await page.getByRole('button', { name: 'Прослушал', exact: true }).click();
   assert.equal((await record()).studiedOn, '2026-10-18');
   assert.equal((await record()).repeatedOn.length, 0);
   assert(await repeat.isDisabled());
+  assert(await page.locator('#complete').isDisabled());
+  await simpleActions();
+  await replayWithoutResetting();
+  await page.setViewportSize({ width: 390, height: 440 });
+  await page.evaluate(() => scrollTo(0, 400));
+  await page.waitForFunction(() => {
+    const top = document.querySelector('.listening-player').getBoundingClientRect().top;
+    return top >= 7 && top <= 10;
+  });
+  await page.locator('#settings-toggle').click();
+  await page.evaluate(() => scrollTo(0, 700));
+  assert(Math.abs(await page.locator('.listening-player').evaluate(el => el.getBoundingClientRect().top) - 8) < 2);
+  await page.locator('#settings-toggle').click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await screenshot(page.locator('.listening-completion'), 'listening-first-actions.png');
   await page.locator('audio').evaluate(audio => { audio.currentTime = 42; audio.dispatchEvent(new Event('seeked')); });
-  await home();
+  await page.locator('#return-course').click();
+  await page.waitForURL(url => !url.pathname.includes('text-and-audio'));
   await openBackup();
   const listeningStat = page.locator('.stats-grid > div').filter({ hasText: 'прослушано аудио' });
   assert.match(await listeningStat.innerText(), /< 1 мин.*прослушано аудио/s);
@@ -143,13 +176,15 @@ try {
   await repeat.click();
   assert.deepEqual((await record()).repeatedOn, ['2026-10-19', '2026-10-25']);
   assert.match(await page.locator('#review-status').innerText(), /29 октября/);
-  await page.locator('#complete').click();
-  assert.equal((await record()).active, false);
-  assert(await repeat.isHidden());
-  await page.locator('#complete').click();
+  assert(await page.locator('#complete').isHidden(), 'A review must not show a second completion action');
+  assert.deepEqual(await page.locator('.listening-actions button:visible').allTextContents(), ['Прослушал', 'Прослушать ещё раз']);
+  assert(await repeat.isDisabled(), 'A counted review cannot be revoked or counted twice');
   assert.equal((await record()).active, true);
   assert.equal((await record()).studiedOn, '2026-10-18');
   assert.equal((await record()).repeatedOn.length, 2);
+  await simpleActions();
+  await replayWithoutResetting();
+  await screenshot(page.locator('.listening-completion'), 'listening-review-actions.png');
   await page.locator('#review-dates summary').click();
   assert.deepEqual(await page.locator('#review-schedule time').evaluateAll(nodes => nodes.slice(0, 4).map(node => node.dateTime)),
     ['2026-10-18', '2026-10-19', '2026-10-25', '2026-10-29']);
@@ -159,7 +194,7 @@ try {
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await screenshot(page.locator('#audio-review'), 'player-review.png');
-  console.log('Initial study, actual-date intervals, early guards, cancellation and separate review positions passed');
+  console.log('Initial study, actual-date intervals, early guards, idempotent completion and separate review positions passed');
 
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Скачать урок для занятий без интернета', exact: true }).click();
@@ -193,7 +228,7 @@ try {
   const backupDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Сохранить копию', exact: true }).click();
   const backup = JSON.parse(await readFile(await (await backupDownload).path(), 'utf8'));
-  assert.equal(backup.version, 5);
+  assert.equal(backup.version, 6);
   assert.deepEqual(backup.listeningTime, await times());
   assert.equal(backup.listeningReviews['2:11'].repeatedOn.length, 2);
   await page.evaluate(() => localStorage.clear());
@@ -218,7 +253,7 @@ try {
   delete version4.listeningTime;
   await restore(version4);
   assert.deepEqual(await times(), backup.listeningTime);
-  console.log('Version 5 round trip and legacy versions 1–3 preserve the review history');
+  console.log('Version 6 round trip and legacy versions 1–3 preserve the review history');
 
   await setDay('2026-10-29');
   await openPlayer();

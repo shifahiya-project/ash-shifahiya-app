@@ -603,6 +603,18 @@ export default function Home() {
   const [showMainMenu, setShowMainMenu] = useState(false);
   const mainMenu = useRef<HTMLElement>(null);
   const mainMenuToggle = useRef<HTMLButtonElement>(null);
+  const lessonListeningFrame = useRef<HTMLIFrameElement>(null);
+  useEffect(() => {
+    const returnFromListening = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== lessonListeningFrame.current?.contentWindow
+        || event.data?.type !== "shifahiya:return-to-course") return;
+      setCourse(2);
+      setView("home");
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+    };
+    window.addEventListener("message", returnFromListening);
+    return () => window.removeEventListener("message", returnFromListening);
+  }, []);
   const closeMainMenu = useCallback(() => {
     if (mainMenu.current?.matches(":popover-open")) {
       mainMenu.current.hidePopover();
@@ -3061,12 +3073,11 @@ export default function Home() {
       {view === "p2-listening" && part2 && (
         <section className="study-view reading-view" data-part2-stage="listening">
           <div className="stage-label"><span>4</span>Текст и аудио · урок {part2.id}</div>
-          <p className="instruction">Прослушайте запись с текстом и отметьте её как пройденную. Затем закрепите слова в предложениях.</p>
-          <iframe className="lesson-listening-frame" title="Текст и аудио урока"
+          <p className="instruction">Прослушайте запись с текстом и нажмите «Прослушал». Затем закрепите слова в предложениях.</p>
+          <iframe ref={lessonListeningFrame} className="lesson-listening-frame" title="Текст и аудио урока"
             src={`${listeningHref(part2.id, 2)}&embedded=1`} />
           <div className="study-actions">
-            <button className="secondary" onClick={() => setView("home")}>Вернуться позже</button>
-            <button className="primary" disabled={!isLaterListeningComplete(part2.id, 2, stored)} onClick={beginPart2Context}>К закреплению <span>→</span></button>
+            <button className="primary wide" disabled={!isLaterListeningComplete(part2.id, 2, stored)} onClick={beginPart2Context}>К закреплению <span>→</span></button>
           </div>
         </section>
       )}
