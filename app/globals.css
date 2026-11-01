@@ -1016,6 +1016,7 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .achievement-list { grid-template-columns: repeat(2, 1fr); }
   .card-score { top: 10px; right: 10px; }
+  .lesson-window-label { margin-top: 16px; }
   .chips { display: none; }
   .lesson-progress, .study-view, .practice-view { width: calc(100% - 28px); }
   .part-badge { padding: 3px 8px; font-size: 9px; }
@@ -1042,10 +1043,6 @@ footer span:last-child { color: var(--green); font: 18px "Traditional Arabic", s
   .brand small { display: none; }
   .study-actions, .study-actions.three { grid-template-columns: 1fr; }
   .result-grid div { padding: 18px 6px; }
-}
-
-@media (max-width: 360px) {
-  .lesson-window-label { margin-top: 16px; }
 }
 
 /* ── Podcasts: the habit of watching one episode a day ────────────────── */

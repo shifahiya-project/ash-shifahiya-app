@@ -194,7 +194,7 @@ try {
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `The homepage should fit a ${width}px viewport`);
       const bounds = await card(id).locator(".lesson-actions > button, .lesson-actions > a").evaluateAll((nodes) => nodes.map((node) => {
         const box = node.getBoundingClientRect();
-        return { top: box.top, left: box.left, right: box.right, height: box.height };
+        return { top: node.offsetTop, left: box.left, right: box.right, height: box.height };
       }));
       assert.equal(bounds.length, 2);
       assert(Math.abs(bounds[0].top - bounds[1].top) < 1, `Lesson ${id} actions should share one row at ${width}px`);
@@ -449,7 +449,7 @@ try {
   assert.match(await hero.innerText(), /Урок 87\./);
   assert.match(await hero.innerText(), /Текст и аудио/);
   await showProgress().click();
-  assert.equal(await page.locator('.stats-grid > div').filter({ has: page.getByText('уроков завершено', { exact: true }) }).locator('strong').innerText(), "86");
+  assert.equal(await page.locator('.stats-grid > div').filter({ has: page.getByText(/^уроков завершено из /) }).locator('strong').innerText(), "86");
   await page.getByRole('button', { name: 'Скрыть личный прогресс', exact: true }).click();
   assert.equal(await card(87).getByRole("link", { name: "Текст и аудио", exact: true }).getAttribute("href"), "./text-and-audio.html?v=11&lesson=87");
   assert.equal(await page.getByRole("button", { name: "Показать все уроки", exact: true }).count(), 1);
@@ -550,7 +550,7 @@ try {
   // A completed course keeps the final lesson as a route back into the course.
   await seed([...scoreEntries(lessonSummaries, "shifahiya-lesson-"), listeningEntry()]);
   await assertWindow([100]);
-  assert.equal(await hero.count(), 0, "A completed course should not offer a completed lesson as the next step");
+  assert.match(await hero.innerText(), /экзамен/i, "A completed course should continue to its unfinished exam");
   for (const title of ["Промежуточный экзамен", "Итоговый экзамен"]) {
     const exam = page.locator(".exam-card").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
     assert(await exam.isVisible(), "An unfinished exam must remain accessible alongside the focused lesson list");
@@ -569,12 +569,13 @@ try {
   const readingListeningKey = "shifahiya-p2-listening-progress-v1";
   const readingListeningEntry = [readingListeningKey, JSON.stringify(Object.fromEntries(
     readingListeningCatalog.map(({ lessonId }) => [lessonId, { completed: true, updatedAt: 1000 }])))];
+  const firstCourseComplete = [...scoreEntries(lessonSummaries, "shifahiya-lesson-"), listeningEntry(), finalPassed];
 
   // The same number in two courses must keep distinct playback and completion.
-  const originalListening = { 1: { completed: false, updatedAt: 1000 } };
+  const originalListening = { ...JSON.parse(listeningEntry()[1]), 1: { completed: false, updatedAt: 1000 } };
   const originalPosition = JSON.stringify({ position: 99, rate: 2 });
   await seed([
-    finalPassed,
+    ...firstCourseComplete,
     ...scoreEntries(lessonSummaries, "shifahiya-lesson-", 1),
     ...scoreEntries(part2Summaries, "shifahiya-p2-lesson-", 5),
     ["shifahiya-p2-session-6", readingSession(6, 2000)],
@@ -645,7 +646,7 @@ try {
 
   // Reading in the current flow opens embedded audio before the final practice.
   await seed([
-    finalPassed,
+    ...firstCourseComplete,
     ["shifahiya-p2-session-1", JSON.stringify({ lessonId: 1, view: "reading", index: 0, score: 0, mistakes: [],
       flowVersion: 2, contentRevision: part2LessonOne.revision, round: 2, vocabularyScore: 39, contextIndex: 0, updatedAt: 2000 })],
   ]);
@@ -665,9 +666,7 @@ try {
   assert.equal(await page.locator(".lesson-list .listening-link").count(), 0, "Locked reading lessons must expose no audio links");
 
   await seed([
-    ...scoreEntries(lessonSummaries, "shifahiya-lesson-"),
-    listeningEntry(),
-    finalPassed,
+    ...firstCourseComplete,
     ...scoreEntries(part2Summaries, "shifahiya-p2-lesson-", 20),
     readingListeningEntry,
     ["shifahiya-p2-session-21", readingSession(21, 1000)],
@@ -702,10 +701,9 @@ try {
   await assertWindow([20, 21, 22]);
 
   await seed([
-    ...scoreEntries(lessonSummaries, "shifahiya-lesson-"),
-    listeningEntry(),
-    finalPassed,
+    ...firstCourseComplete,
     ...scoreEntries(part2Summaries, "shifahiya-p2-lesson-"),
+    readingListeningEntry,
     ...scoreEntries(part3Summaries, "shifahiya-p3-lesson-", 10),
     ["shifahiya-p3-session-11", readingSession(11, 1000)],
   ]);
