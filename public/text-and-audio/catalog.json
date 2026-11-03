@@ -556,5 +556,69 @@
     "audioSrc": "./audio/reading-2/lesson-67.mp3",
     "textSrc": "./text/reading-2/lesson-67.json?v=4c14e71040913eee",
     "courseId": 2
+  },
+  {
+    "lessonId": 68,
+    "courseTitle": "Чтение",
+    "duration": 320.688,
+    "audioSrc": "./audio/reading-2/lesson-68.mp3?v=428d745b4dc7ad24",
+    "textSrc": "./text/reading-2/lesson-68.json?v=d95cf709a3f128b0",
+    "courseId": 2
+  },
+  {
+    "lessonId": 69,
+    "courseTitle": "Чтение",
+    "duration": 176.688,
+    "audioSrc": "./audio/reading-2/lesson-69.mp3?v=e16ffca9f72f8fe8",
+    "textSrc": "./text/reading-2/lesson-69.json?v=3d7f7a187e2b2160",
+    "courseId": 2
+  },
+  {
+    "lessonId": 70,
+    "courseTitle": "Чтение",
+    "duration": 215.784,
+    "audioSrc": "./audio/reading-2/lesson-70.mp3?v=5a2efba3674a84eb",
+    "textSrc": "./text/reading-2/lesson-70.json?v=e09526174eaa47e3",
+    "courseId": 2
+  },
+  {
+    "lessonId": 71,
+    "courseTitle": "Чтение",
+    "duration": 306.864,
+    "audioSrc": "./audio/reading-2/lesson-71.mp3?v=19a670e66e9f0e8a",
+    "textSrc": "./text/reading-2/lesson-71.json?v=0ce66606a1594d4a",
+    "courseId": 2
+  },
+  {
+    "lessonId": 72,
+    "courseTitle": "Чтение",
+    "duration": 357.144,
+    "audioSrc": "./audio/reading-2/lesson-72.mp3?v=c58545df5e88c681",
+    "textSrc": "./text/reading-2/lesson-72.json?v=1f0936c8c185c85a",
+    "courseId": 2
+  },
+  {
+    "lessonId": 73,
+    "courseTitle": "Чтение",
+    "duration": 396.216,
+    "audioSrc": "./audio/reading-2/lesson-73.mp3?v=b29864169abe27a6",
+    "textSrc": "./text/reading-2/lesson-73.json?v=ee34afe0bf7e8a86",
+    "courseId": 2
+  },
+  {
+    "lessonId": 74,
+    "courseTitle": "Чтение",
+    "duration": 385.176,
+    "audioSrc": "./audio/reading-2/lesson-74.mp3?v=6a0412c6e2945664",
+    "textSrc": "./text/reading-2/lesson-74.json?v=13de1282179b7ff2",
+    "courseId": 2
+  },
+  {
+    "lessonId": 75,
+    "courseTitle": "Чтение",
+    "duration": 623.376,
+    "audioSrc": "./audio/reading-2/lesson-75.mp3?v=273e773d12770427",
+    "textSrc": "./text/reading-2/lesson-75.json?v=71429aa32c9a793f",
+    "courseId": 2
   }
 ]

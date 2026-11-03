@@ -14,7 +14,7 @@ assert.deepEqual(catalog, [...catalog].sort((a, b) => (a.courseId ?? 1) - (b.cou
 const firstCourseCatalog = catalog.filter(entry => (entry.courseId ?? 1) === 1);
 const readingCatalog = catalog.filter(entry => entry.courseId === 2);
 assert.deepEqual(readingCatalog.map(entry => entry.lessonId),
-  Array.from({ length: 67 }, (_, index) => index + 1).filter(id => ![15, 41, 48, 61, 63, 65].includes(id)));
+  Array.from({ length: 75 }, (_, index) => index + 1).filter(id => ![15, 41, 48, 61, 63, 65].includes(id)));
 assert(catalog.some(entry => entry.lessonId === 87) && catalog.some(entry => entry.lessonId === 88), 'The original pilot lessons must join the shared catalog');
 const listeningKey = 'shifahiya-listening-progress-v1';
 const readingListeningKey = 'shifahiya-p2-listening-progress-v1';
