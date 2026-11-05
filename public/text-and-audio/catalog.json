@@ -176,16 +176,16 @@
   {
     "lessonId": 14,
     "courseTitle": "Чтение",
-    "duration": 620.064,
-    "audioSrc": "./audio/reading-2/lesson-14.mp3",
+    "duration": 511.321,
+    "audioSrc": "./audio/reading-2/lesson-14.mp3?v=36ad4f6a5fadd546",
     "textSrc": "./text/reading-2/lesson-14.json?v=95b47a44a80871c0",
     "courseId": 2
   },
   {
     "lessonId": 16,
     "courseTitle": "Чтение",
-    "duration": 599.808,
-    "audioSrc": "./audio/reading-2/lesson-16.mp3",
+    "duration": 489.953,
+    "audioSrc": "./audio/reading-2/lesson-16.mp3?v=fa9baeb85566557a",
     "textSrc": "./text/reading-2/lesson-16.json?v=9561283f075c6124",
     "courseId": 2
   },
