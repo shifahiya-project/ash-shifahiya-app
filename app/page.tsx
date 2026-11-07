@@ -20,6 +20,7 @@ import { part2CardId, part2LessonIdsInCards, unlockedPart2Ids } from "./part2-ac
 import { part3Summaries } from "../content/part3/manifest";
 import { loadPart3Lesson, loadPart3Lessons } from "../content/part3/lessons";
 import { isPart3Open, part3CardId, part3LessonIdsInCards, unlockedPart3Ids } from "./part3-access";
+import { activeTextWordIndexes, textCourseSessionWordIndexes } from "./part3-vocabulary";
 import { part4Summaries } from "../content/part4/manifest";
 import { loadPart4Lesson, loadPart4Lessons, loadPart4WordsMetBefore } from "../content/part4/lessons";
 import { isPart4Open, part4CardId, part4LessonIdsInCards, unlockedPart4Ids } from "./part4-access";
@@ -230,24 +231,27 @@ function textCourseReviewCardsOf(
   lesson: TextCourseLesson,
   cardId: (lessonId: number, index: number, direction: "ar-ru" | "ru-ar") => string,
 ): ReviewCard[] {
-  return lesson.words.flatMap((word, index) => [
-    {
-      id: cardId(lesson.id, index, "ar-ru"),
-      lessonId: lesson.id,
-      prompt: word.arabic,
-      answer: word.russian,
-      promptLang: "ar" as const,
-      answerLang: "ru" as const,
-    },
-    {
-      id: cardId(lesson.id, index, "ru-ar"),
-      lessonId: lesson.id,
-      prompt: word.russian,
-      answer: word.arabic,
-      promptLang: "ru" as const,
-      answerLang: "ar" as const,
-    },
-  ]);
+  return activeTextWordIndexes(lesson).flatMap((index) => {
+    const word = lesson.words[index];
+    return [
+      {
+        id: cardId(lesson.id, index, "ar-ru"),
+        lessonId: lesson.id,
+        prompt: word.arabic,
+        answer: word.russian,
+        promptLang: "ar" as const,
+        answerLang: "ru" as const,
+      },
+      {
+        id: cardId(lesson.id, index, "ru-ar"),
+        lessonId: lesson.id,
+        prompt: word.russian,
+        answer: word.arabic,
+        promptLang: "ru" as const,
+        answerLang: "ar" as const,
+      },
+    ];
+  });
 }
 
 /** The courses that teach a scholarly book: its glossary, then its text. */
@@ -650,6 +654,7 @@ export default function Home() {
   /** Which text course is on screen, and the lesson of it that is open. */
   const [textCourseId, setTextCourseId] = useState<TextCourseId>(3);
   const [textLesson, setTextLesson] = useState<TextCourseLesson | null>(null);
+  const [textWordIndexes, setTextWordIndexes] = useState<number[]>([]);
   /**
    * Words already met, for a lesson too short to fill three options out of its
    * own glossary. Empty for every other lesson, which is nearly all of them.
@@ -887,13 +892,17 @@ export default function Home() {
     () => ({ ...TEXT_COURSES[textCourseId], id: textCourseId, ...textCourseProgress[textCourseId] }),
     [textCourseId, textCourseProgress],
   );
-  const textWords = textLesson?.words ?? [];
+  const textWords = useMemo(
+    () => textLesson ? textWordIndexes.map((index) => textLesson.words[index]) : [],
+    [textLesson, textWordIndexes],
+  );
   const textTasks = useMemo(
-    () => (textLesson ? textCourseQuestions(textLesson, textMet) : []),
-    [textLesson, textMet],
+    () => (textLesson ? textCourseQuestions({ ...textLesson, words: textWords }, textMet) : []),
+    [textLesson, textWords, textMet],
   );
   const textWord = textWords[stepIndex];
   const textTask = textTasks[stepIndex];
+  const textReviewWordCount = textWords.filter((word) => !word.retired).length;
   // The texts are read on their own schedule, so today's reading is counted
   // apart from the cards and shown as its own line on the home screen.
   const dueReadings = useMemo(
@@ -1713,13 +1722,21 @@ export default function Home() {
 
     const sessions = textCourseProgress[courseId].sessions;
     const parked = from === "resume" ? sessions[id] : undefined;
+    const wordIndexes = textCourseSessionWordIndexes(courseId, lesson, parked);
+    setTextWordIndexes(wordIndexes);
     setStepIndex(parked?.index ?? 0);
     setStepScore(parked?.score ?? 0);
     setStepMistakes(parked?.mistakes ?? []);
     // A lesson that brings no new words has nothing to show on cards and
     // nothing to ask: the fourth course's glossary is cumulative, and deep in
     // a book a lesson can meet nothing new. Such a lesson is its text.
-    const step = lesson.words.length ? (parked?.view ?? "learn") : "reading";
+    const step = wordIndexes.length ? (parked?.view ?? "learn") : "reading";
+    if (courseId === 3) {
+      opening.saveSession({
+        lessonId: id, view: step, index: parked?.index ?? 0,
+        score: parked?.score ?? 0, mistakes: parked?.mistakes ?? [], wordIndexes: [...wordIndexes],
+      });
+    }
     setView(`text-${step}` as "text-learn" | "text-practice" | "text-reading");
   }
 
@@ -1730,14 +1747,18 @@ export default function Home() {
     mistakes = stepMistakes,
   ) {
     if (!textLesson) return;
-    textCourse.saveSession({ lessonId: textLesson.id, view, index, score, mistakes });
+    textCourse.saveSession({
+      lessonId: textLesson.id, view, index, score, mistakes,
+      ...(textCourseId === 3 ? { wordIndexes: [...textWordIndexes] } : {}),
+    });
   }
 
   /** A word of a text course enters the same boxes every course before it uses. */
   function rateTextCourseCard(remembered: boolean) {
     if (!textLesson) return;
-    const forward = textCourse.cardId(textLesson.id, stepIndex, "ar-ru");
-    const reverse = textCourse.cardId(textLesson.id, stepIndex, "ru-ar");
+    const wordIndex = textWordIndexes[stepIndex];
+    const forward = textCourse.cardId(textLesson.id, wordIndex, "ar-ru");
+    const reverse = textCourse.cardId(textLesson.id, wordIndex, "ru-ar");
     progressStore.updateCards((items) => ({
       ...items,
       [forward]: nextCardProgress(items[forward], remembered),
@@ -2479,7 +2500,9 @@ export default function Home() {
                       )}
                       {coreCompleted && (
                         <div className="card-score">
-                          {item.wordCount ? `✓ ${score}/${item.wordCount}` : "✓ прочитан"}
+                          {course === 3
+                            ? `✓ ${plural(score, "балл", "балла", "баллов")}`
+                            : item.wordCount ? `✓ ${score}/${item.wordCount}` : "✓ прочитан"}
                         </div>
                       )}
                     </div>
@@ -3237,8 +3260,8 @@ export default function Home() {
             <p className="result-score">{stepScore} из {textTasks.length}</p>
           )}
           <p className="instruction">
-            {textWords.length
-              ? `${plural(textWords.length, "новое слово", "новых слова", "новых слов")} ушли в повторение — они вернутся вместе со словами других частей.`
+            {textReviewWordCount
+              ? `${plural(textReviewWordCount, "новое слово", "новых слова", "новых слов")} ушли в повторение — они вернутся вместе со словами других частей.`
               : "Новых слов этот урок не приносит — он весь в тексте, и текст прочитан."}
           </p>
           <div className="study-actions">

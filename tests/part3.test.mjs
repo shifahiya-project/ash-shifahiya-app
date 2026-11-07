@@ -149,7 +149,7 @@ test("the manifest agrees with the lessons", () => {
     assert.equal(summary.arabicTitle, lesson.arabicTitle);
     assert.equal(summary.book, lesson.book);
     assert.equal(summary.section, lesson.section);
-    assert.equal(summary.wordCount, lesson.words.length);
+    assert.equal(summary.wordCount, lesson.words.filter((word) => !word.retired).length);
     assert.equal(summary.fragmentCount, lesson.fragments.length);
   }
 });

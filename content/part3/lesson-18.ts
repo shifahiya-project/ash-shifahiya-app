@@ -20,7 +20,7 @@ export const part3LessonEighteen: TextCourseLesson = {
     { arabic: "اِسْتِثْنَاءٌ", russian: "исключение из общего высказывания", kind: "term" },
     { arabic: "هَلَاكٌ", russian: "гибель; исчезновение", kind: "masdar" },
     { arabic: "مُحْتَمِلٌ", russian: "допускающий разные толкования", kind: "term" },
-    { arabic: "اِنْتَهَى (يَنْتَهِي)", russian: "заканчиваться; достигать предела", kind: "verb" },
+    { arabic: "تَنَاهَى (يَتَنَاهَى)", russian: "иметь предел; быть конечным", kind: "verb" },
     { arabic: "اِسْتَثْنَى (يَسْتَثْنِي)", russian: "делать исключение", kind: "verb" },
   ],
   fragments: [

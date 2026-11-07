@@ -28,5 +28,5 @@ for (const lesson of course) {
 }
 await writePart3Manifest(directory, course);
 console.log(`Reviewed main text: ${course.length} lessons, ` +
-  `${course.reduce((n, lesson) => n + lesson.words.length, 0)} words, ` +
+  `${course.reduce((n, lesson) => n + lesson.words.filter((word) => !word.retired).length, 0)} active words, ` +
   `${course.reduce((n, lesson) => n + lesson.fragments.length, 0)} fragments`);

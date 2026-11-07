@@ -25,7 +25,7 @@ export const part3LessonTwentyEight: TextCourseLesson = {
     { arabic: "دَفَّةٌ", russian: "доска или обложка книги", kind: "noun" },
     { arabic: "سَاغَ (يَسُوغُ)", russian: "быть допустимым и приемлемым", kind: "verb" },
     { arabic: "شَبِيهٌ", russian: "подобный; сходный", kind: "adjective" },
-    { arabic: "عَدَسَةٌ", russian: "хрусталик глаза; чечевицеобразная линза", kind: "noun" },
+    { arabic: "عَدَسَةٌ", russian: "чечевичное зерно; линза; хрусталик глаза", kind: "noun" },
     { arabic: "غَيٌّ", russian: "заблуждение; уклонение от верного пути", kind: "masdar" },
     { arabic: "كَمِّيٌّ", russian: "количественный", kind: "term" },
     { arabic: "مُسْكَةٌ", russian: "самая малая доля; крупица", kind: "noun" },

@@ -8,6 +8,7 @@ import { applyPart3ReviewedText, part3TextFingerprint } from "../scripts/part3-r
 
 const root = new URL("../", import.meta.url);
 const cleanup = JSON.parse(await readFile(new URL("scripts/part3-main-text.json", root), "utf8"));
+const vocabulary = JSON.parse(await readFile(new URL("scripts/part3-vocabulary-review.json", root), "utf8"));
 const rawReviews = await Promise.all(["bakri", "kursavi"].map(async (name) =>
   JSON.parse(await readFile(new URL(`scripts/${name}-text-corrections.json`, root), "utf8"))));
 const course = [];
@@ -16,12 +17,34 @@ for (let id = 1; id <= 37; id++) {
   course.push(structuredClone(Object.values(imported)[0]));
 }
 
+function restoreVocabulary(lesson) {
+  for (const addition of vocabulary.additions.filter((entry) => entry.lesson === lesson.id)
+    .sort((a, b) => b.position - a.position)) {
+    assert.deepEqual(lesson.words[addition.position - 1], addition.entry);
+    lesson.words.splice(addition.position - 1, 1);
+  }
+  for (const edit of vocabulary.edits.filter((entry) => entry.lesson === lesson.id)) {
+    assert.deepEqual(lesson.words[edit.word - 1], edit.after);
+    lesson.words[edit.word - 1] = structuredClone(edit.before);
+  }
+}
+
+function mainTextBook(book) {
+  const lessons = structuredClone(course.filter((lesson) => lesson.book === book));
+  for (const lesson of lessons) {
+    restoreVocabulary(lesson);
+    lesson.id -= cleanup.books[book].offset;
+  }
+  return lessons;
+}
+
 // Restore the exact documented input, including removed source footnotes.
 // This exercises all review guards against the published data, not a mock subset.
 function sourceBook(book, original) {
   const { offset } = cleanup.books[book];
   const lessons = structuredClone(course.filter((lesson) => lesson.book === book));
   for (const lesson of lessons) {
+    restoreVocabulary(lesson);
     for (const entry of cleanup.droppedFragments.filter((entry) => entry.lesson === lesson.id)
       .sort((a, b) => a.fragment - b.fragment)) {
       lesson.fragments.splice(entry.fragment - 1, 0, structuredClone(entry.before));
@@ -49,18 +72,28 @@ function sourceBook(book, original) {
 }
 
 for (const [book, edition] of Object.entries(cleanup.books)) {
-  test(`${book}: original and reviewed exports produce the same main text and keep word positions`, () => {
+  test(`${book}: original and both reviewed stages produce the same edition and keep word positions`, () => {
     const expected = structuredClone(course.filter((lesson) => lesson.book === book));
     for (const lesson of expected) lesson.id -= edition.offset;
-    assert.equal(part3TextFingerprint(expected), edition.sha256);
-    for (const original of [true, false]) {
-      const input = sourceBook(book, original);
+    assert.equal(part3TextFingerprint(expected), vocabulary.books[book].sha256);
+    const mainText = mainTextBook(book);
+    assert.equal(part3TextFingerprint(mainText), edition.sha256, "the original review fingerprint stays valid");
+    for (const input of [sourceBook(book, true), sourceBook(book, false), mainText, structuredClone(expected)]) {
       applyPart3ReviewedText(book, input);
       assert.deepEqual(input, expected);
       applyPart3ReviewedText(book, input);
       assert.deepEqual(input, expected, "a repeated review is idempotent");
     }
-    assert.equal(expected.reduce((n, lesson) => n + lesson.words.length, 0), edition.words);
+    for (const lesson of mainTextBook(book)) {
+      const result = expected.find((entry) => entry.id === lesson.id);
+      for (const [index, word] of lesson.words.entries()) {
+        const edit = vocabulary.edits.find((entry) => entry.lesson === lesson.id + edition.offset && entry.word === index + 1);
+        assert.deepEqual(result.words[index], edit?.after ?? word, "existing word addresses stay stable");
+      }
+    }
+    assert.equal(expected.reduce((n, lesson) => n + lesson.words.length, 0), vocabulary.books[book].words);
+    assert.equal(expected.reduce((n, lesson) => n + lesson.words.filter((word) => !word.retired).length, 0),
+      vocabulary.books[book].activeWords);
     assert.equal(expected.reduce((n, lesson) => n + lesson.fragments.length, 0), edition.fragments);
   });
 
@@ -71,11 +104,37 @@ for (const [book, edition] of Object.entries(cleanup.books)) {
     assert.throws(() => applyPart3ReviewedText(book, input));
     assert.deepEqual(input, saved);
   });
+
+  test(`${book}: an incompatible vocabulary export fails atomically`, () => {
+    const input = sourceBook(book, true);
+    input[0].words[0].russian += " (другая редакция)";
+    const saved = structuredClone(input);
+    assert.throws(() => applyPart3ReviewedText(book, input));
+    assert.deepEqual(input, saved);
+  });
 }
+
+test("retirement is part of the reviewed fingerprint and cannot silently reactivate a card", () => {
+  const edit = vocabulary.edits.find((entry) => entry.after.retired);
+  const original = structuredClone(course.filter((lesson) => lesson.book === course.find((entry) => entry.id === edit.lesson).book));
+  const book = original[0].book;
+  for (const lesson of original) lesson.id -= vocabulary.books[book].offset;
+  for (const retired of [false, undefined]) {
+    const input = structuredClone(original);
+    const word = input.find((lesson) => lesson.id === edit.lesson - vocabulary.books[book].offset).words[edit.word - 1];
+    if (retired === undefined) delete word.retired;
+    else word.retired = retired;
+    assert.notEqual(part3TextFingerprint(input), vocabulary.books[book].sha256);
+    const saved = structuredClone(input);
+    assert.throws(() => applyPart3ReviewedText(book, input));
+    assert.deepEqual(input, saved);
+  }
+});
 
 test("only the main text reaches lessons, including an untranslated Arabic source passage", () => {
   assert.equal(course.length, 37);
-  assert.equal(course.reduce((n, lesson) => n + lesson.words.length, 0), 887);
+  assert.equal(course.reduce((n, lesson) => n + lesson.words.length, 0), 894);
+  assert.equal(course.reduce((n, lesson) => n + lesson.words.filter((word) => !word.retired).length, 0), 893);
   for (const lesson of course) {
     for (const line of lesson.fragments) {
       assert.doesNotMatch(line.arabic + line.russian, /PDF|Примечание редактора|\([1-7]\)|\* \* \*|---/);
@@ -94,7 +153,7 @@ test("the real CLI keeps corrected words and main text when both original books 
     await mkdir(join(directory, "content/part3"), { recursive: true });
     await writeFile(join(directory, "package.json"), '{"type":"module"}\n');
     for (const file of await readdir(new URL("scripts/", root))) {
-      if (/^(?:import-part3|part3-output|part3-reviewed-text|bakri-text-corrections|kursavi-text-corrections|part3-main-text)\.(?:mjs|json)$/.test(file)) {
+      if (/^(?:import-part3|part3-output|part3-reviewed-text|part3-vocabulary-review|bakri-text-corrections|kursavi-text-corrections|part3-main-text)\.(?:mjs|json)$/.test(file)) {
         await copyFile(new URL(`scripts/${file}`, root), join(directory, "scripts", file));
       }
     }
@@ -105,6 +164,8 @@ test("the real CLI keeps corrected words and main text when both original books 
     }
     for (const book of Object.keys(cleanup.books)) {
       const source = sourceBook(book, true);
+      assert(source.every((lesson) => lesson.words.every((word) => !Object.hasOwn(word, "retired"))),
+        "the source glossary has no application-specific retirement metadata");
       const glossary = { title_ru: book, lessons: source.map((lesson) => ({
         number: lesson.id, title_ru: lesson.title, title_ar: lesson.arabicTitle, section: lesson.section,
         entries: lesson.words.map((word, i) => ({ id: `source-${lesson.id}-${i}`, arabic: word.arabic,
