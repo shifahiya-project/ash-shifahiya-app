@@ -22,6 +22,7 @@ async function loadLessons() {
 }
 
 const lessons = await loadLessons();
+const { untranslated } = JSON.parse(await readFile(new URL("../scripts/part3-main-text.json", import.meta.url), "utf8"));
 
 function skeleton(text) {
   return text.replace(/[ً-ْٰـ]/g, "").replace(/[^ء-ي]/g, "");
@@ -40,9 +41,15 @@ test("every lesson brings words and the text they belong to", () => {
     }
     assert.match(lesson.arabicTitle, /[ء-ي]/, `урок ${lesson.id}: без арабского названия`);
 
-    for (const line of lesson.fragments) {
+    for (const [index, line] of lesson.fragments.entries()) {
       assert.match(line.arabic, /[ء-ي]/, `урок ${lesson.id}: фрагмент без арабского`);
-      assert.match(line.russian, /[а-яА-ЯёЁ]/, `урок ${lesson.id}: фрагмент без перевода`);
+      const unavailable = untranslated.find((entry) => entry.lesson === lesson.id && entry.fragment === index + 1);
+      if (unavailable) {
+        assert.equal(line.arabic, unavailable.arabic, "неподтверждённый перевод относится к конкретной строке источника");
+        assert.equal(line.russian, "", "редакторское примечание не подменяет отсутствующий перевод");
+      } else {
+        assert.match(line.russian, /[а-яА-ЯёЁ]/, `урок ${lesson.id}: фрагмент без перевода`);
+      }
     }
   }
 });
