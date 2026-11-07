@@ -14,6 +14,7 @@
     "content:manifest": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/generate-manifest.mjs",
     "part2:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part2.mjs",
     "part3:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part3.mjs",
+    "part3:review": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/apply-part3-review.mjs",
     "part4:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part4.mjs",
     "part5:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part5.mjs",
     "part6:import": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/import-part6.mjs",

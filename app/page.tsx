@@ -3202,18 +3202,22 @@ export default function Home() {
                   key={id}
                 >
                   <div className="reading-row">
-                    <button
-                      className="reading-arabic"
-                      lang="ar"
-                      dir="rtl"
-                      aria-expanded={open}
-                      onClick={() => setStepOpen((items) => open ? items.filter((value) => value !== id) : [...items, id])}
-                    >
-                      {line.arabic}
-                    </button>
+                    {line.russian ? (
+                      <button
+                        className="reading-arabic"
+                        lang="ar"
+                        dir="rtl"
+                        aria-expanded={open}
+                        onClick={() => setStepOpen((items) => open ? items.filter((value) => value !== id) : [...items, id])}
+                      >
+                        {line.arabic}
+                      </button>
+                    ) : (
+                      <div className="reading-arabic" lang="ar" dir="rtl">{line.arabic}</div>
+                    )}
                     <button className="reading-sound" onClick={() => speak(line.arabic)} aria-label="Прослушать фрагмент">◖))</button>
                   </div>
-                  {open && <p className="reading-russian">{line.russian}</p>}
+                  {open && line.russian && <p className="reading-russian">{line.russian}</p>}
                 </div>
               );
             })}

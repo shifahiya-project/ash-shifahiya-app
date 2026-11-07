@@ -21,7 +21,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "الْإِيمَانُ",
     title: "Вера",
     wordCount: 44,
-    fragmentCount: 49,
+    fragmentCount: 48,
   },
   {
     id: 3,
@@ -30,7 +30,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "وُجُودُ اللهِ تَعَالَى",
     title: "Существование Всевышнего Аллаха",
     wordCount: 38,
-    fragmentCount: 25,
+    fragmentCount: 23,
   },
   {
     id: 4,
@@ -102,7 +102,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "بَعْثَةُ الْأَنْبِيَاءِ وَالرُّسُلِ وَأَوْصَافُهُمْ",
     title: "Направление пророков и посланников и их качества",
     wordCount: 36,
-    fragmentCount: 35,
+    fragmentCount: 34,
   },
   {
     id: 12,
@@ -111,7 +111,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "مُعْجِزَاتُ الْأَنْبِيَاءِ",
     title: "Чудеса пророков",
     wordCount: 29,
-    fragmentCount: 37,
+    fragmentCount: 34,
   },
   {
     id: 13,
@@ -129,7 +129,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "شُبُهَاتٌ وَجَوَابُهَا",
     title: "Возражения и ответы на них",
     wordCount: 20,
-    fragmentCount: 38,
+    fragmentCount: 34,
   },
   {
     id: 15,
@@ -138,7 +138,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "عَوَالِمُ غَيْبِيَّةٌ",
     title: "Сокрытые миры",
     wordCount: 54,
-    fragmentCount: 130,
+    fragmentCount: 126,
   },
   {
     id: 16,
@@ -174,7 +174,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "مَنْزِلَةُ الصَّحَابَةِ وَالْمُفَاضَلَةُ بَيْنَهُمْ",
     title: "Положение сподвижников и превосходство одних над другими",
     wordCount: 27,
-    fragmentCount: 29,
+    fragmentCount: 25,
   },
   {
     id: 20,
@@ -183,7 +183,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "ضَوَابِطُ التَّكْفِيرِ",
     title: "Правила такфира",
     wordCount: 25,
-    fragmentCount: 19,
+    fragmentCount: 18,
   },
   {
     id: 21,

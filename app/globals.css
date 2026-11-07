@@ -724,7 +724,8 @@ h1 em { color: var(--green); font-weight: inherit; }
   cursor: pointer;
 }
 
-.reading-arabic:hover { color: var(--green); }
+button.reading-arabic:hover { color: var(--green); }
+div.reading-arabic { cursor: text; }
 .reading-line.is-open .reading-arabic { color: var(--green-dark); }
 
 /* A heading printed inside a lesson is not read as a sentence of the argument,
