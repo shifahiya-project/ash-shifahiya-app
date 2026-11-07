@@ -123,6 +123,8 @@ export type TextCourseWordKind =
   | "particle";
 
 export type TextCourseWord = {
+  /** Keep a retired word's review address, but omit it from new study and review. */
+  retired?: true;
   /** The dictionary form as the glossary gives it: مَذْهَبٌ (مَذَاهِبُ), شَرَطَ (يَشْرُطُ). */
   arabic: string;
   russian: string;

@@ -47,7 +47,7 @@ export const part3Summaries: TextCourseSummary[] = [
     section: "Баб первый · Иляхийят",
     arabicTitle: "صِفَاتُ الْمَعَانِي وَالصِّفَاتُ الْمَعْنَوِيَّةُ",
     title: "Атрибуты ма‘ани и ма‘навийные атрибуты",
-    wordCount: 34,
+    wordCount: 35,
     fragmentCount: 47,
   },
   {
@@ -137,7 +137,7 @@ export const part3Summaries: TextCourseSummary[] = [
     section: "Баб третий · Сам‘ийят",
     arabicTitle: "عَوَالِمُ غَيْبِيَّةٌ",
     title: "Сокрытые миры",
-    wordCount: 54,
+    wordCount: 56,
     fragmentCount: 126,
   },
   {
@@ -222,7 +222,7 @@ export const part3Summaries: TextCourseSummary[] = [
     book: "Шарх аль-‘Акаид аль-джадида",
     arabicTitle: "وَحْدَانِيَّةُ اللهِ وَأَسْمَاؤُهُ: الْقَدِيمُ وَالْحَيُّ وَالْقَدِيرُ وَالْعَلِيمُ",
     title: "Единственность Аллаха и Его имена: аль-Кадим, аль-Хайй, аль-Кадир, аль-‘Алим",
-    wordCount: 16,
+    wordCount: 17,
     fragmentCount: 26,
   },
   {
@@ -294,7 +294,7 @@ export const part3Summaries: TextCourseSummary[] = [
     book: "Шарх аль-‘Акаид аль-джадида",
     arabicTitle: "الْأَنْبِيَاءُ وَالْمَلَائِكَةُ وَالْكُتُبُ وَالْمِعْرَاجُ وَالْكَرَامَاتُ",
     title: "Пророки, ангелы, Писания, ми‘радж и караматы",
-    wordCount: 10,
+    wordCount: 11,
     fragmentCount: 29,
   },
   {
@@ -302,7 +302,7 @@ export const part3Summaries: TextCourseSummary[] = [
     book: "Шарх аль-‘Акаид аль-джадида",
     arabicTitle: "أَفْضَلُ الصَّحَابَةِ وَالْخِلَافَةُ وَالْإِمَامَةُ",
     title: "Лучшие из сподвижников, халифат и имамат",
-    wordCount: 32,
+    wordCount: 33,
     fragmentCount: 55,
   },
   {

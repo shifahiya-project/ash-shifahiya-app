@@ -18,7 +18,7 @@ function numberName(n) {
 const quote = (value) => JSON.stringify(value);
 
 function renderWord(word) {
-  return `    { arabic: ${quote(word.arabic)}, russian: ${quote(word.russian)}, kind: ${quote(word.kind)} },`;
+  return `    { arabic: ${quote(word.arabic)}, russian: ${quote(word.russian)}, kind: ${quote(word.kind)}${word.retired === true ? ", retired: true" : ""} },`;
 }
 
 function renderFragment(fragment) {
@@ -54,7 +54,7 @@ export async function writePart3Manifest(directory, course) {
         ...(lesson.section ? [`    section: ${quote(lesson.section)},`] : []),
         `    arabicTitle: ${quote(lesson.arabicTitle)},`,
         `    title: ${quote(lesson.title)},`,
-        `    wordCount: ${lesson.words.length},`,
+        `    wordCount: ${lesson.words.filter((word) => !word.retired).length},`,
         `    fragmentCount: ${lesson.fragments.length},`,
         "  },",
       ].join("\n"),
