@@ -272,32 +272,32 @@
   {
     "lessonId": 27,
     "courseTitle": "Чтение",
-    "duration": 540.264,
-    "audioSrc": "./audio/reading-2/lesson-27.mp3",
+    "duration": 364.539,
+    "audioSrc": "./audio/reading-2/lesson-27.mp3?v=2f44ca644700be87",
     "textSrc": "./text/reading-2/lesson-27.json?v=0543aad76520fec2",
     "courseId": 2
   },
   {
     "lessonId": 28,
     "courseTitle": "Чтение",
-    "duration": 649.608,
-    "audioSrc": "./audio/reading-2/lesson-28.mp3",
+    "duration": 471.589,
+    "audioSrc": "./audio/reading-2/lesson-28.mp3?v=32db854d389c08b7",
     "textSrc": "./text/reading-2/lesson-28.json?v=1fa9d3ac6725dbaf",
     "courseId": 2
   },
   {
     "lessonId": 29,
     "courseTitle": "Чтение",
-    "duration": 650.136,
-    "audioSrc": "./audio/reading-2/lesson-29.mp3",
+    "duration": 773.773,
+    "audioSrc": "./audio/reading-2/lesson-29.mp3?v=78def033a3fe358c",
     "textSrc": "./text/reading-2/lesson-29.json?v=b9bb430090df1bd1",
     "courseId": 2
   },
   {
     "lessonId": 30,
     "courseTitle": "Чтение",
-    "duration": 859.224,
-    "audioSrc": "./audio/reading-2/lesson-30.mp3",
+    "duration": 616.594,
+    "audioSrc": "./audio/reading-2/lesson-30.mp3?v=27acc7e3a274dd55",
     "textSrc": "./text/reading-2/lesson-30.json?v=b37159c41386d068",
     "courseId": 2
   },
