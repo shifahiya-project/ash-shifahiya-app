@@ -140,8 +140,20 @@ function serveSite() {
     try {
       const body = await readFile(file);
       const extension = file.slice(file.lastIndexOf("."));
-      response.writeHead(200, { "content-type": TYPES[extension] ?? "application/octet-stream" });
-      response.end(body);
+      response.setHeader("content-type", TYPES[extension] ?? "application/octet-stream");
+      response.setHeader("accept-ranges", "bytes");
+      // Restoring a paused recording needs the same byte-range support as Pages.
+      const range = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
+      if (range) {
+        const start = Number(range[1]);
+        const end = range[2] ? Math.min(Number(range[2]), body.length - 1) : body.length - 1;
+        if (start > end) { response.writeHead(416).end(); return; }
+        response.writeHead(206, { "content-range": `bytes ${start}-${end}/${body.length}`, "content-length": end - start + 1 });
+        response.end(body.subarray(start, end + 1));
+      } else {
+        response.writeHead(200, { "content-length": body.length });
+        response.end(body);
+      }
     } catch {
       response.writeHead(404, { "content-type": TYPES[".html"] }).end("not found");
     }
@@ -264,6 +276,7 @@ try {
   await page.getByRole("tab", { name: /2 · Чтение/ }).click();
   const firstPart2Card = page.locator(".lesson-card").filter({ has: page.locator(".lesson-label", { hasText: /^Часть 2 · урок 1$/ }) });
   assert.match(await firstPart2Card.locator(".card-score").innerText(), /39\/39.*прежняя редакция/);
+  await openCourseParts();
   await page.getByRole("tab", { name: /8 · Хадис/ }).click();
   await page.getByRole("button", { name: "Закрыть меню", exact: true }).click();
   assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
@@ -372,7 +385,7 @@ try {
   assert.equal(await player.locator('audio').count(), 0, 'The iframe must not retain a second recording');
   assert.equal(await dockAudio.count(), 1, 'The floating panel owns the original recording');
   const viewport = page.viewportSize();
-  for (const size of [{ width: 390, height: 480 }, { width: 1280, height: 800 }]) {
+  for (const size of [{ width: 320, height: 480 }, { width: 390, height: 480 }, { width: 1280, height: 800 }]) {
     await page.setViewportSize(size);
     await page.evaluate(() => {
       scrollTo(0, document.documentElement.scrollHeight);
@@ -395,22 +408,63 @@ try {
   assert(await player.locator('#listening-transcript').isHidden(), 'Docked settings must still control the transcript');
   await dock.getByRole('button', { name: 'Показать текст', exact: true }).click();
   await dock.getByRole('button', { name: 'Настройки', exact: true }).click();
-  const beforePlayback = await dockAudio.evaluate(audio => audio.currentTime);
-  await dockAudio.evaluate(audio => audio.play());
-  await page.waitForFunction(before => document.querySelector('[data-lesson-player]').shadowRoot.querySelector('audio').currentTime > before + 0.2, beforePlayback);
-  await dockAudio.evaluate(audio => audio.pause());
   await page.setViewportSize(viewport);
-  await page.evaluate(() => scrollTo(0, 0));
+  await dockAudio.evaluate(async audio => { audio.currentTime = 12; await audio.play(); });
+  await page.waitForFunction(() => document.querySelector('[data-lesson-player]').shadowRoot.querySelector('audio').currentTime > 12.2);
+  const unfinishedAudio = await dockAudio.elementHandle();
+  await player.locator('#return-course').click();
+  await page.locator('.home-view').waitFor();
+  assert.equal(await unfinishedAudio.evaluate(audio => audio.paused), true, 'Returning to the course must stop playback');
+  assert.equal((await p2Session()).view, 'listening');
+  assert(await page.evaluate(() => JSON.parse(localStorage.getItem('shifahiya-p2-listening-1-v1')).position > 12));
+  await resumePart2('listening');
+  await page.waitForFunction(() => {
+    const audio = document.querySelector('[data-lesson-player]')?.shadowRoot?.querySelector('audio');
+    return audio && audio.currentTime > 12 && audio.playbackRate === 1.25;
+  });
   await player.locator("#complete").click();
   await page.waitForFunction(() => {
     const marks = JSON.parse(localStorage.getItem("shifahiya-p2-listening-progress-v1") || "{}");
     return marks[1]?.completed === true;
   });
+  const listeningSession = await p2Session();
+  assert.deepEqual(await player.locator('.listening-actions button:visible').allTextContents(), ['Прослушал', 'Прослушать ещё раз']);
+  const marksBeforeReplay = await page.evaluate(() => localStorage.getItem('shifahiya-p2-listening-progress-v1'));
+  const reviewsBeforeReplay = await page.evaluate(() => localStorage.getItem('shifahiya-listening-reviews-v1'));
+  await player.locator('#listen-again').click();
+  await page.waitForFunction(() => {
+    const audio = document.querySelector('[data-lesson-player]').shadowRoot.querySelector('audio');
+    return !audio.paused && audio.currentTime > 0 && audio.currentTime < 4;
+  });
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifahiya-p2-listening-progress-v1')), marksBeforeReplay);
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifahiya-listening-reviews-v1')), reviewsBeforeReplay);
+  // Only this frame may request returning to the parent course.
+  await page.evaluate(() => dispatchEvent(new MessageEvent('message', {
+    origin: location.origin, source: window, data: { type: 'shifahiya:return-to-course' },
+  })));
+  assert(await p2Stage('listening').isVisible());
+  const returningAudio = await dockAudio.elementHandle();
+  await player.locator('#return-course').click();
+  await page.locator('.home-view').waitFor();
+  assert.equal(await returningAudio.evaluate(audio => audio.paused), true);
+  assert.equal((await p2Session()).view, listeningSession.view);
+  assert.equal(await p2Stage('listening').count(), 0);
+  // Also exercise the direct transition while the adopted recording is playing.
+  await page.evaluate(() => {
+    localStorage.setItem('shifahiya-p2-listening-progress-v1', '{}');
+    const reviews = JSON.parse(localStorage.getItem('shifahiya-listening-reviews-v1') || '{}');
+    delete reviews['2:1'];
+    localStorage.setItem('shifahiya-listening-reviews-v1', JSON.stringify(reviews));
+  });
+  await resumePart2('listening');
   await dockAudio.evaluate(audio => audio.play());
-  const ownedAudio = await dockAudio.elementHandle();
-  await p2Stage("listening").getByRole("button", { name: /К закреплению/ }).click();
+  await player.locator('#complete').click();
+  await p2Stage('listening').getByRole('button', { name: /К закреплению/ }).waitFor();
+  const completingAudio = await dockAudio.elementHandle();
+  await p2Stage('listening').getByRole('button', { name: /К закреплению/ }).click();
   await p2Stage("context").waitFor();
-  assert.equal(await ownedAudio.evaluate(audio => audio.paused), true, 'Leaving the lesson must stop its adopted recording');
+  assert.equal(await completingAudio.evaluate(audio => audio.paused), true, 'Continuing the lesson must stop playback');
+  assert.equal(await dock.count(), 0);
   await p2NotFinished();
   const p2Contexts = part2Questions(part2LessonOne);
   for (let index = 0; index < p2Contexts.length; index += 1) {

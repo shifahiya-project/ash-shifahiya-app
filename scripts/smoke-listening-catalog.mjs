@@ -14,7 +14,7 @@ assert.deepEqual(catalog, [...catalog].sort((a, b) => (a.courseId ?? 1) - (b.cou
 const firstCourseCatalog = catalog.filter(entry => (entry.courseId ?? 1) === 1);
 const readingCatalog = catalog.filter(entry => entry.courseId === 2);
 assert.deepEqual(readingCatalog.map(entry => entry.lessonId),
-  Array.from({ length: 67 }, (_, index) => index + 1).filter(id => ![15, 41, 48, 61, 63, 65].includes(id)));
+  Array.from({ length: 75 }, (_, index) => index + 1).filter(id => ![15, 41, 48, 61, 63, 65].includes(id)));
 assert(catalog.some(entry => entry.lessonId === 87) && catalog.some(entry => entry.lessonId === 88), 'The original pilot lessons must join the shared catalog');
 const listeningKey = 'shifahiya-listening-progress-v1';
 const readingListeningKey = 'shifahiya-p2-listening-progress-v1';
@@ -69,7 +69,7 @@ try {
       }, entry.lessonId);
     }
     requests.length = 0;
-    await page.goto(`${origin}${base}text-and-audio.html?v=9&lesson=${entry.lessonId}${entry.courseId === 2 ? '&course=2' : ''}`);
+    await page.goto(`${origin}${base}text-and-audio.html?v=12&lesson=${entry.lessonId}${entry.courseId === 2 ? '&course=2' : ''}`);
     await page.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
     assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), `${entry.courseTitle} · Урок ${entry.lessonId}`);
     assert.equal(await page.getByLabel('Выбрать урок').locator('option').count(), entry.courseId === 2 ? readingCatalog.length : firstCourseCatalog.length);
@@ -169,7 +169,7 @@ try {
     assert.equal(await audio.evaluate(a => a.playbackRate), 1.25);
     assert(await audio.evaluate(a => a.loop));
     assert.notEqual(await page.evaluate(({ key, id }) => JSON.parse(localStorage.getItem(key) ?? '{}')[id]?.completed, { key: scopedKey, id: entry.lessonId }), true, 'Playback alone must not mark text and audio as completed');
-    await page.getByRole('button', { name: 'Текст и аудио пройдены', exact: true }).click();
+    await page.getByRole('button', { name: 'Прослушал', exact: true }).click();
     const marked = await page.evaluate(({ key, id }) => JSON.parse(localStorage.getItem(key))[id], { key: scopedKey, id: entry.lessonId });
     assert.equal(marked.completed, true);
     assert(Number.isFinite(marked.updatedAt) && marked.updatedAt > 0);
@@ -180,10 +180,16 @@ try {
     if (entry.lessonId === 87) {
       const otherTab = await context.newPage();
       otherTab.on('pageerror', error => errors.push(error.message));
-      await otherTab.goto(`${origin}${base}text-and-audio.html?v=9&lesson=87`);
-      await otherTab.locator('#complete[aria-pressed="true"]').click();
+      await otherTab.goto(`${origin}${base}text-and-audio.html?v=12&lesson=87`);
+      assert(await otherTab.locator('#complete[aria-pressed="true"]').isDisabled());
+      await otherTab.evaluate(() => {
+        const key = 'shifahiya-listening-progress-v1';
+        const progress = JSON.parse(localStorage.getItem(key));
+        progress[87] = { completed: false, updatedAt: Date.now() + 1000 };
+        localStorage.setItem(key, JSON.stringify(progress));
+      });
       await page.locator('#complete[aria-pressed="false"]').waitFor();
-      await page.getByRole('button', { name: 'Текст и аудио пройдены', exact: true }).click();
+      await page.getByRole('button', { name: 'Прослушал', exact: true }).click();
       await otherTab.locator('#complete[aria-pressed="true"]').waitFor();
       await otherTab.close();
     }
@@ -226,8 +232,8 @@ try {
   await links.first().waitFor();
   assert.equal(await links.count(), firstCourseCatalog.length);
   const hrefs = await links.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
-  for (const entry of firstCourseCatalog) assert(hrefs.includes(`./text-and-audio.html?v=9&lesson=${entry.lessonId}`));
-  await page.goto(`${origin}${base}text-and-audio.html?v=9&lesson=91`);
+  for (const entry of firstCourseCatalog) assert(hrefs.includes(`./text-and-audio.html?v=12&lesson=${entry.lessonId}`));
+  await page.goto(`${origin}${base}text-and-audio.html?v=12&lesson=91`);
   await page.getByText('Шифахия · Урок 91', { exact: true }).waitFor();
   assert.equal(await page.getByLabel('Выбрать урок').locator('option').count(), firstCourseCatalog.length);
   await page.getByLabel('Выбрать урок').selectOption('87');
@@ -248,14 +254,14 @@ try {
   const readingLinks = page.getByRole('link', { name: 'Текст и аудио', exact: true });
   assert.equal(await readingLinks.count(), readingCatalog.length);
   const readingHrefs = await readingLinks.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
-  for (const entry of readingCatalog) assert(readingHrefs.includes(`./text-and-audio.html?v=9&lesson=${entry.lessonId}&course=2`));
+  for (const entry of readingCatalog) assert(readingHrefs.includes(`./text-and-audio.html?v=12&lesson=${entry.lessonId}&course=2`));
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Reading menu overflows on mobile');
   const missing = Array.from({ length: 100 }, (_, index) => index + 1).find(id => !firstCourseCatalog.some(entry => entry.lessonId === id));
-  await page.goto(`${origin}${base}text-and-audio.html?v=9&lesson=${missing ?? 101}`);
+  await page.goto(`${origin}${base}text-and-audio.html?v=12&lesson=${missing ?? 101}`);
   await page.getByRole('status').filter({ hasText: 'Не удалось открыть урок' }).waitFor();
   assert.equal(await page.locator('audio').getAttribute('src'), null);
   for (const lesson of [15, 41, 48, 61, 63, 65]) {
-    await page.goto(`${origin}${base}text-and-audio.html?v=9&lesson=${lesson}&course=2`);
+    await page.goto(`${origin}${base}text-and-audio.html?v=12&lesson=${lesson}&course=2`);
     await page.getByRole('status').filter({ hasText: 'Не удалось открыть урок' }).waitFor();
     assert.equal(await page.locator('audio').getAttribute('src'), null, 'A skipped reading lesson must not load another recording');
   }

@@ -33,15 +33,14 @@ import { createListeningPlayback } from './playback.js?v=1';
   const inLesson = !embedded && new URLSearchParams(location.search).get('embedded') === '1';
   if (inLesson) {
     document.querySelector('nav').hidden = true;
-    // Dock the original controls before assigning the media source. A second
-    // audio element would split playback, saved positions and listening time.
-    // Shadow DOM keeps player styles and IDs out of the course application.
+    // Move the original panel before assigning a source: playback, progress and
+    // settings must keep sharing one audio element. Isolate its styles and IDs.
     const host = window.frameElement?.parentElement?.querySelector('[data-lesson-player]');
     if (host) {
       const root = host.shadowRoot || host.attachShadow({ mode: 'open' });
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
-      stylesheet.href = new URL('./player.css?v=9', import.meta.url).href;
+      stylesheet.href = new URL('./player.css?v=10', import.meta.url).href;
       panel.classList.add('is-docked');
       root.replaceChildren(stylesheet, panel);
       host.hidden = false;
@@ -50,7 +49,10 @@ import { createListeningPlayback } from './playback.js?v=1';
         section.style.setProperty('--lesson-player-height', `${panel.getBoundingClientRect().height}px`);
       });
       resize.observe(panel);
-      window.addEventListener('pagehide', () => { audio.pause(); resize.disconnect(); });
+      const stop = () => { audio.pause(); listeningClock?.stop(); save(); resize.disconnect(); };
+      // React detaches the host while the iframe's storage/listeners still live.
+      host.addEventListener('lesson-player-dispose', stop, { once: true });
+      window.addEventListener('pagehide', stop);
       window.addEventListener('pageshow', () => resize.observe(panel));
     }
   }
@@ -116,12 +118,15 @@ import { createListeningPlayback } from './playback.js?v=1';
   function renderCompletion() {
     if (!lesson) return;
     const completed = courseId() >= 2 ? reviewRecord()?.active === true : readProgress()[lesson.lessonId]?.completed === true;
-    get('complete').textContent = completed ? 'Пройдено · Отменить отметку' : 'Текст и аудио пройдены';
+    const repeating = courseId() >= 2 && reviewAction(reviewRecord());
+    get('complete').textContent = 'Прослушал';
+    get('complete').hidden = repeating;
     get('complete').setAttribute('aria-pressed', String(completed));
-    get('complete').disabled = false;
+    get('complete').disabled = completed;
+    get('completion-status').hidden = repeating;
     get('completion-status').textContent = completed
-      ? 'Текст и аудио этого урока отмечены как пройденные.'
-      : 'После занятия отметьте текст и аудио как пройденные.';
+      ? 'Прослушивание учтено.'
+      : 'После прослушивания нажмите «Прослушал».';
     renderReview();
   }
   function readReviews() {
@@ -132,9 +137,15 @@ import { createListeningPlayback } from './playback.js?v=1';
       courseId() === 2 ? readProgress()[lesson.lessonId] : undefined);
   }
   const formatDate = day => new Date(`${day}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  function reviewAction(record) {
+    if (!record?.active) return false;
+    const date = reviews.nextDate(record);
+    const today = reviews.localDay();
+    return reviewMode || !!(date && date <= today) || record.repeatedOn.at(-1) === today;
+  }
   function renderReview() {
     get('audio-review').hidden = courseId() < 2;
-    if (courseId() < 2) return;
+    if (courseId() < 2) { get('review-complete').hidden = true; return; }
     const record = reviewRecord();
     const date = reviews.nextDate(record);
     const today = reviews.localDay();
@@ -145,9 +156,10 @@ import { createListeningPlayback } from './playback.js?v=1';
       : date && date <= today ? `${count + 1}-е повторение из 7 · слушайте и повторяйте вслух`
         : record?.active ? 'Повторение аудио · график ниже' : 'Повторение аудио · сначала пройдите урок';
     get('review-count').textContent = record?.active ? `Повторено ${count} из 7` : 'Первое повторение — на следующий день после изучения';
-    get('review-complete').hidden = !record?.active;
+    get('review-complete').hidden = !reviewAction(record);
     get('review-complete').disabled = !date || date > today;
-    get('review-complete').textContent = record?.repeatedOn.at(-1) === today ? 'Повторение учтено ✓' : 'Повторение пройдено';
+    get('review-complete').textContent = 'Прослушал';
+    get('review-complete').setAttribute('aria-pressed', String(record?.repeatedOn.at(-1) === today));
     get('review-status').textContent = !record?.active
       ? 'Сначала отметьте текст и аудио как пройденные. Затем начнётся расписание из семи повторений.'
       : !date ? 'Все семь повторений завершены. Запись можно слушать в любое время.'
@@ -169,7 +181,7 @@ import { createListeningPlayback } from './playback.js?v=1';
       .find(entry => (entry.courseId || 1) !== courseId() || entry.lessonId !== lesson.lessonId);
     get('review-next').hidden = !reviewMode || !next;
     if (next) {
-      get('review-next').href = `./text-and-audio.html?v=10&lesson=${next.lessonId}&course=${next.courseId}&review=1`;
+      get('review-next').href = `./text-and-audio.html?v=11&lesson=${next.lessonId}&course=${next.courseId}&review=1`;
       get('review-next').textContent = `Следующее аудио: ${next.courseTitle || `Часть ${next.courseId}`} · Урок ${next.lessonId}`;
     }
   }
@@ -299,20 +311,40 @@ import { createListeningPlayback } from './playback.js?v=1';
   get('vowels').onclick = () => update({ vocalized: !state.vocalized });
   get('smaller').onclick = () => update({ fontSize: Math.max(24, state.fontSize - 3) });
   get('larger').onclick = () => update({ fontSize: Math.min(42, state.fontSize + 3) });
+  get('listen-again').onclick = async () => {
+    audio.pause();
+    state.position = 0;
+    positionRestore?.dispose();
+    positionRestore = playback.restore(audio, 0);
+    pendingActivation = true;
+    save();
+    try { await audio.play(); }
+    catch { get('audio-error').hidden = false; }
+  };
+  get('return-course').onclick = (event) => {
+    audio.pause();
+    save();
+    if (inLesson && window.parent !== window) {
+      event.preventDefault();
+      window.parent.postMessage({ type: 'shifahiya:return-to-course' }, location.origin);
+    }
+  };
   get('complete').onclick = () => {
     if (!lesson) return;
     if (courseId() >= 2) {
       const resolved = reviewRecord();
+      if (resolved?.active) return;
       const previous = readReviews()[reviews.reviewKey(courseId(), lesson.lessonId)] || (resolved?.active ? resolved : undefined);
-      const next = reviews.setStudied(previous, !resolved?.active, reviews.localDay(), Math.max(Date.now(), (resolved?.updatedAt || 0) + 1));
+      const next = reviews.setStudied(previous, true, reviews.localDay(), Math.max(Date.now(), (resolved?.updatedAt || 0) + 1));
       try { writeReview(next); renderCompletion(); }
       catch { get('completion-status').textContent = 'Не удалось сохранить отметку. Проверьте, разрешено ли браузеру сохранять данные.'; }
       return;
     }
     const progress = readProgress();
     const previous = progress[lesson.lessonId];
+    if (previous?.completed) return;
     progress[lesson.lessonId] = {
-      completed: previous?.completed !== true,
+      completed: true,
       updatedAt: Math.max(Date.now(), (previous?.updatedAt || 0) + 1),
     };
     try {
@@ -356,7 +388,7 @@ import { createListeningPlayback } from './playback.js?v=1';
         reader.readAsDataURL(blob);
       });
       const [html, css, script] = await Promise.all([
-        fetchText('./text-and-audio.html?v=11'), fetchText('./text-and-audio/player.css?v=9'), fetchText('./text-and-audio/player.js?v=11'),
+        fetchText('./text-and-audio.html?v=12'), fetchText('./text-and-audio/player.css?v=10'), fetchText('./text-and-audio/player.js?v=12'),
       ]);
       const doc = new DOMParser().parseFromString(html, 'text/html');
       doc.querySelector('link[rel="stylesheet"]').remove();
@@ -420,6 +452,7 @@ import { createListeningPlayback } from './playback.js?v=1';
       document.querySelector('nav a').href = embedded
         ? `https://shifahiya-project.github.io/ash-shifahiya-app/?course=${courseId()}` : `./?course=${courseId()}`;
     }
+    get('return-course').href = document.querySelector('nav a').href;
     for (const entry of catalog) {
       const option = document.createElement('option');
       option.value = entry.lessonId;

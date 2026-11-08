@@ -53,6 +53,8 @@ export type ReadingCourseSession = {
   lessonId: number;
   view: "learn" | "practice" | "reading";
   index: number;
+  /** Freeze a third-course attempt using stable raw vocabulary positions. */
+  wordIndexes?: number[];
   score: number;
   mistakes: string[];
   updatedAt?: number;

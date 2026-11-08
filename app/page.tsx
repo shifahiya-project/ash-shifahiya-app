@@ -20,6 +20,7 @@ import { part2CardId, part2LessonIdsInCards, unlockedPart2Ids } from "./part2-ac
 import { part3Summaries } from "../content/part3/manifest";
 import { loadPart3Lesson, loadPart3Lessons } from "../content/part3/lessons";
 import { isPart3Open, part3CardId, part3LessonIdsInCards, unlockedPart3Ids } from "./part3-access";
+import { activeTextWordIndexes, textCourseSessionWordIndexes } from "./part3-vocabulary";
 import { part4Summaries } from "../content/part4/manifest";
 import { loadPart4Lesson, loadPart4Lessons, loadPart4WordsMetBefore } from "../content/part4/lessons";
 import { isPart4Open, part4CardId, part4LessonIdsInCards, unlockedPart4Ids } from "./part4-access";
@@ -107,10 +108,10 @@ type ReviewCard = {
 
 const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
 
-/** The adopted recording must stop when React removes its lesson screen. */
+/** Flush and stop the adopted recording before React removes its iframe. */
 function attachLessonPlayer(host: HTMLDivElement | null) {
   if (!host) return;
-  return () => { host.shadowRoot?.querySelector("audio")?.pause(); };
+  return () => { host.dispatchEvent(new Event("lesson-player-dispose")); };
 }
 const WORD_ACHIEVEMENTS = [100, 250, 500, 1000, 2500, 5000, 7500, 10000];
 const DAY_ACHIEVEMENTS = [7, 14, 30, 50, 100, 150, 250, 365];
@@ -236,24 +237,27 @@ function textCourseReviewCardsOf(
   lesson: TextCourseLesson,
   cardId: (lessonId: number, index: number, direction: "ar-ru" | "ru-ar") => string,
 ): ReviewCard[] {
-  return lesson.words.flatMap((word, index) => [
-    {
-      id: cardId(lesson.id, index, "ar-ru"),
-      lessonId: lesson.id,
-      prompt: word.arabic,
-      answer: word.russian,
-      promptLang: "ar" as const,
-      answerLang: "ru" as const,
-    },
-    {
-      id: cardId(lesson.id, index, "ru-ar"),
-      lessonId: lesson.id,
-      prompt: word.russian,
-      answer: word.arabic,
-      promptLang: "ru" as const,
-      answerLang: "ar" as const,
-    },
-  ]);
+  return activeTextWordIndexes(lesson).flatMap((index) => {
+    const word = lesson.words[index];
+    return [
+      {
+        id: cardId(lesson.id, index, "ar-ru"),
+        lessonId: lesson.id,
+        prompt: word.arabic,
+        answer: word.russian,
+        promptLang: "ar" as const,
+        answerLang: "ru" as const,
+      },
+      {
+        id: cardId(lesson.id, index, "ru-ar"),
+        lessonId: lesson.id,
+        prompt: word.russian,
+        answer: word.arabic,
+        promptLang: "ru" as const,
+        answerLang: "ar" as const,
+      },
+    ];
+  });
 }
 
 /** The courses that teach a scholarly book: its glossary, then its text. */
@@ -609,6 +613,18 @@ export default function Home() {
   const [showMainMenu, setShowMainMenu] = useState(false);
   const mainMenu = useRef<HTMLElement>(null);
   const mainMenuToggle = useRef<HTMLButtonElement>(null);
+  const lessonListeningFrame = useRef<HTMLIFrameElement>(null);
+  useEffect(() => {
+    const returnFromListening = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== lessonListeningFrame.current?.contentWindow
+        || event.data?.type !== "shifahiya:return-to-course") return;
+      setCourse(2);
+      setView("home");
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+    };
+    window.addEventListener("message", returnFromListening);
+    return () => window.removeEventListener("message", returnFromListening);
+  }, []);
   const closeMainMenu = useCallback(() => {
     if (mainMenu.current?.matches(":popover-open")) {
       mainMenu.current.hidePopover();
@@ -644,6 +660,7 @@ export default function Home() {
   /** Which text course is on screen, and the lesson of it that is open. */
   const [textCourseId, setTextCourseId] = useState<TextCourseId>(3);
   const [textLesson, setTextLesson] = useState<TextCourseLesson | null>(null);
+  const [textWordIndexes, setTextWordIndexes] = useState<number[]>([]);
   /**
    * Words already met, for a lesson too short to fill three options out of its
    * own glossary. Empty for every other lesson, which is nearly all of them.
@@ -881,13 +898,17 @@ export default function Home() {
     () => ({ ...TEXT_COURSES[textCourseId], id: textCourseId, ...textCourseProgress[textCourseId] }),
     [textCourseId, textCourseProgress],
   );
-  const textWords = textLesson?.words ?? [];
+  const textWords = useMemo(
+    () => textLesson ? textWordIndexes.map((index) => textLesson.words[index]) : [],
+    [textLesson, textWordIndexes],
+  );
   const textTasks = useMemo(
-    () => (textLesson ? textCourseQuestions(textLesson, textMet) : []),
-    [textLesson, textMet],
+    () => (textLesson ? textCourseQuestions({ ...textLesson, words: textWords }, textMet) : []),
+    [textLesson, textWords, textMet],
   );
   const textWord = textWords[stepIndex];
   const textTask = textTasks[stepIndex];
+  const textReviewWordCount = textWords.filter((word) => !word.retired).length;
   // The texts are read on their own schedule, so today's reading is counted
   // apart from the cards and shown as its own line on the home screen.
   const dueReadings = useMemo(
@@ -1707,13 +1728,21 @@ export default function Home() {
 
     const sessions = textCourseProgress[courseId].sessions;
     const parked = from === "resume" ? sessions[id] : undefined;
+    const wordIndexes = textCourseSessionWordIndexes(courseId, lesson, parked);
+    setTextWordIndexes(wordIndexes);
     setStepIndex(parked?.index ?? 0);
     setStepScore(parked?.score ?? 0);
     setStepMistakes(parked?.mistakes ?? []);
     // A lesson that brings no new words has nothing to show on cards and
     // nothing to ask: the fourth course's glossary is cumulative, and deep in
     // a book a lesson can meet nothing new. Such a lesson is its text.
-    const step = lesson.words.length ? (parked?.view ?? "learn") : "reading";
+    const step = wordIndexes.length ? (parked?.view ?? "learn") : "reading";
+    if (courseId === 3) {
+      opening.saveSession({
+        lessonId: id, view: step, index: parked?.index ?? 0,
+        score: parked?.score ?? 0, mistakes: parked?.mistakes ?? [], wordIndexes: [...wordIndexes],
+      });
+    }
     setView(`text-${step}` as "text-learn" | "text-practice" | "text-reading");
   }
 
@@ -1724,14 +1753,18 @@ export default function Home() {
     mistakes = stepMistakes,
   ) {
     if (!textLesson) return;
-    textCourse.saveSession({ lessonId: textLesson.id, view, index, score, mistakes });
+    textCourse.saveSession({
+      lessonId: textLesson.id, view, index, score, mistakes,
+      ...(textCourseId === 3 ? { wordIndexes: [...textWordIndexes] } : {}),
+    });
   }
 
   /** A word of a text course enters the same boxes every course before it uses. */
   function rateTextCourseCard(remembered: boolean) {
     if (!textLesson) return;
-    const forward = textCourse.cardId(textLesson.id, stepIndex, "ar-ru");
-    const reverse = textCourse.cardId(textLesson.id, stepIndex, "ru-ar");
+    const wordIndex = textWordIndexes[stepIndex];
+    const forward = textCourse.cardId(textLesson.id, wordIndex, "ar-ru");
+    const reverse = textCourse.cardId(textLesson.id, wordIndex, "ru-ar");
     progressStore.updateCards((items) => ({
       ...items,
       [forward]: nextCardProgress(items[forward], remembered),
@@ -2473,7 +2506,9 @@ export default function Home() {
                       )}
                       {coreCompleted && (
                         <div className="card-score">
-                          {item.wordCount ? `✓ ${score}/${item.wordCount}` : "✓ прочитан"}
+                          {course === 3
+                            ? `✓ ${plural(score, "балл", "балла", "баллов")}`
+                            : item.wordCount ? `✓ ${score}/${item.wordCount}` : "✓ прочитан"}
                         </div>
                       )}
                     </div>
@@ -3067,13 +3102,12 @@ export default function Home() {
       {view === "p2-listening" && part2 && (
         <section className="study-view reading-view" data-part2-stage="listening">
           <div className="stage-label"><span>4</span>Текст и аудио · урок {part2.id}</div>
-          <p className="instruction">Прослушайте запись с текстом и отметьте её как пройденную. Затем закрепите слова в предложениях.</p>
-          <iframe className="lesson-listening-frame" title="Текст и аудио урока"
+          <p className="instruction">Прослушайте запись с текстом и нажмите «Прослушал». Затем закрепите слова в предложениях.</p>
+          <iframe ref={lessonListeningFrame} className="lesson-listening-frame" title="Текст и аудио урока"
             src={`${listeningHref(part2.id, 2)}&embedded=1`} />
           <div ref={attachLessonPlayer} className="lesson-listening-controls" data-lesson-player="" hidden />
           <div className="study-actions">
-            <button className="secondary" onClick={() => setView("home")}>Вернуться позже</button>
-            <button className="primary" disabled={!isLaterListeningComplete(part2.id, 2, stored)} onClick={beginPart2Context}>К закреплению <span>→</span></button>
+            <button className="primary wide" disabled={!isLaterListeningComplete(part2.id, 2, stored)} onClick={beginPart2Context}>К закреплению <span>→</span></button>
           </div>
         </section>
       )}
@@ -3198,18 +3232,22 @@ export default function Home() {
                   key={id}
                 >
                   <div className="reading-row">
-                    <button
-                      className="reading-arabic"
-                      lang="ar"
-                      dir="rtl"
-                      aria-expanded={open}
-                      onClick={() => setStepOpen((items) => open ? items.filter((value) => value !== id) : [...items, id])}
-                    >
-                      {line.arabic}
-                    </button>
+                    {line.russian ? (
+                      <button
+                        className="reading-arabic"
+                        lang="ar"
+                        dir="rtl"
+                        aria-expanded={open}
+                        onClick={() => setStepOpen((items) => open ? items.filter((value) => value !== id) : [...items, id])}
+                      >
+                        {line.arabic}
+                      </button>
+                    ) : (
+                      <div className="reading-arabic" lang="ar" dir="rtl">{line.arabic}</div>
+                    )}
                     <button className="reading-sound" onClick={() => speak(line.arabic)} aria-label="Прослушать фрагмент">◖))</button>
                   </div>
-                  {open && <p className="reading-russian">{line.russian}</p>}
+                  {open && line.russian && <p className="reading-russian">{line.russian}</p>}
                 </div>
               );
             })}
@@ -3229,8 +3267,8 @@ export default function Home() {
             <p className="result-score">{stepScore} из {textTasks.length}</p>
           )}
           <p className="instruction">
-            {textWords.length
-              ? `${plural(textWords.length, "новое слово", "новых слова", "новых слов")} ушли в повторение — они вернутся вместе со словами других частей.`
+            {textReviewWordCount
+              ? `${plural(textReviewWordCount, "новое слово", "новых слова", "новых слов")} ушли в повторение — они вернутся вместе со словами других частей.`
               : "Новых слов этот урок не приносит — он весь в тексте, и текст прочитан."}
           </p>
           <div className="study-actions">

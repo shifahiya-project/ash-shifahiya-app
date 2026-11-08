@@ -21,7 +21,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "الْإِيمَانُ",
     title: "Вера",
     wordCount: 44,
-    fragmentCount: 49,
+    fragmentCount: 48,
   },
   {
     id: 3,
@@ -30,7 +30,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "وُجُودُ اللهِ تَعَالَى",
     title: "Существование Всевышнего Аллаха",
     wordCount: 38,
-    fragmentCount: 25,
+    fragmentCount: 23,
   },
   {
     id: 4,
@@ -47,7 +47,7 @@ export const part3Summaries: TextCourseSummary[] = [
     section: "Баб первый · Иляхийят",
     arabicTitle: "صِفَاتُ الْمَعَانِي وَالصِّفَاتُ الْمَعْنَوِيَّةُ",
     title: "Атрибуты ма‘ани и ма‘навийные атрибуты",
-    wordCount: 34,
+    wordCount: 35,
     fragmentCount: 47,
   },
   {
@@ -102,7 +102,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "بَعْثَةُ الْأَنْبِيَاءِ وَالرُّسُلِ وَأَوْصَافُهُمْ",
     title: "Направление пророков и посланников и их качества",
     wordCount: 36,
-    fragmentCount: 35,
+    fragmentCount: 34,
   },
   {
     id: 12,
@@ -111,7 +111,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "مُعْجِزَاتُ الْأَنْبِيَاءِ",
     title: "Чудеса пророков",
     wordCount: 29,
-    fragmentCount: 37,
+    fragmentCount: 34,
   },
   {
     id: 13,
@@ -129,7 +129,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "شُبُهَاتٌ وَجَوَابُهَا",
     title: "Возражения и ответы на них",
     wordCount: 20,
-    fragmentCount: 38,
+    fragmentCount: 34,
   },
   {
     id: 15,
@@ -137,8 +137,8 @@ export const part3Summaries: TextCourseSummary[] = [
     section: "Баб третий · Сам‘ийят",
     arabicTitle: "عَوَالِمُ غَيْبِيَّةٌ",
     title: "Сокрытые миры",
-    wordCount: 54,
-    fragmentCount: 130,
+    wordCount: 56,
+    fragmentCount: 126,
   },
   {
     id: 16,
@@ -174,7 +174,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "مَنْزِلَةُ الصَّحَابَةِ وَالْمُفَاضَلَةُ بَيْنَهُمْ",
     title: "Положение сподвижников и превосходство одних над другими",
     wordCount: 27,
-    fragmentCount: 29,
+    fragmentCount: 25,
   },
   {
     id: 20,
@@ -183,7 +183,7 @@ export const part3Summaries: TextCourseSummary[] = [
     arabicTitle: "ضَوَابِطُ التَّكْفِيرِ",
     title: "Правила такфира",
     wordCount: 25,
-    fragmentCount: 19,
+    fragmentCount: 18,
   },
   {
     id: 21,
@@ -222,7 +222,7 @@ export const part3Summaries: TextCourseSummary[] = [
     book: "Шарх аль-‘Акаид аль-джадида",
     arabicTitle: "وَحْدَانِيَّةُ اللهِ وَأَسْمَاؤُهُ: الْقَدِيمُ وَالْحَيُّ وَالْقَدِيرُ وَالْعَلِيمُ",
     title: "Единственность Аллаха и Его имена: аль-Кадим, аль-Хайй, аль-Кадир, аль-‘Алим",
-    wordCount: 16,
+    wordCount: 17,
     fragmentCount: 26,
   },
   {
@@ -294,7 +294,7 @@ export const part3Summaries: TextCourseSummary[] = [
     book: "Шарх аль-‘Акаид аль-джадида",
     arabicTitle: "الْأَنْبِيَاءُ وَالْمَلَائِكَةُ وَالْكُتُبُ وَالْمِعْرَاجُ وَالْكَرَامَاتُ",
     title: "Пророки, ангелы, Писания, ми‘радж и караматы",
-    wordCount: 10,
+    wordCount: 11,
     fragmentCount: 29,
   },
   {
@@ -302,7 +302,7 @@ export const part3Summaries: TextCourseSummary[] = [
     book: "Шарх аль-‘Акаид аль-джадида",
     arabicTitle: "أَفْضَلُ الصَّحَابَةِ وَالْخِلَافَةُ وَالْإِمَامَةُ",
     title: "Лучшие из сподвижников, халифат и имамат",
-    wordCount: 32,
+    wordCount: 33,
     fragmentCount: 55,
   },
   {

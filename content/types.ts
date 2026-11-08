@@ -123,6 +123,8 @@ export type TextCourseWordKind =
   | "particle";
 
 export type TextCourseWord = {
+  /** Keep a retired word's review address, but omit it from new study and review. */
+  retired?: true;
   /** The dictionary form as the glossary gives it: مَذْهَبٌ (مَذَاهِبُ), شَرَطَ (يَشْرُطُ). */
   arabic: string;
   russian: string;
@@ -138,6 +140,8 @@ export type TextCourseWord = {
  * line by line, and the line it explains is not one more sentence of the
  * explanation: the book prints it apart, and a reader who cannot tell the مَتْن
  * from the شَرْح has lost the shape of the book.
+ * A source passage without a verified translation keeps an empty Russian field;
+ * its Arabic is still read, without a translation toggle or an editorial note.
  */
 export type TextCourseFragment = ReadingSentence & { heading?: true; verse?: true; ayah?: true };
 
