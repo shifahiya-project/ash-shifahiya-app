@@ -99,7 +99,7 @@ try {
   assert.equal(await mini.locator('audio').evaluate(a => new URL(a.currentSrc).searchParams.get('v')), audioVersion);
   assert(Math.abs(await mini.locator('audio').evaluate(a => a.duration) - entry.duration) < 0.2);
   const href = await mini.getByRole('link', { name: 'Текст урока →' }).getAttribute('href');
-  assert.equal(new URL(href, site).searchParams.get('v'), '11');
+  assert.equal(new URL(href, site).searchParams.get('v'), '12');
   await mini.getByRole('link', { name: 'Текст урока →' }).click();
   await page.waitForFunction(() => document.querySelector('audio')?.readyState > 0);
   assert.deepEqual(await page.locator('#listening-transcript > *').allTextContents(), transcript.paragraphs);
