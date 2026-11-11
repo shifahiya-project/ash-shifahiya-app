@@ -102,7 +102,8 @@ test("save, JSON backup, restore and finish retain the new position without alte
   const { progressStore, part2SessionKey } = await import("../app/progress-store.ts");
   items.set("shifahiya-p2-lesson-1", "15");
   const session = {
-    ...old({ lessonId: 2, view: "vocabulary", index: 4, score: 3 }), flowVersion: 2,
+    ...old({ lessonId: 2, view: "vocabulary", index: 4, score: 3 }), flowVersion: 3,
+    wordPlanIndex: 64, wordPlanCredit: { firstPass: 7, secondPass: 0, vocabulary: 0 },
     round: 2, vocabularyScore: 4, contextIndex: 5,
     answered: { option: "книга", correct: true },
   };

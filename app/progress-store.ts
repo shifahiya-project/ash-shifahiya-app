@@ -67,7 +67,11 @@ export type Part2Session = Omit<ReadingCourseSession, "view"> & {
   archivedSession?: Part2Session;
   view: "learn" | "vocabulary" | "reading" | "listening" | "practice";
   /** Missing on sessions saved before the vocabulary-first sequence. */
-  flowVersion?: 2;
+  flowVersion?: 2 | 3;
+  /** Position in the interleaved five-word / block-translation sequence. */
+  wordPlanIndex?: number;
+  /** Whole-lesson passes already completed before the block sequence was introduced. */
+  wordPlanCredit?: { firstPass: number; secondPass: number; vocabulary: number };
   round?: 1 | 2;
   /** Translation practice is scored separately from the original context paper. */
   vocabularyScore?: number;

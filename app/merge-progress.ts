@@ -221,12 +221,16 @@ function mergePart2Sessions(mine: Record<number, Part2Session>, theirs: Record<n
   const rank = (session: Part2Session) => [
     session.updatedAt ?? 0,
     session.flowVersion ?? 1,
-    session.flowVersion === 2 ? phases[session.view] : ({ learn: 0, practice: 1, reading: 2 }[session.view as ReadingCourseSession["view"]] ?? 0),
-    session.view === "learn" ? session.round ?? 1 : 0,
+    session.flowVersion === 3 ? Math.max(0, phases[session.view] - 1)
+      : session.flowVersion === 2 ? phases[session.view] : ({ learn: 0, practice: 1, reading: 2 }[session.view as ReadingCourseSession["view"]] ?? 0),
+    session.flowVersion === 3 ? session.wordPlanIndex ?? 0 : session.view === "learn" ? session.round ?? 1 : 0,
     session.index,
     Number(!!session.answered),
     session.vocabularyScore ?? 0,
     session.score,
+    session.wordPlanCredit?.firstPass ?? 0,
+    session.wordPlanCredit?.secondPass ?? 0,
+    session.wordPlanCredit?.vocabulary ?? 0,
     // A deterministic final tie-break keeps same-millisecond merges commutative.
     JSON.stringify(session),
   ];

@@ -19,18 +19,20 @@ const arabicIdentity = (value: string) => value
  * enough distinct words for three options; never invent an unseen distractor
  * if a future glossary happens to be smaller.
  */
-export function part2VocabularyQuestions(lesson: Part2Lesson): Question[] {
-  const arabic = lesson.words.map((word) => ({
+export function part2VocabularyQuestions(lesson: Part2Lesson, knownWordCount = lesson.words.length): Question[] {
+  // An early block must never offer a word from a block the learner has not met.
+  const words = lesson.words.slice(0, knownWordCount);
+  const arabic = words.map((word) => ({
     value: word.arabic,
     meaning: word.russian,
     deckIndex: kindIndex(word.kind),
   }));
 
-  return lesson.words.flatMap((word): Question[] => {
+  return words.flatMap((word): Question[] => {
     const kind = kindIndex(word.kind);
     // Two entries can give the same Arabic form different glosses. Neither
     // gloss is a distractor for that form, even if their Russian text differs.
-    const russian = lesson.words
+    const russian = words
       .filter((other) => arabicIdentity(other.arabic) !== arabicIdentity(word.arabic))
       .map((other) => ({ value: other.russian, deckIndex: kindIndex(other.kind) }));
     const explanation = `${word.arabic} — ${word.russian}.`;
