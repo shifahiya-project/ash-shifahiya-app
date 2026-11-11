@@ -15,6 +15,7 @@ import { loadPart2Lesson, loadPart2Lessons } from "../content/part2/lessons";
 import { BLANK, part2Questions } from "../content/part2/questions";
 import { part2VocabularyQuestions } from "../content/part2/vocabulary-questions";
 import { upgradePart2Session } from "./part2-session";
+import { nextPart2WordStep, part2WordPlan } from "./part2-word-plan";
 import { part2ResultFor, part2ResultLabel } from "./part2-results";
 import { part2CardId, part2LessonIdsInCards, unlockedPart2Ids } from "./part2-access";
 import { part3Summaries } from "../content/part3/manifest";
@@ -654,6 +655,8 @@ export default function Home() {
     });
   }
   const [p2Round, setP2Round] = useState<1 | 2>(1);
+  const [p2PlanIndex, setP2PlanIndex] = useState(0);
+  const [p2PlanCredit, setP2PlanCredit] = useState<Part2Session["wordPlanCredit"]>();
   const [p2VocabularyScore, setP2VocabularyScore] = useState(0);
   const [p2ContextIndex, setP2ContextIndex] = useState(0);
   const [part2, setPart2] = useState<Part2Lesson | null>(null);
@@ -790,8 +793,12 @@ export default function Home() {
     [stored, part2Ready],
   );
   const p2Words = part2?.words ?? [];
+  const p2Plan = useMemo(() => part2WordPlan(part2?.words.length ?? 0), [part2]);
+  const p2PlanStep = view === "p2-learn" || view === "p2-vocabulary" ? p2Plan[p2PlanIndex] : undefined;
+  const p2NextPlanStep = p2Plan[nextPart2WordStep(p2Plan, p2PlanIndex + 1, p2PlanCredit)];
+  const p2KnownWords = p2PlanStep?.blockEnd ?? p2Words.length;
   const p2Tasks = useMemo(() => (part2 ? part2Questions(part2) : []), [part2]);
-  const p2VocabularyTasks = useMemo(() => (part2 ? part2VocabularyQuestions(part2) : []), [part2]);
+  const p2VocabularyTasks = useMemo(() => (part2 ? part2VocabularyQuestions(part2, p2KnownWords) : []), [part2, p2KnownWords]);
   const p2ActiveTasks = view === "p2-vocabulary" ? p2VocabularyTasks : p2Tasks;
   const p2Word = p2Words[stepIndex];
   const p2Task = p2ActiveTasks[stepIndex];
@@ -1438,8 +1445,12 @@ export default function Home() {
 
   const grammarRules = lesson?.grammar?.rules ?? [];
   const progress = view === "p2-learn"
-    ? ((stepIndex + (p2Round - 1) * p2Words.length) / Math.max(p2Words.length * 2, 1)) * 100
-    : view === "p2-practice" || view === "p2-vocabulary"
+    ? p2PlanStep ? ((2 * (p2PlanStep.groupStart - p2PlanStep.blockStart)
+        + (p2Round - 1) * (p2PlanStep.groupEnd - p2PlanStep.groupStart)
+        + stepIndex - p2PlanStep.groupStart) / (2 * (p2PlanStep.blockEnd - p2PlanStep.blockStart))) * 100 : 0
+    : view === "p2-vocabulary" && p2PlanStep
+    ? ((stepIndex - 2 * p2PlanStep.blockStart + (selected ? 1 : 0)) / (2 * (p2PlanStep.blockEnd - p2PlanStep.blockStart))) * 100
+    : view === "p2-practice"
     ? ((stepIndex + (selected ? 1 : 0)) / Math.max(p2ActiveTasks.length, 1)) * 100
     : view === "text-learn"
     ? (stepIndex / Math.max(textWords.length, 1)) * 100
@@ -1577,9 +1588,9 @@ export default function Home() {
     const lesson = await loadPart2Lesson(id);
     const contextTotal = part2Questions(lesson).length;
     const parked = from === "resume" ? part2Sessions[id] : undefined;
-    let session: Part2Session = parked ? upgradePart2Session(parked, contextTotal, lesson.revision) : {
+    let session: Part2Session = parked ? upgradePart2Session(parked, contextTotal, lesson.revision, lesson.words.length) : {
       lessonId: id, view: lesson.words.length ? "learn" : "reading", index: 0,
-      score: 0, mistakes: [], flowVersion: 2, round: 1, vocabularyScore: 0, contextIndex: 0, contentRevision: lesson.revision,
+      score: 0, mistakes: [], flowVersion: 3, wordPlanIndex: 0, round: 1, vocabularyScore: 0, contextIndex: 0, contentRevision: lesson.revision,
     };
     if (session.view === "listening" && (!hasListening(id, 2) || isLaterListeningComplete(id, 2, stored))) {
       session = { ...session, view: "practice", index: session.contextIndex ?? 0, answered: undefined };
@@ -1590,6 +1601,8 @@ export default function Home() {
     setRevealed(false);
     setStepOpen([]);
     setP2Round(session.round ?? 1);
+    setP2PlanIndex(session.wordPlanIndex ?? 0);
+    setP2PlanCredit(session.wordPlanCredit);
     setP2VocabularyScore(session.vocabularyScore ?? 0);
     setP2ContextIndex(session.contextIndex ?? 0);
     setStepIndex(session.index);
@@ -1608,9 +1621,23 @@ export default function Home() {
     if (!part2) return;
     progressStore.savePart2Session({
       lessonId: part2.id, view, index, score: stepScore, mistakes: stepMistakes,
-      flowVersion: 2, contentRevision: part2.revision, round: p2Round, vocabularyScore: p2VocabularyScore,
+      flowVersion: 3, wordPlanIndex: p2PlanIndex, wordPlanCredit: p2PlanCredit,
+      contentRevision: part2.revision, round: p2Round, vocabularyScore: p2VocabularyScore,
       contextIndex: p2ContextIndex, ...changes,
     });
+  }
+
+  function advancePart2Words() {
+    const cursor = nextPart2WordStep(p2Plan, p2PlanIndex + 1, p2PlanCredit);
+    const step = p2Plan[cursor];
+    setP2PlanIndex(cursor);
+    setStepIndex(step?.index ?? 0);
+    setP2Round(step?.round ?? 2);
+    setSelected(null);
+    setRevealed(false);
+    setStepOpen([]);
+    savePart2(step?.view ?? "reading", step?.index ?? 0, { wordPlanIndex: cursor, round: step?.round ?? 2 });
+    setView(step ? `p2-${step.view}` : "p2-reading");
   }
 
   /** A word enters the shared review boxes without changing its persistent address. */
@@ -1625,19 +1652,7 @@ export default function Home() {
         box: 0, nextReview: localDate(), lastReviewed: "", correct: 0, wrong: 0,
       },
     }));
-    setRevealed(false);
-    if (stepIndex < p2Words.length - 1) {
-      setStepIndex(stepIndex + 1);
-      savePart2("learn", stepIndex + 1);
-    } else if (p2Round === 1) {
-      setP2Round(2);
-      setStepIndex(0);
-      savePart2("learn", 0, { round: 2 });
-    } else {
-      setStepIndex(0);
-      savePart2("vocabulary", 0);
-      setView("p2-vocabulary");
-    }
+    advancePart2Words();
   }
 
   function answerPart2(option: string) {
@@ -1659,15 +1674,11 @@ export default function Home() {
   function nextPart2Task() {
     if (!p2Task || !selected) return;
     const vocabulary = view === "p2-vocabulary";
+    if (vocabulary) { advancePart2Words(); return; }
     setSelected(null);
     if (stepIndex < p2ActiveTasks.length - 1) {
       setStepIndex(stepIndex + 1);
       savePart2(vocabulary ? "vocabulary" : "practice", stepIndex + 1);
-    } else if (vocabulary) {
-      setStepIndex(0);
-      setStepOpen([]);
-      savePart2("reading", 0);
-      setView("p2-reading");
     } else {
       finishPart2();
     }
@@ -2723,8 +2734,10 @@ export default function Home() {
               : view === "text-reading"
                 ? `${plural(textLesson?.fragments.length ?? 0, "фрагмент", "фрагмента", "фрагментов")}`
               : view === "p2-learn"
-                ? `${stepIndex + 1}/${p2Words.length}`
-                : view === "p2-practice" || view === "p2-vocabulary"
+                ? `${stepIndex + 1 - (p2PlanStep?.groupStart ?? 0)}/${p2PlanStep ? p2PlanStep.groupEnd - p2PlanStep.groupStart : p2Words.length}`
+                : view === "p2-vocabulary" && p2PlanStep
+                  ? `${stepIndex + 1 - p2PlanStep.blockStart * 2}/${(p2PlanStep.blockEnd - p2PlanStep.blockStart) * 2}`
+                : view === "p2-practice"
                   ? `${stepIndex + 1}/${p2ActiveTasks.length}`
                   : view === "text-learn"
                     ? `${stepIndex + 1}/${textWords.length}`
@@ -2985,8 +2998,8 @@ export default function Home() {
 
       {view === "p2-learn" && part2 && p2Word && (
         <section className="study-view" data-part2-stage="learn">
-          <div className="stage-label"><span>1</span>Новые слова урока</div>
-          <div className="repeat-badge active">{part2.title} · круг {p2Round} из 2 · слово {stepIndex + 1} из {p2Words.length}</div>
+          <div className="stage-label"><span>1</span>Новые слова урока{p2PlanStep && ` · блок ${p2PlanStep.block + 1} из ${p2PlanStep.blockCount}`}</div>
+          <div className="repeat-badge active">{part2.title} · круг {p2Round} из 2 · слово {stepIndex + 1 - (p2PlanStep?.groupStart ?? 0)} из {p2PlanStep ? p2PlanStep.groupEnd - p2PlanStep.groupStart : p2Words.length}</div>
           <p className="instruction">
             {revealed
               ? "Прочитайте перевод и вспомните значение слова"
@@ -3018,8 +3031,8 @@ export default function Home() {
 
       {(view === "p2-vocabulary" || view === "p2-practice") && part2 && p2Task && (
         <section className="practice-view" data-part2-stage={view === "p2-vocabulary" ? "vocabulary" : "context"}>
-          <div className="stage-label"><span>{view === "p2-vocabulary" ? 2 : 5}</span>{view === "p2-vocabulary" ? "Закрепляем новые слова" : "Закрепляем слова в предложениях"}</div>
-          <div className="repeat-badge active">{part2.title} · задание {stepIndex + 1} из {p2ActiveTasks.length}</div>
+          <div className="stage-label"><span>{view === "p2-vocabulary" ? 2 : 5}</span>{view === "p2-vocabulary" ? `Закрепляем новые слова${p2PlanStep ? ` · блок ${p2PlanStep.block + 1} из ${p2PlanStep.blockCount}` : ""}` : "Закрепляем слова в предложениях"}</div>
+          <div className="repeat-badge active">{part2.title} · задание {stepIndex + 1 - (p2PlanStep?.blockStart ?? 0) * 2} из {p2PlanStep ? (p2PlanStep.blockEnd - p2PlanStep.blockStart) * 2 : p2ActiveTasks.length}</div>
           <p className="instruction">
             {view === "p2-vocabulary" ? (p2Task.promptLang === "ar" ? "Вспомните перевод на русский" : "Вспомните слово на арабском")
               : p2Task.prompt.includes(BLANK)
@@ -3052,7 +3065,9 @@ export default function Home() {
                 <p>{p2Task.explanation}</p>
               </div>
               <button className="primary" onClick={nextPart2Task}>
-                {stepIndex === p2ActiveTasks.length - 1 ? (view === "p2-vocabulary" ? "К чтению" : "Завершить урок") : "Дальше"} <span>→</span>
+                {view === "p2-vocabulary"
+                  ? !p2NextPlanStep ? "К чтению" : p2NextPlanStep.view === "learn" ? "Следующий блок" : "Дальше"
+                  : stepIndex === p2ActiveTasks.length - 1 ? "Завершить урок" : "Дальше"} <span>→</span>
               </button>
             </div>
           )}

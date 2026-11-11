@@ -34,6 +34,7 @@ import assert from "node:assert/strict";
 import { part11LessonOne } from "../content/part11/lesson-001.ts";
 import { part11LessonNinetyFour } from "../content/part11/lesson-094.ts";
 import { part2LessonOne } from "../content/part2/lesson-01.ts";
+import { part2LessonEleven } from "../content/part2/lesson-11.ts";
 import { part2Questions } from "../content/part2/questions.ts";
 import { part2VocabularyQuestions } from "../content/part2/vocabulary-questions.ts";
 
@@ -328,25 +329,40 @@ try {
     await hero.click();
     await p2Stage(stage).waitFor();
   };
-  for (let round = 1; round <= 2; round += 1) {
-    for (let index = 0; index < part2LessonOne.words.length; index += 1) {
-      const learning = p2Stage("learn");
-      await learning.waitFor();
-      assert.match(await learning.locator(".repeat-badge").innerText(), new RegExp(`круг ${round} из 2`, "i"));
-      assert.equal((await learning.locator(".arabic-word").textContent()).trim(), part2LessonOne.words[index].arabic);
-      await learning.getByRole("button", { name: "Показать перевод", exact: true }).click();
-      assert.equal(await learning.locator(".word-context").count(), 0, "word cards must not reveal a context sentence");
-      assert.equal((await learning.locator(".translation strong").textContent()).trim(), part2LessonOne.words[index].russian);
-      await learning.getByRole("button", { name: /Запомнил/ }).click();
-      if (round === 2 && index === 0) {
-        const saved = await p2Session();
-        assert.equal(saved.round, 2);
-        assert.equal(saved.index, 1);
-        await resumePart2("learn");
+  const checkPart2Layout = async (stage, name) => {
+    const size = page.viewportSize();
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 950 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        `Part 2 ${stage} must fit ${width}px`);
+      if (process.env.SMOKE_ARTIFACTS) await p2Stage(stage).screenshot({ path: join(process.env.SMOKE_ARTIFACTS, `${name}-${width}.png`) });
+    }
+    await page.setViewportSize(size);
+  };
+  await checkPart2Layout('learn', 'word-group');
+  for (let groupStart = 0; groupStart < part2LessonOne.words.length; groupStart += 5) {
+    for (let round = 1; round <= 2; round += 1) {
+      for (let index = groupStart; index < Math.min(groupStart + 5, part2LessonOne.words.length); index += 1) {
+        const learning = p2Stage("learn");
+        await learning.waitFor();
+        assert.match(await learning.locator(".repeat-badge").innerText(), new RegExp(`круг ${round} из 2`, "i"));
+        assert.equal((await learning.locator(".arabic-word").textContent()).trim(), part2LessonOne.words[index].arabic);
+        await learning.getByRole("button", { name: "Показать перевод", exact: true }).click();
+        assert.equal(await learning.locator(".word-context").count(), 0, "word cards must not reveal a context sentence");
+        assert.equal((await learning.locator(".translation strong").textContent()).trim(), part2LessonOne.words[index].russian);
+        await learning.getByRole("button", { name: /Запомнил/ }).click();
+        if (round === 2 && index === 0) {
+          const saved = await p2Session();
+          assert.equal(saved.round, 2);
+          assert.equal(saved.index, 1);
+          assert.equal(saved.wordPlanIndex, 6);
+          await resumePart2("learn");
+        }
       }
     }
   }
   await p2Stage("vocabulary").waitFor();
+  await checkPart2Layout('vocabulary', 'word-block-translation');
   await p2NotFinished();
   const p2Vocabulary = part2VocabularyQuestions(part2LessonOne);
   const seenDirections = new Set();
@@ -488,7 +504,59 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem("shifahiya-p2-lesson-105")), "7");
   await page.getByRole("button", { name: "На главную", exact: true }).click();
   assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
-  console.log("Вторая часть: два круга слов, перевод в обе стороны, чтение, аудио, контекст в конце и возобновление проверены.");
+  console.log("Вторая часть: два круга каждой пятёрки, перевод в обе стороны, чтение, аудио, контекст в конце и возобновление проверены.");
+
+  // The 54-word glossary has two 27-word blocks. Completing the first paper
+  // must return to word cards, while the final paper must lead to reading.
+  assert.equal(part2LessonEleven.words.length, 54);
+  const firstPaper = part2VocabularyQuestions(part2LessonEleven, 27);
+  await page.evaluate(({ revision, answer }) => {
+    for (let id = 1; id <= 10; id += 1) localStorage.setItem(`shifahiya-p2-lesson-${id}`, '10');
+    const marks = JSON.parse(localStorage.getItem('shifahiya-p2-listening-progress-v1') || '{}');
+    for (let id = 1; id <= 10; id += 1) marks[id] = { completed: true, updatedAt: Date.now() };
+    localStorage.setItem('shifahiya-p2-listening-progress-v1', JSON.stringify(marks));
+    localStorage.setItem('shifahiya-p2-session-11', JSON.stringify({
+      lessonId: 11, contentRevision: revision, flowVersion: 3, view: 'vocabulary',
+      wordPlanIndex: 107, index: 53, round: 2, vocabularyScore: 54,
+      score: 0, contextIndex: 0, mistakes: [], answered: { option: answer, correct: true }, updatedAt: Date.now(),
+    }));
+  }, { revision: part2LessonEleven.revision, answer: firstPaper.at(-1).answer });
+  await page.reload({ waitUntil: 'networkidle' });
+  await hero.click();
+  await p2Stage('vocabulary').waitFor();
+  assert.match(await p2Stage('vocabulary').locator('.stage-label').innerText(), /блок\s+1\s+из\s+2/i);
+  assert.equal(await p2Stage('vocabulary').locator('.options button:disabled').count(), firstPaper.at(-1).options.length);
+  await p2Stage('vocabulary').getByRole('button', { name: /Следующий блок/ }).click();
+  await p2Stage('learn').waitFor();
+  assert.match(await p2Stage('learn').locator('.stage-label').innerText(), /блок\s+2\s+из\s+2/i);
+  assert.equal((await p2Stage('learn').locator('.arabic-word').textContent()).trim(), part2LessonEleven.words[27].arabic);
+  await checkPart2Layout('learn', 'second-word-block');
+  await page.reload({ waitUntil: 'networkidle' });
+  await hero.click();
+  await p2Stage('learn').waitFor();
+  assert.equal((await p2Stage('learn').locator('.arabic-word').textContent()).trim(), part2LessonEleven.words[27].arabic);
+  for (let index = 27; index < 32; index += 1) {
+    assert.equal((await p2Stage('learn').locator('.arabic-word').textContent()).trim(), part2LessonEleven.words[index].arabic);
+    await p2Stage('learn').getByRole('button', { name: 'Показать перевод', exact: true }).click();
+    await p2Stage('learn').getByRole('button', { name: /Запомнил/ }).click();
+  }
+  assert.equal((await p2Stage('learn').locator('.arabic-word').textContent()).trim(), part2LessonEleven.words[27].arabic);
+  assert.match(await p2Stage('learn').locator('.repeat-badge').innerText(), /круг 2 из 2.*слово 1 из 5/i);
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('shifahiya-p2-session-11')).vocabularyScore), 54);
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifahiya-p2-lesson-11')), null);
+  const finalPaper = part2VocabularyQuestions(part2LessonEleven);
+  await page.evaluate(answer => {
+    const saved = JSON.parse(localStorage.getItem('shifahiya-p2-session-11'));
+    localStorage.setItem('shifahiya-p2-session-11', JSON.stringify({ ...saved, view: 'vocabulary',
+      wordPlanIndex: 215, index: 107, round: 2, vocabularyScore: 108,
+      answered: { option: answer, correct: true }, updatedAt: Date.now() }));
+  }, finalPaper.at(-1).answer);
+  await page.reload({ waitUntil: 'networkidle' });
+  await hero.click();
+  await p2Stage('vocabulary').getByRole('button', { name: /К чтению/ }).click();
+  await p2Stage('reading').waitFor();
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifahiya-p2-lesson-11')), null);
+  console.log('Вторая часть: переход между блоками по 27 слов, повтор пятёрки, сохранение счёта и чтение после последнего блока проверены.');
   await page.goto(origin, { waitUntil: "networkidle" });
 
   // Lesson 82 used to enter a trailing empty deck instead of its second-half
