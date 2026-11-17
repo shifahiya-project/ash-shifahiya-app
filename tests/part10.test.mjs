@@ -266,7 +266,8 @@ test("a two-digit prefix is not confused with a one-digit one", async () => {
 
   for (const [n, of] of matchers) {
     const theirs = { [`p${n}-lesson-7-word-0-ar-ru`]: {} };
-    assert.deepEqual(of(theirs), [7], `часть ${n} не узнала свою карточку`);
+    // The complete fiqh edition moved this stable word from lesson 7 to 10.
+    assert.deepEqual(of(theirs), [n === 4 ? 10 : 7], `часть ${n} не узнала свою карточку`);
     assert.deepEqual(part10LessonIdsInCards(theirs), [], `десятая приняла карточку части ${n} за свою`);
   }
 });

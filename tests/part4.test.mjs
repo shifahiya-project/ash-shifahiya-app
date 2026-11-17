@@ -5,6 +5,8 @@ import test from "node:test";
 import { textCourseNeedsMetWords, textCourseQuestions } from "../content/text-course-questions.ts";
 import { part4Summaries } from "../content/part4/manifest.ts";
 import { part4Glossary } from "../content/part4/glossary.ts";
+import { PART4_REVISION } from "../content/part4/revision.ts";
+import { part4ReviewLessons } from "../content/part4/review-map.ts";
 import { isPart4Open, part4CardId, part4LessonIdsInCards, unlockedPart4Ids } from "../app/part4-access.ts";
 
 const directory = new URL("../content/part4/", import.meta.url);
@@ -43,10 +45,12 @@ test("every lesson carries a text, and its words when it brings any", () => {
     assert.ok(lesson.book.length > 0, `урок ${lesson.id}: не указана книга`);
     assert.ok(lesson.section === undefined || lesson.section.length > 0, `урок ${lesson.id}: пустой раздел`);
     assert.ok(lesson.chapter === undefined || lesson.chapter.length > 0, `урок ${lesson.id}: пустая глава`);
-    assert.match(lesson.arabicTitle, /[ء-ي]/, `урок ${lesson.id}: без арабского названия`);
+    assert.ok(lesson.arabicTitle === "" || /[ء-ي]/.test(lesson.arabicTitle),
+      `урок ${lesson.id}: некорректное арабское название`);
 
     for (const line of lesson.fragments) {
-      assert.match(line.arabic, /[ء-ي]/, `урок ${lesson.id}: фрагмент без арабского`);
+      assert.ok((line.heading && line.arabic === "") || /[ء-ي]/.test(line.arabic),
+        `урок ${lesson.id}: фрагмент без арабского`);
       assert.match(line.russian, /[а-яА-ЯёЁ]/, `урок ${lesson.id}: фрагмент без перевода`);
     }
   }
@@ -212,34 +216,48 @@ test("the fourth course waits for the whole third one", () => {
 });
 
 test("the fourth course runs in order and never takes ground back", () => {
-  const empty = { part4Scores: {}, part4Sessions: {}, cards: {} };
+  const empty = { part4Scores: {}, part4Sessions: {}, part4Revisions: {}, cards: {} };
   assert.equal(unlockedPart4Ids(part4Summaries, empty, false).size, 0);
 
   const opened = unlockedPart4Ids(part4Summaries, empty, true);
   assert.equal(opened.has(1), true, "первый урок должен открыться");
   assert.equal(opened.has(2), false, "второй ждёт первого");
 
-  const oneDone = { ...empty, part4Scores: { 1: 29 } };
+  const legacyDone = { ...empty, part4Scores: { 1: 29 } };
+  assert.equal(unlockedPart4Ids(part4Summaries, legacyDone, true).has(2), false,
+    "старый результат не завершает новый урок");
+
+  const oneDone = { ...empty, part4Revisions: {
+    [PART4_REVISION]: { scores: { 1: 12 }, sessions: {}, totals: { 1: 12 } },
+  } };
   const next = unlockedPart4Ids(part4Summaries, oneDone, true);
   assert.equal(next.has(2), true);
   assert.equal(next.has(3), false);
 
-  const roaming = { ...empty, cards: { [part4CardId(5, 0, "ar-ru")]: {} } };
+  const word = lessons[4].words[0];
+  const roaming = { ...empty, cards: {
+    [part4CardId(word.reviewLessonId, word.reviewIndex, "ar-ru")]: {},
+  } };
   const kept = unlockedPart4Ids(part4Summaries, roaming, true);
   for (const id of [1, 2, 3, 4, 5]) assert.equal(kept.has(id), true, `урок ${id} закрылся`);
 });
 
-test("a fourth-course card says which lesson it came from", () => {
+test("a fourth-course card resolves its stable address to the current lesson", () => {
   assert.equal(part4CardId(7, 12, "ru-ar"), "p4-lesson-7-word-12-ru-ar");
+  const addresses = Object.entries(part4ReviewLessons).filter(([, lesson]) => lesson > 1).slice(0, 2);
   const cards = {
-    "p4-lesson-3-word-0-ar-ru": {},
-    "p4-lesson-9-word-4-ru-ar": {},
-    // The three courses before this one share the box and do not belong here.
+    ...Object.fromEntries(addresses.map(([address]) => {
+      const [lesson, index] = address.split("-").map(Number);
+      return [part4CardId(lesson, index, "ar-ru"), {}];
+    })),
+    // Dormant addresses must not create an unrelated lesson in the new edition.
+    "p4-lesson-999-word-0-ar-ru": {},
     "p3-lesson-3-word-0-ar-ru": {},
     "p2-lesson-3-word-0-ar-ru": {},
     "lesson-3-deck-0-word-0-ar-ru": {},
   };
-  assert.deepEqual(part4LessonIdsInCards(cards).sort((a, b) => a - b), [3, 9]);
+  assert.deepEqual(part4LessonIdsInCards(cards).sort((a, b) => a - b),
+    [...new Set(addresses.map(([, lesson]) => lesson))].sort((a, b) => a - b));
 });
 
 // A teaching course gives its Arabic fully vowelled. Here the vowels came from
@@ -258,7 +276,7 @@ test("the Arabic of the course is vowelled", () => {
       assert.match(word.arabic, harakat, `урок ${lesson.id}: ${word.arabic} без огласовок`);
     }
     for (const line of lesson.fragments) {
-      assert.match(line.arabic, harakat, `урок ${lesson.id}: фрагмент без огласовок`);
+      if (line.arabic) assert.match(line.arabic, harakat, `урок ${lesson.id}: фрагмент без огласовок`);
     }
 
     const words = lesson.fragments.flatMap((line) =>
@@ -292,7 +310,7 @@ test("a heading inside a lesson stays a heading", async () => {
   assert.ok(headings.length > 0, "в этой книге заголовки внутри уроков есть");
   for (const line of headings) {
     assert.equal(line.heading, true);
-    assert.match(line.arabic, /[ء-ي]/);
+    assert.ok(line.arabic === "" || /[ء-ي]/.test(line.arabic));
     assert.match(line.russian, /[а-яА-ЯёЁ]/);
   }
 
