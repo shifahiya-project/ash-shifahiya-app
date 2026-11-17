@@ -34,6 +34,7 @@ import assert from "node:assert/strict";
 import { part11LessonOne } from "../content/part11/lesson-001.ts";
 import { part11LessonNinetyFour } from "../content/part11/lesson-094.ts";
 import { part2LessonOne } from "../content/part2/lesson-01.ts";
+import { part2LessonEleven } from "../content/part2/lesson-11.ts";
 import { part2Questions } from "../content/part2/questions.ts";
 import { part2VocabularyQuestions } from "../content/part2/vocabulary-questions.ts";
 
@@ -140,8 +141,20 @@ function serveSite() {
     try {
       const body = await readFile(file);
       const extension = file.slice(file.lastIndexOf("."));
-      response.writeHead(200, { "content-type": TYPES[extension] ?? "application/octet-stream" });
-      response.end(body);
+      response.setHeader("content-type", TYPES[extension] ?? "application/octet-stream");
+      response.setHeader("accept-ranges", "bytes");
+      // Restoring a paused recording needs the same byte-range support as Pages.
+      const range = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
+      if (range) {
+        const start = Number(range[1]);
+        const end = range[2] ? Math.min(Number(range[2]), body.length - 1) : body.length - 1;
+        if (start > end) { response.writeHead(416).end(); return; }
+        response.writeHead(206, { "content-range": `bytes ${start}-${end}/${body.length}`, "content-length": end - start + 1 });
+        response.end(body.subarray(start, end + 1));
+      } else {
+        response.writeHead(200, { "content-length": body.length });
+        response.end(body);
+      }
     } catch {
       response.writeHead(404, { "content-type": TYPES[".html"] }).end("not found");
     }
@@ -316,25 +329,40 @@ try {
     await hero.click();
     await p2Stage(stage).waitFor();
   };
-  for (let round = 1; round <= 2; round += 1) {
-    for (let index = 0; index < part2LessonOne.words.length; index += 1) {
-      const learning = p2Stage("learn");
-      await learning.waitFor();
-      assert.match(await learning.locator(".repeat-badge").innerText(), new RegExp(`круг ${round} из 2`, "i"));
-      assert.equal((await learning.locator(".arabic-word").textContent()).trim(), part2LessonOne.words[index].arabic);
-      await learning.getByRole("button", { name: "Показать перевод", exact: true }).click();
-      assert.equal(await learning.locator(".word-context").count(), 0, "word cards must not reveal a context sentence");
-      assert.equal((await learning.locator(".translation strong").textContent()).trim(), part2LessonOne.words[index].russian);
-      await learning.getByRole("button", { name: /Запомнил/ }).click();
-      if (round === 2 && index === 0) {
-        const saved = await p2Session();
-        assert.equal(saved.round, 2);
-        assert.equal(saved.index, 1);
-        await resumePart2("learn");
+  const checkPart2Layout = async (stage, name) => {
+    const size = page.viewportSize();
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 950 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        `Part 2 ${stage} must fit ${width}px`);
+      if (process.env.SMOKE_ARTIFACTS) await p2Stage(stage).screenshot({ path: join(process.env.SMOKE_ARTIFACTS, `${name}-${width}.png`) });
+    }
+    await page.setViewportSize(size);
+  };
+  await checkPart2Layout('learn', 'word-group');
+  for (let groupStart = 0; groupStart < part2LessonOne.words.length; groupStart += 5) {
+    for (let round = 1; round <= 2; round += 1) {
+      for (let index = groupStart; index < Math.min(groupStart + 5, part2LessonOne.words.length); index += 1) {
+        const learning = p2Stage("learn");
+        await learning.waitFor();
+        assert.match(await learning.locator(".repeat-badge").innerText(), new RegExp(`круг ${round} из 2`, "i"));
+        assert.equal((await learning.locator(".arabic-word").textContent()).trim(), part2LessonOne.words[index].arabic);
+        await learning.getByRole("button", { name: "Показать перевод", exact: true }).click();
+        assert.equal(await learning.locator(".word-context").count(), 0, "word cards must not reveal a context sentence");
+        assert.equal((await learning.locator(".translation strong").textContent()).trim(), part2LessonOne.words[index].russian);
+        await learning.getByRole("button", { name: /Запомнил/ }).click();
+        if (round === 2 && index === 0) {
+          const saved = await p2Session();
+          assert.equal(saved.round, 2);
+          assert.equal(saved.index, 1);
+          assert.equal(saved.wordPlanIndex, 6);
+          await resumePart2("learn");
+        }
       }
     }
   }
   await p2Stage("vocabulary").waitFor();
+  await checkPart2Layout('vocabulary', 'word-block-translation');
   await p2NotFinished();
   const p2Vocabulary = part2VocabularyQuestions(part2LessonOne);
   const seenDirections = new Set();
@@ -364,9 +392,51 @@ try {
   await resumePart2("listening");
   const player = page.frameLocator('iframe[title="Текст и аудио урока"]');
   await page.waitForFunction(() => {
-    const audio = document.querySelector('iframe[title="Текст и аудио урока"]')
-      ?.contentDocument?.querySelector("audio");
+    const audio = document.querySelector('[data-lesson-player]')?.shadowRoot?.querySelector("audio");
     return audio && audio.readyState >= 1 && audio.error === null;
+  });
+  const dock = page.locator('[data-lesson-player]');
+  const dockAudio = dock.locator('audio');
+  await dockAudio.waitFor({ state: 'visible' });
+  assert.equal(await player.locator('audio').count(), 0, 'The iframe must not retain a second recording');
+  assert.equal(await dockAudio.count(), 1, 'The floating panel owns the original recording');
+  const viewport = page.viewportSize();
+  for (const size of [{ width: 320, height: 480 }, { width: 390, height: 480 }, { width: 1280, height: 800 }]) {
+    await page.setViewportSize(size);
+    await page.evaluate(() => {
+      scrollTo(0, document.documentElement.scrollHeight);
+      const frame = document.querySelector('iframe[title="Текст и аудио урока"]');
+      frame.contentWindow.scrollTo(0, frame.contentDocument.documentElement.scrollHeight);
+    });
+    const bounds = await dock.boundingBox();
+    assert(bounds && bounds.height > 0 && bounds.y >= 0 && bounds.y + bounds.height <= size.height,
+      'The panel must stay in the parent viewport after both documents scroll');
+    assert(bounds.x >= 0 && bounds.x + bounds.width <= size.width, 'The panel must fit a narrow screen');
+    await dock.getByRole('button', { name: 'Настройки', exact: true }).click();
+    const expanded = await dock.boundingBox();
+    assert(expanded.y >= 0 && expanded.y + expanded.height <= size.height, 'Open settings must fit the viewport');
+    await dock.getByRole('button', { name: 'Настройки', exact: true }).click();
+  }
+  await dock.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await dock.getByLabel('Скорость').selectOption('1.25');
+  assert.equal(await dockAudio.evaluate(audio => audio.playbackRate), 1.25);
+  await dock.getByRole('button', { name: 'Скрыть текст', exact: true }).click();
+  assert(await player.locator('#listening-transcript').isHidden(), 'Docked settings must still control the transcript');
+  await dock.getByRole('button', { name: 'Показать текст', exact: true }).click();
+  await dock.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await page.setViewportSize(viewport);
+  await dockAudio.evaluate(async audio => { audio.currentTime = 12; await audio.play(); });
+  await page.waitForFunction(() => document.querySelector('[data-lesson-player]').shadowRoot.querySelector('audio').currentTime > 12.2);
+  const unfinishedAudio = await dockAudio.elementHandle();
+  await player.locator('#return-course').click();
+  await page.locator('.home-view').waitFor();
+  assert.equal(await unfinishedAudio.evaluate(audio => audio.paused), true, 'Returning to the course must stop playback');
+  assert.equal((await p2Session()).view, 'listening');
+  assert(await page.evaluate(() => JSON.parse(localStorage.getItem('shifahiya-p2-listening-1-v1')).position > 12));
+  await resumePart2('listening');
+  await page.waitForFunction(() => {
+    const audio = document.querySelector('[data-lesson-player]')?.shadowRoot?.querySelector('audio');
+    return audio && audio.currentTime > 12 && audio.playbackRate === 1.25;
   });
   await player.locator("#complete").click();
   await page.waitForFunction(() => {
@@ -374,26 +444,43 @@ try {
     return marks[1]?.completed === true;
   });
   const listeningSession = await p2Session();
-  await page.locator('iframe[title="Текст и аудио урока"]').evaluate(frame => {
-    frame.style.height = '440px'; frame.style.minHeight = '0';
-    frame.contentWindow.scrollTo(0, 500);
-  });
-  await page.waitForFunction(() => {
-    const panel = document.querySelector('iframe[title="Текст и аудио урока"]')?.contentDocument?.querySelector('.listening-player');
-    return panel && Math.abs(panel.getBoundingClientRect().top - 8) < 2;
-  });
   assert.deepEqual(await player.locator('.listening-actions button:visible').allTextContents(), ['Прослушал', 'Прослушать ещё раз']);
+  const marksBeforeReplay = await page.evaluate(() => localStorage.getItem('shifahiya-p2-listening-progress-v1'));
+  const reviewsBeforeReplay = await page.evaluate(() => localStorage.getItem('shifahiya-listening-reviews-v1'));
+  await player.locator('#listen-again').click();
+  await page.waitForFunction(() => {
+    const audio = document.querySelector('[data-lesson-player]').shadowRoot.querySelector('audio');
+    return !audio.paused && audio.currentTime > 0 && audio.currentTime < 4;
+  });
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifahiya-p2-listening-progress-v1')), marksBeforeReplay);
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifahiya-listening-reviews-v1')), reviewsBeforeReplay);
   // Only this frame may request returning to the parent course.
   await page.evaluate(() => dispatchEvent(new MessageEvent('message', {
     origin: location.origin, source: window, data: { type: 'shifahiya:return-to-course' },
   })));
   assert(await p2Stage('listening').isVisible());
+  const returningAudio = await dockAudio.elementHandle();
   await player.locator('#return-course').click();
   await page.locator('.home-view').waitFor();
+  assert.equal(await returningAudio.evaluate(audio => audio.paused), true);
   assert.equal((await p2Session()).view, listeningSession.view);
   assert.equal(await p2Stage('listening').count(), 0);
-  await resumePart2('context');
+  // Also exercise the direct transition while the adopted recording is playing.
+  await page.evaluate(() => {
+    localStorage.setItem('shifahiya-p2-listening-progress-v1', '{}');
+    const reviews = JSON.parse(localStorage.getItem('shifahiya-listening-reviews-v1') || '{}');
+    delete reviews['2:1'];
+    localStorage.setItem('shifahiya-listening-reviews-v1', JSON.stringify(reviews));
+  });
+  await resumePart2('listening');
+  await dockAudio.evaluate(audio => audio.play());
+  await player.locator('#complete').click();
+  await p2Stage('listening').getByRole('button', { name: /К закреплению/ }).waitFor();
+  const completingAudio = await dockAudio.elementHandle();
+  await p2Stage('listening').getByRole('button', { name: /К закреплению/ }).click();
   await p2Stage("context").waitFor();
+  assert.equal(await completingAudio.evaluate(audio => audio.paused), true, 'Continuing the lesson must stop playback');
+  assert.equal(await dock.count(), 0);
   await p2NotFinished();
   const p2Contexts = part2Questions(part2LessonOne);
   for (let index = 0; index < p2Contexts.length; index += 1) {
@@ -417,7 +504,59 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem("shifahiya-p2-lesson-105")), "7");
   await page.getByRole("button", { name: "На главную", exact: true }).click();
   assert.match(await hero.innerText(), /Часть 2 · Урок 2\./);
-  console.log("Вторая часть: два круга слов, перевод в обе стороны, чтение, аудио, контекст в конце и возобновление проверены.");
+  console.log("Вторая часть: два круга каждой пятёрки, перевод в обе стороны, чтение, аудио, контекст в конце и возобновление проверены.");
+
+  // The 54-word glossary has two 27-word blocks. Completing the first paper
+  // must return to word cards, while the final paper must lead to reading.
+  assert.equal(part2LessonEleven.words.length, 54);
+  const firstPaper = part2VocabularyQuestions(part2LessonEleven, 27);
+  await page.evaluate(({ revision, answer }) => {
+    for (let id = 1; id <= 10; id += 1) localStorage.setItem(`shifahiya-p2-lesson-${id}`, '10');
+    const marks = JSON.parse(localStorage.getItem('shifahiya-p2-listening-progress-v1') || '{}');
+    for (let id = 1; id <= 10; id += 1) marks[id] = { completed: true, updatedAt: Date.now() };
+    localStorage.setItem('shifahiya-p2-listening-progress-v1', JSON.stringify(marks));
+    localStorage.setItem('shifahiya-p2-session-11', JSON.stringify({
+      lessonId: 11, contentRevision: revision, flowVersion: 3, view: 'vocabulary',
+      wordPlanIndex: 107, index: 53, round: 2, vocabularyScore: 54,
+      score: 0, contextIndex: 0, mistakes: [], answered: { option: answer, correct: true }, updatedAt: Date.now(),
+    }));
+  }, { revision: part2LessonEleven.revision, answer: firstPaper.at(-1).answer });
+  await page.reload({ waitUntil: 'networkidle' });
+  await hero.click();
+  await p2Stage('vocabulary').waitFor();
+  assert.match(await p2Stage('vocabulary').locator('.stage-label').innerText(), /блок\s+1\s+из\s+2/i);
+  assert.equal(await p2Stage('vocabulary').locator('.options button:disabled').count(), firstPaper.at(-1).options.length);
+  await p2Stage('vocabulary').getByRole('button', { name: /Следующий блок/ }).click();
+  await p2Stage('learn').waitFor();
+  assert.match(await p2Stage('learn').locator('.stage-label').innerText(), /блок\s+2\s+из\s+2/i);
+  assert.equal((await p2Stage('learn').locator('.arabic-word').textContent()).trim(), part2LessonEleven.words[27].arabic);
+  await checkPart2Layout('learn', 'second-word-block');
+  await page.reload({ waitUntil: 'networkidle' });
+  await hero.click();
+  await p2Stage('learn').waitFor();
+  assert.equal((await p2Stage('learn').locator('.arabic-word').textContent()).trim(), part2LessonEleven.words[27].arabic);
+  for (let index = 27; index < 32; index += 1) {
+    assert.equal((await p2Stage('learn').locator('.arabic-word').textContent()).trim(), part2LessonEleven.words[index].arabic);
+    await p2Stage('learn').getByRole('button', { name: 'Показать перевод', exact: true }).click();
+    await p2Stage('learn').getByRole('button', { name: /Запомнил/ }).click();
+  }
+  assert.equal((await p2Stage('learn').locator('.arabic-word').textContent()).trim(), part2LessonEleven.words[27].arabic);
+  assert.match(await p2Stage('learn').locator('.repeat-badge').innerText(), /круг 2 из 2.*слово 1 из 5/i);
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('shifahiya-p2-session-11')).vocabularyScore), 54);
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifahiya-p2-lesson-11')), null);
+  const finalPaper = part2VocabularyQuestions(part2LessonEleven);
+  await page.evaluate(answer => {
+    const saved = JSON.parse(localStorage.getItem('shifahiya-p2-session-11'));
+    localStorage.setItem('shifahiya-p2-session-11', JSON.stringify({ ...saved, view: 'vocabulary',
+      wordPlanIndex: 215, index: 107, round: 2, vocabularyScore: 108,
+      answered: { option: answer, correct: true }, updatedAt: Date.now() }));
+  }, finalPaper.at(-1).answer);
+  await page.reload({ waitUntil: 'networkidle' });
+  await hero.click();
+  await p2Stage('vocabulary').getByRole('button', { name: /К чтению/ }).click();
+  await p2Stage('reading').waitFor();
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifahiya-p2-lesson-11')), null);
+  console.log('Вторая часть: переход между блоками по 27 слов, повтор пятёрки, сохранение счёта и чтение после последнего блока проверены.');
   await page.goto(origin, { waitUntil: "networkidle" });
 
   // Lesson 82 used to enter a trailing empty deck instead of its second-half

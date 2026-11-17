@@ -61,6 +61,18 @@ test("question generation is deterministic and does not modify a lesson", () => 
   assert.deepEqual(lesson, before);
 });
 
+test("block papers offer only words already learned, including their distractors", () => {
+  const lesson = lessons.find(l => l.words.length > 40);
+  const known = lesson.words.slice(0, 25);
+  const questions = part2VocabularyQuestions(lesson, known.length);
+  assert.equal(questions.length, 50);
+  for (const question of questions) {
+    const field = question.promptLang === "ar" ? "russian" : "arabic";
+    assert(question.options.includes(question.answer));
+    for (const option of question.options) assert(known.some(word => word[field] === option));
+  }
+});
+
 test("synonyms and alternative glosses of the same Arabic form never become wrong answers", () => {
   const makeWord = (arabic, russian) => ({
     arabic, russian, kind: "noun", contextArabic: "unused context", contextRussian: "unused translation",

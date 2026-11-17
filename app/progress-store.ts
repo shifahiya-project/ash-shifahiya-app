@@ -1,7 +1,7 @@
 import { lessonSummaries } from "../content/manifest.ts";
 import { part2Summaries } from "../content/part2/manifest.ts";
 import { part3Summaries } from "../content/part3/manifest.ts";
-import { part4Summaries } from "../content/part4/manifest.ts";
+import { PART4_REVISION, part4LegacySummaries } from "../content/part4/revision.ts";
 import { part5Summaries } from "../content/part5/manifest.ts";
 import { part6Summaries } from "../content/part6/manifest.ts";
 import { part7Summaries } from "../content/part7/manifest.ts";
@@ -14,10 +14,12 @@ import { LISTENING_PROGRESS_KEY, PART2_LISTENING_PROGRESS_KEY, normalizeListenin
 import { LISTENING_REVIEW_PROGRESS_KEY, normalizeListeningReviews, type ListeningReviewMap } from "./listening-review.ts";
 import { LISTENING_TIME_KEY, normalizeListeningTime, mergeListeningTime, type ListeningTime } from "./listening-time.ts";
 import { mergePart2Results, normalizePart2Results, part2ScoresFromResults, type Part2Results } from "./part2-results.ts";
+import { PART4_REVISIONS_KEY, mergePart4Revisions, normalizePart4Revisions, type Part4Revisions } from "./part4-revision.ts";
 
 export { LISTENING_PROGRESS_KEY, PART2_LISTENING_PROGRESS_KEY } from "./listening-progress.ts";
 export { LISTENING_REVIEW_PROGRESS_KEY } from "./listening-review.ts";
 export { LISTENING_TIME_KEY } from "./listening-time.ts";
+export { PART4_REVISIONS_KEY } from "./part4-revision.ts";
 export type { ListeningProgress } from "./listening-progress.ts";
 
 export type SavedSession = {
@@ -67,7 +69,11 @@ export type Part2Session = Omit<ReadingCourseSession, "view"> & {
   archivedSession?: Part2Session;
   view: "learn" | "vocabulary" | "reading" | "listening" | "practice";
   /** Missing on sessions saved before the vocabulary-first sequence. */
-  flowVersion?: 2;
+  flowVersion?: 2 | 3;
+  /** Position in the interleaved five-word / block-translation sequence. */
+  wordPlanIndex?: number;
+  /** Whole-lesson passes already completed before the block sequence was introduced. */
+  wordPlanCredit?: { firstPass: number; secondPass: number; vocabulary: number };
   round?: 1 | 2;
   /** Translation practice is scored separately from the original context paper. */
   vocabularyScore?: number;
@@ -165,9 +171,11 @@ export type Progress = {
   /** The third course likewise: its own results, the same boxes. */
   part3Scores: Record<number, number>;
   part3Sessions: Record<number, Part3Session>;
-  /** And the fourth. */
+  /** The original 145-lesson fourth course; kept as transportable history. */
   part4Scores: Record<number, number>;
   part4Sessions: Record<number, Part4Session>;
+  /** Revised fourth-course lesson numbers are isolated by edition. */
+  part4Revisions: Part4Revisions;
   /** And the fifth. */
   part5Scores: Record<number, number>;
   part5Sessions: Record<number, Part5Session>;
@@ -241,6 +249,7 @@ const EMPTY: Progress = {
   part3Sessions: {},
   part4Scores: {},
   part4Sessions: {},
+  part4Revisions: {},
   part5Scores: {},
   part5Sessions: {},
   part6Scores: {},
@@ -314,7 +323,7 @@ function readProgress(): Progress {
 
   const part4Scores: Record<number, number> = {};
   const part4Sessions: Record<number, Part4Session> = {};
-  for (const summary of part4Summaries) {
+  for (const summary of part4LegacySummaries) {
     const score = window.localStorage.getItem(part4ScoreKey(summary.id));
     if (score !== null) part4Scores[summary.id] = Number(score);
     const session = read<Part4Session | null>(part4SessionKey(summary.id), null);
@@ -425,6 +434,7 @@ function readProgress(): Progress {
     part3Sessions,
     part4Scores,
     part4Sessions,
+    part4Revisions: normalizePart4Revisions(read<unknown>(PART4_REVISIONS_KEY, {})),
     part5Scores,
     part5Sessions,
     part6Scores,
@@ -451,7 +461,8 @@ function publish() {
 
 function refreshExternalListening(event: StorageEvent) {
   if (event.key === null || event.key === LISTENING_PROGRESS_KEY || event.key === PART2_LISTENING_PROGRESS_KEY
-    || event.key === LISTENING_REVIEW_PROGRESS_KEY || event.key === LISTENING_TIME_KEY) publish();
+    || event.key === LISTENING_REVIEW_PROGRESS_KEY || event.key === LISTENING_TIME_KEY
+    || event.key === PART4_REVISIONS_KEY) publish();
 }
 
 function refreshRestoredPage(event: PageTransitionEvent) {
@@ -580,15 +591,21 @@ export const progressStore = {
 
   savePart4Session(session: Omit<Part4Session, "updatedAt">) {
     const stamped: Part4Session = { ...session, updatedAt: Date.now() };
-    window.localStorage.setItem(part4SessionKey(session.lessonId), JSON.stringify(stamped));
+    const revisions = normalizePart4Revisions(read<unknown>(PART4_REVISIONS_KEY, {}));
+    const current = revisions[PART4_REVISION] ?? { scores: {}, sessions: {}, totals: {} };
+    revisions[PART4_REVISION] = { ...current, sessions: { ...current.sessions, [session.lessonId]: stamped } };
+    window.localStorage.setItem(PART4_REVISIONS_KEY, JSON.stringify(revisions));
     publish();
   },
 
-  /** And once more for the fourth course. */
-  finishPart4Lesson(lessonId: number, score: number) {
-    const earned = progressStore.getSnapshot().part4Scores[lessonId] ?? 0;
-    window.localStorage.setItem(part4ScoreKey(lessonId), String(Math.max(score, earned)));
-    window.localStorage.removeItem(part4SessionKey(lessonId));
+  /** A revised lesson never writes into the old edition's numeric keys. */
+  finishPart4Lesson(lessonId: number, score: number, questionCount?: number) {
+    const revisions = mergePart4Revisions(read<unknown>(PART4_REVISIONS_KEY, {}), {
+      [PART4_REVISION]: { scores: { [lessonId]: score }, sessions: {},
+        totals: questionCount === undefined ? {} : { [lessonId]: questionCount } },
+    });
+    delete revisions[PART4_REVISION].sessions[lessonId];
+    window.localStorage.setItem(PART4_REVISIONS_KEY, JSON.stringify(revisions));
     publish();
   },
 
@@ -771,6 +788,10 @@ export const progressStore = {
     for (const [id, session] of Object.entries(progress.part4Sessions ?? {})) {
       window.localStorage.setItem(part4SessionKey(id), JSON.stringify(session));
     }
+    // A pre-revision backup cannot erase the new edition or another archive.
+    window.localStorage.setItem(PART4_REVISIONS_KEY, JSON.stringify(mergePart4Revisions(
+      read<unknown>(PART4_REVISIONS_KEY, {}), progress.part4Revisions,
+    )));
     for (const [id, score] of Object.entries(progress.part5Scores ?? {})) {
       window.localStorage.setItem(part5ScoreKey(id), String(score));
     }

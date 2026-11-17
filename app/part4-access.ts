@@ -2,17 +2,19 @@
 import {
   isCourseFinished,
   textCourseCardId,
-  textCourseLessonIdsInCards,
   unlockedTextCourseIds,
 } from "./text-course-access.ts";
 import type { TextCourseProgress } from "./text-course-access.ts";
 import type { ReadingCourseSession } from "./progress-store.ts";
+import { getPart4Progress, type Part4Revisions } from "./part4-revision.ts";
+import { part4ReviewLessons } from "../content/part4/review-map.ts";
 
 /** What the fourth course needs to know about a learner. */
 export type Part4Progress = {
   /** Result of each finished lesson, by lesson id. */
   part4Scores: Record<number, number>;
   part4Sessions: Record<number, ReadingCourseSession>;
+  part4Revisions?: Part4Revisions;
   cards: Record<string, unknown>;
 };
 
@@ -25,7 +27,13 @@ export function part4CardId(lessonId: number, wordIndex: number, direction: "ar-
 
 /** Fourth-course lessons the learner holds review cards for. */
 export function part4LessonIdsInCards(cards: Record<string, unknown>) {
-  return textCourseLessonIdsInCards(PREFIX, cards);
+  const ids = new Set<number>();
+  for (const id of Object.keys(cards)) {
+    const match = /^p4-lesson-(\d+)-word-(\d+)-(?:ar-ru|ru-ar)$/.exec(id);
+    const lesson = match && part4ReviewLessons[`${match[1]}-${match[2]}`];
+    if (lesson) ids.add(lesson);
+  }
+  return [...ids];
 }
 
 /**
@@ -49,10 +57,13 @@ export function unlockedPart4Ids(
   progress: Part4Progress,
   open: boolean,
 ): Set<number> {
+  const current = getPart4Progress(progress);
   const held: TextCourseProgress = {
-    scores: progress.part4Scores,
-    sessions: progress.part4Sessions,
-    cards: progress.cards,
+    scores: current.scores,
+    sessions: current.sessions,
+    // Historical card addresses resolve to today's lessons before unlocking.
+    cards: Object.fromEntries(part4LessonIdsInCards(progress.cards)
+      .map((id) => [part4CardId(id, 0, "ar-ru"), {}])),
   };
   return unlockedTextCourseIds(PREFIX, summaries, held, open);
 }

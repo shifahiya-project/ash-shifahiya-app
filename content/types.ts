@@ -123,6 +123,11 @@ export type TextCourseWordKind =
   | "particle";
 
 export type TextCourseWord = {
+  /** Stable review address, independent of a revised lesson's teaching order. */
+  reviewLessonId?: number;
+  reviewIndex?: number;
+  /** Author-provided glossary identity, contexts and lexical forms. */
+  source?: Record<string, unknown>;
   /** Keep a retired word's review address, but omit it from new study and review. */
   retired?: true;
   /** The dictionary form as the glossary gives it: مَذْهَبٌ (مَذَاهِبُ), شَرَطَ (يَشْرُطُ). */
@@ -143,9 +148,17 @@ export type TextCourseWord = {
  * A source passage without a verified translation keeps an empty Russian field;
  * its Arabic is still read, without a translation toggle or an editorial note.
  */
-export type TextCourseFragment = ReadingSentence & { heading?: true; verse?: true; ayah?: true };
+export type TextCourseFragment = ReadingSentence & {
+  heading?: true;
+  verse?: true;
+  ayah?: true;
+  sourceId?: string | number;
+  headingLevel?: number;
+};
 
 export type TextCourseLesson = {
+  /** Numerical lesson IDs are scoped to this content edition. */
+  revision?: string;
   id: number;
   /** Which book the lesson is taken from — a course here runs through more than one. */
   book: string;
