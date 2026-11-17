@@ -25,6 +25,8 @@ import { activeTextWordIndexes, textCourseSessionWordIndexes } from "./part3-voc
 import { part4Summaries } from "../content/part4/manifest";
 import { loadPart4Lesson, loadPart4Lessons, loadPart4WordsMetBefore } from "../content/part4/lessons";
 import { isPart4Open, part4CardId, part4LessonIdsInCards, unlockedPart4Ids } from "./part4-access";
+import { getPart4Progress, normalizePart4Revisions } from "./part4-revision";
+import { hasPriorPart5Access } from "./part4-history";
 import { part5Summaries } from "../content/part5/manifest";
 import { loadPart5Lesson, loadPart5Lessons, loadPart5WordsMetBefore } from "../content/part5/lessons";
 import { isPart5Open, part5CardId, part5LessonIdsInCards, unlockedPart5Ids } from "./part5-access";
@@ -242,7 +244,7 @@ function textCourseReviewCardsOf(
     const word = lesson.words[index];
     return [
       {
-        id: cardId(lesson.id, index, "ar-ru"),
+        id: cardId(word.reviewLessonId ?? lesson.id, word.reviewIndex ?? index, "ar-ru"),
         lessonId: lesson.id,
         prompt: word.arabic,
         answer: word.russian,
@@ -250,7 +252,7 @@ function textCourseReviewCardsOf(
         answerLang: "ru" as const,
       },
       {
-        id: cardId(lesson.id, index, "ru-ar"),
+        id: cardId(word.reviewLessonId ?? lesson.id, word.reviewIndex ?? index, "ru-ar"),
         lessonId: lesson.id,
         prompt: word.russian,
         answer: word.arabic,
@@ -804,8 +806,9 @@ export default function Home() {
   const p2Task = p2ActiveTasks[stepIndex];
   const part3Scores = stored.part3Scores;
   const part3Sessions = stored.part3Sessions;
-  const part4Scores = stored.part4Scores;
-  const part4Sessions = stored.part4Sessions;
+  const part4Progress = useMemo(() => getPart4Progress(stored), [stored]);
+  const part4Scores = part4Progress.scores;
+  const part4Sessions = part4Progress.sessions;
   const part5Scores = stored.part5Scores;
   const part5Sessions = stored.part5Sessions;
   const part6Scores = stored.part6Scores;
@@ -828,7 +831,7 @@ export default function Home() {
   const part4Ready = isPart4Open(part3Summaries, part3Scores);
   // And the fifth waits for the fourth: grammar names what has been read, so it
   // comes after the reading rather than before it.
-  const part5Ready = isPart5Open(part4Summaries, part4Scores);
+  const part5Ready = isPart5Open(part4Summaries, part4Scores) || hasPriorPart5Access(stored);
   // And the sixth waits for the fifth — here it is also the classical order:
   // rhetoric weighs a sentence that grammar has already made correct.
   const part6Ready = isPart6Open(part5Summaries, part5Scores);
@@ -1774,8 +1777,11 @@ export default function Home() {
   function rateTextCourseCard(remembered: boolean) {
     if (!textLesson) return;
     const wordIndex = textWordIndexes[stepIndex];
-    const forward = textCourse.cardId(textLesson.id, wordIndex, "ar-ru");
-    const reverse = textCourse.cardId(textLesson.id, wordIndex, "ru-ar");
+    const word = textLesson.words[wordIndex];
+    const reviewLesson = word.reviewLessonId ?? textLesson.id;
+    const reviewIndex = word.reviewIndex ?? wordIndex;
+    const forward = textCourse.cardId(reviewLesson, reviewIndex, "ar-ru");
+    const reverse = textCourse.cardId(reviewLesson, reviewIndex, "ru-ar");
     progressStore.updateCards((items) => ({
       ...items,
       [forward]: nextCardProgress(items[forward], remembered),
@@ -1825,7 +1831,8 @@ export default function Home() {
   /** The text is the point of the lesson here too, so reading it finishes it. */
   function finishTextCourse() {
     if (!textLesson) return;
-    textCourse.finishLesson(textLesson.id, stepScore);
+    if (textCourseId === 4) progressStore.finishPart4Lesson(textLesson.id, stepScore, textTasks.length);
+    else textCourse.finishLesson(textLesson.id, stepScore);
     setView("text-result");
   }
 
@@ -1927,7 +1934,7 @@ export default function Home() {
   function exportProgress() {
     const payload = {
       format: "shifahiya-progress",
-      version: 6,
+      version: 7,
       exportedAt: new Date().toISOString(),
       scores: savedScores,
       scoreTotals: savedScoreTotals,
@@ -1949,8 +1956,9 @@ export default function Home() {
       part2Sessions,
       part3Scores,
       part3Sessions,
-      part4Scores,
-      part4Sessions,
+      part4Scores: stored.part4Scores,
+      part4Sessions: stored.part4Sessions,
+      part4Revisions: stored.part4Revisions,
       part5Scores,
       part5Sessions,
       part6Scores,
@@ -1982,7 +1990,7 @@ export default function Home() {
     if (!file) return;
     try {
       const payload = JSON.parse(await file.text());
-      if (payload.format !== "shifahiya-progress" || ![1, 2, 3, 4, 5, 6].includes(payload.version)) throw new Error("Invalid backup");
+      if (payload.format !== "shifahiya-progress" || ![1, 2, 3, 4, 5, 6, 7].includes(payload.version)) throw new Error("Invalid backup");
       const scores = payload.scores ?? {};
       // Backups written before the totals were kept simply have none of them,
       // and the card then shows the result without a denominator.
@@ -2020,6 +2028,8 @@ export default function Home() {
         // And the same for the fourth and the fifth.
         part4Scores: payload.part4Scores ?? {},
         part4Sessions: payload.part4Sessions ?? {},
+        part4Revisions: payload.part4Revisions === undefined
+          ? progressStore.getSnapshot().part4Revisions : normalizePart4Revisions(payload.part4Revisions),
         part5Scores: payload.part5Scores ?? {},
         part5Sessions: payload.part5Sessions ?? {},
         part6Scores: payload.part6Scores ?? {},
@@ -3230,7 +3240,7 @@ export default function Home() {
             Читайте вслух целиком. Если фрагмент не сложился — нажмите на него, и появится перевод.
           </p>
           <article className="reading-text">
-            <h3 lang="ar" dir="rtl">{textLesson.arabicTitle || textLesson.title}</h3>
+            {textLesson.arabicTitle && <h3 lang="ar" dir="rtl">{textLesson.arabicTitle}</h3>}
             <p className="story-title">{textLesson.title}</p>
             {textLesson.fragments.map((line, lineIndex) => {
               const id = `text-${lineIndex}`;
@@ -3244,8 +3254,11 @@ export default function Home() {
                     line.verse ? "is-verse" : "",
                     line.ayah ? "is-ayah" : "",
                   ].filter(Boolean).join(" ")}
+                  data-source-id={line.sourceId}
+                  data-heading-level={line.headingLevel}
                   key={id}
                 >
+                  {line.arabic ? <>
                   <div className="reading-row">
                     {line.russian ? (
                       <button
@@ -3263,6 +3276,7 @@ export default function Home() {
                     <button className="reading-sound" onClick={() => speak(line.arabic)} aria-label="Прослушать фрагмент">◖))</button>
                   </div>
                   {open && line.russian && <p className="reading-russian">{line.russian}</p>}
+                  </> : <p className="reading-russian">{line.russian}</p>}
                 </div>
               );
             })}
