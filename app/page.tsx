@@ -4,6 +4,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState, useSync
 import { lessonSummaries } from "../content/manifest";
 import { hasListening, listeningHref, listeningCatalog } from "./listening-catalog";
 import { ResumeAudio } from "./resume-audio";
+import { ThemePicker } from "./theme-picker";
 import { dueListeningReviews, listeningReviewKey, resolveListeningReview, nextListeningReviewDate,
   normalizeListeningReviews, subscribeListeningDay, listeningDaySnapshot, listeningDayServerSnapshot } from "./listening-review";
 import { READING_SOURCE, readingByLesson } from "../content/reading-manifest";
@@ -2200,6 +2201,7 @@ export default function Home() {
           <strong>Меню</strong>
           <button className="main-menu-close" onClick={closeMainMenu} aria-label="Закрыть меню">×</button>
         </div>
+        <ThemePicker />
         <div className="home-extras" aria-label="Дополнительно">
           <HomeDisclosure label="Личный прогресс" detail={`${overallProgress.completed} из ${overallProgress.total} уроков завершено · ${formatStudyTime(learningStats.totalSeconds)} в учёбе`} open={showPersonalProgress} controls="personal-progress" onToggle={() => setShowPersonalProgress((value) => !value)}>
             <div className="progress-heading">

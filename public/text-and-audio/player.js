@@ -40,7 +40,7 @@ import { createListeningPlayback } from './playback.js?v=1';
       const root = host.shadowRoot || host.attachShadow({ mode: 'open' });
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
-      stylesheet.href = new URL('./player.css?v=10', import.meta.url).href;
+      stylesheet.href = new URL('./player.css?v=11', import.meta.url).href;
       panel.classList.add('is-docked');
       root.replaceChildren(stylesheet, panel);
       host.hidden = false;
@@ -56,6 +56,10 @@ import { createListeningPlayback } from './playback.js?v=1';
       window.addEventListener('pageshow', () => resize.observe(panel));
     }
   }
+  const syncTheme = () => { get('theme').value = window.ShifahiyaTheme?.get() || 'light'; };
+  get('theme').onchange = event => window.ShifahiyaTheme?.set(event.target.value);
+  window.addEventListener('shifahiya-theme-change', syncTheme);
+  syncTheme();
   const rates = [0.5, 0.75, 0.9, 1, 1.25, 1.5, 2];
   const progressKey = (id = courseId()) => `shifahiya-${prefix(id)}listening-progress-v1`;
   async function fetchText(url) {
@@ -387,15 +391,18 @@ import { createListeningPlayback } from './playback.js?v=1';
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
-      const [html, css, script] = await Promise.all([
-        fetchText('./text-and-audio.html?v=12'), fetchText('./text-and-audio/player.css?v=10'), fetchText('./text-and-audio/player.js?v=12'),
+      const [html, css, script, palette, themeScript] = await Promise.all([
+        fetchText('./text-and-audio.html?v=13'), fetchText('./text-and-audio/player.css?v=11'), fetchText('./text-and-audio/player.js?v=13'),
+        fetchText('./themes.css?v=1'), fetchText('./theme.js?v=1'),
       ]);
       const doc = new DOMParser().parseFromString(html, 'text/html');
-      doc.querySelector('link[rel="stylesheet"]').remove();
-      doc.querySelector('script[src]').remove();
+      doc.querySelectorAll('link[rel="stylesheet"], script[src]').forEach(node => node.remove());
+      doc.documentElement.dataset.theme = document.documentElement.dataset.theme || 'light';
       const style = doc.createElement('style');
-      style.textContent = css;
-      doc.head.append(style);
+      style.textContent = palette + '\n' + css;
+      const appearance = doc.createElement('script');
+      appearance.textContent = themeScript;
+      doc.head.append(style, appearance);
       const data = doc.createElement('script');
       data.textContent = 'window.LISTENING_LESSON=' + JSON.stringify({ ...lesson, audioSrc: dataURL }).replace(/</g, '\\u003c') + ';';
       const player = doc.createElement('script');
