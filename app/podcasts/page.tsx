@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { ThemeMenu } from "../theme-picker";
 import { plural } from "../../content/questions";
 import { shippedCatalog } from "../../content/podcasts/catalog";
 import { DEFAULT_HANDLES } from "../../content/podcasts/channels";
@@ -342,6 +343,7 @@ export default function PodcastsPage() {
             <small>подкаст в день</small>
           </span>
         </a>
+        <ThemeMenu />
         <div className="streak" title="Текущая серия дней">
           <span>🔥</span> {run.current} дн.
         </div>

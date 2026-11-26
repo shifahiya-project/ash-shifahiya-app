@@ -1,0 +1,61 @@
+/* Shared palette. Shadow DOM audio controls inherit these same properties. */
+:root, :root[data-theme="light"] {
+  color-scheme: light;
+  --ink: #183c33; --ink-soft: #557068; --ink-rgb: 24,60,51;
+  --green: #176b55; --green-dark: #0d503f; --green-rgb: 23,107,85;
+  --button-green: #176b55; --button-green-hover: #0d503f; --button-green-rgb: 23,107,85;
+  --mint: #e7f1eb; --mint-rgb: 231,241,235;
+  --paper: #f8faf8; --cream: #eef2ed; --cream-rgb: 238,242,237;
+  --surface-rgb: 255,255,255;
+  --page-top: #fcfdfb; --page-bottom: #f1f5f1;
+  --line: #d7dfd6; --line-rgb: 215,223,214;
+  --gold: #87632b; --gold-rgb: 197,154,85; --button-gold: #87632b;
+  --red: #a43c34; --red-soft: #f8e7e5; --red-line: #dca09b; --button-red: #a63f37;
+  --blue: #2f62c4; --blue-dark: #234b99; --blue-rgb: 47,98,196;
+  --blue-soft: #e6edfa; --blue-soft-rgb: 230,237,250;
+  --button-blue: #2f62c4; --button-blue-hover: #234b99;
+  --muted: #6c766e; --track: #dfe6dd; --shadow-rgb: 24,60,51;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e3eee7; --ink-soft: #acbfb2; --ink-rgb: 227,238,231;
+  --green: #8bd4b4; --green-dark: #ace8cc; --green-rgb: 139,212,180;
+  --button-green: #276c51; --button-green-hover: #307d60; --button-green-rgb: 39,108,81;
+  --mint: #213e31; --mint-rgb: 33,62,49;
+  --paper: #121c17; --cream: #25372d; --cream-rgb: 37,55,45;
+  --surface-rgb: 28,42,34;
+  --page-top: #17231c; --page-bottom: #101914;
+  --line: #3d5547; --line-rgb: 61,85,71;
+  --gold: #e2bd7b; --gold-rgb: 226,189,123; --button-gold: #80602b;
+  --red: #f2aaa0; --red-soft: #442a27; --red-line: #966158; --button-red: #a4473c;
+  --blue: #a9c6ff; --blue-dark: #c5d7ff; --blue-rgb: 169,198,255;
+  --blue-soft: #263851; --blue-soft-rgb: 38,56,81;
+  --button-blue: #365fa6; --button-blue-hover: #416fb9;
+  --muted: #a1b4a7; --track: #35483c; --shadow-rgb: 0,0,0;
+}
+:root[data-theme="sepia"] {
+  color-scheme: light;
+  --ink: #493d2c; --ink-soft: #75634b; --ink-rgb: 73,61,44;
+  --green: #4e6240; --green-dark: #3c5030; --green-rgb: 78,98,64;
+  --button-green: #4e6240; --button-green-hover: #3c5030; --button-green-rgb: 78,98,64;
+  --mint: #e7e7ce; --mint-rgb: 231,231,206;
+  --paper: #f3ead7; --cream: #eaddc2; --cream-rgb: 234,221,194;
+  --surface-rgb: 251,244,226;
+  --page-top: #f6efdf; --page-bottom: #eee1c7;
+  --line: #d3c4a7; --line-rgb: 211,196,167;
+  --gold: #7b592c; --gold-rgb: 155,116,60; --button-gold: #7b592c;
+  --red: #a04434; --red-soft: #f1dcd0; --red-line: #bd8772; --button-red: #a04434;
+  --blue: #4d608d; --blue-dark: #3b4b73; --blue-rgb: 77,96,141;
+  --blue-soft: #e0e1df; --blue-soft-rgb: 224,225,223;
+  --button-blue: #4d608d; --button-blue-hover: #3b4b73;
+  --muted: #78664e; --track: #d6c9ad; --shadow-rgb: 73,61,44;
+}
+:root {
+  --surface: rgb(var(--surface-rgb));
+  --white: var(--surface);
+  --on-accent: #fff;
+  --soft: var(--ink-soft);
+  --panel-border: color-mix(in srgb, var(--green) 35%, var(--line));
+  --surface-hover: color-mix(in srgb, var(--mint) 55%, var(--surface));
+  --blue-hover-surface: color-mix(in srgb, var(--blue-soft) 85%, var(--blue));
+}

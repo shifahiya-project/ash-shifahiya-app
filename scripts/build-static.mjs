@@ -46,7 +46,7 @@ async function render({ path, depth }) {
   // React rebuilds the head during hydration, in the escaped payload as well.
   const prefix = depth === 0 ? "./" : "../".repeat(depth);
   html = html.replace(/(src|href)="\/(?!\/)/g, `$1="${prefix}`);
-  html = html.replace(/\\"\/(assets\/|favicon\.svg)/g, `\\"${prefix}$1`);
+  html = html.replace(/\\"\/(assets\/|favicon\.svg|themes\.css|theme\.js)/g, `\\"${prefix}$1`);
 
   // The STATIC_BASE=./ build already emits the asset URLs relative to the
   // document, which is only correct for a page sitting at the root. A page one
@@ -59,7 +59,7 @@ async function render({ path, depth }) {
   // The lookbehind keeps ../assets/, already rewritten above, from being
   // mistaken for a ./assets/ of its own.
   if (depth > 0) {
-    html = html.replace(/(?<!\.)\.\/(assets\/|favicon\.svg)/g, `${prefix}$1`);
+    html = html.replace(/(?<!\.)\.\/(assets\/|favicon\.svg|themes\.css|theme\.js)/g, `${prefix}$1`);
   }
 
   const stillAbsolute = html.match(/(?:src|href)="\/(?!\/)/g);

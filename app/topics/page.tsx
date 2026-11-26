@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState, useSyncExternalStore } from "react";
+import { ThemeMenu } from "../theme-picker";
 import { plural, seededShuffle } from "../../content/questions";
 import { TOPIC_BOOKS, TOPIC_SUMMARIES, topicById } from "../../content/topics/catalog";
 import { citeOf, citeRange, isDrill, stepUnits, type Atom, type Topic, type TopicStep, type TopicUnit } from "../../content/topics/types";
@@ -228,6 +229,7 @@ export default function TopicsPage() {
             <small>разбор и повторение по книге</small>
           </span>
         </a>
+        <ThemeMenu />
         {progress && (
           <div className="streak" title="Фактов в памяти">
             <span>◆</span> {progress.seen} / {progress.total}
