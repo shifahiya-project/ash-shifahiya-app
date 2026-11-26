@@ -60,6 +60,26 @@ const contrast = async page => {
   });
   for (const pair of ratios) assert(pair.ratio >= 4.5, `${pair.text} on ${pair.background}: ${pair.ratio}`);
 };
+const continueContrast = async page => {
+  const ratios = await page.locator('.continue-learning .continue-copy small, .continue-learning .continue-copy em').evaluateAll(nodes => {
+    const rgb = value => value.match(/[\d.]+/g).map(Number);
+    const luminance = channels => channels.map(value => {
+      value /= 255;
+      return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+    }).reduce((sum, value, i) => sum + value * [.2126, .7152, .0722][i], 0);
+    return nodes.map(node => {
+      const style = getComputedStyle(node), foreground = rgb(style.color);
+      const background = rgb(getComputedStyle(node.closest('.continue-learning')).backgroundColor).slice(0, 3);
+      const alpha = (foreground[3] ?? 1) * Number(style.opacity);
+      const painted = foreground.slice(0, 3).map((value, i) => value * alpha + background[i] * (1 - alpha));
+      const a = luminance(painted), b = luminance(background);
+      return { text: node.textContent, ratio: (Math.max(a, b) + .05) / (Math.min(a, b) + .05) };
+    });
+  });
+  assert.equal(ratios.length, 2, 'Check both the stage label and continuation hint');
+  for (const value of ratios) assert(value.ratio >= 4.5, `Continuation text: ${value.ratio} (${value.text})`);
+  console.log('Continuation hint contrast:', ratios.map(value => value.ratio.toFixed(2)).join(', '));
+};
 
 try {
   browser = await chromium.launch({ executablePath: process.env.SMOKE_CHROMIUM || '/usr/bin/chromium' });
@@ -92,8 +112,11 @@ try {
     assert.equal(await page.evaluate(key => localStorage.getItem(key), key), value);
     assert.equal(await picker.locator('[aria-pressed="true"]').count(), 1);
     assert.equal(await picker.locator(`[data-theme-choice="${value}"]`).getAttribute('aria-pressed'), 'true');
-    await fits(page); await contrast(page);
+    await fits(page); await contrast(page); await continueContrast(page);
     await shot(page, `menu-${value}`);
+    await page.getByRole('button', { name: 'Закрыть меню', exact: true }).click();
+    await shot(page, `home-${value}`);
+    await page.getByRole('button', { name: 'Меню', exact: true }).click();
   }
   assert.equal(await page.evaluate(() => localStorage.getItem('shifahiya-lesson-1')), '7');
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('shifahiya-listening-87-v1')).position), 23);
